@@ -6,9 +6,15 @@ export {
   LilyConfigError,
   LilyApiError,
   LilyAuthenticationError,
+  LilyAuthorizationError,
+  LilyConflictError,
+  LilyNotFoundError,
+  LilyRateLimitError,
+  LilyServerError,
   LilyTransportError,
   LilyValidationError,
 } from './errors/sdk-error';
+export type { LilyErrorOptions } from './errors/sdk-error';
 export { AgentClient } from './clients/agent-client';
 export { IdentityClient } from './clients/identity-client';
 export { PaymentClient } from './clients/payment-client';

@@ -1,9 +1,6 @@
 import type { ResolvedLilySdkConfig } from '../config/types';
-import {
-  LilyApiError,
-  LilyAuthenticationError,
-  LilyTransportError,
-} from '../errors/sdk-error';
+import { LilySdkError, LilyTransportError } from '../errors/sdk-error';
+import { mapResponseError } from './map-response-error';
 import type { HttpClient, HttpHeaders, HttpRequest, HttpResponse } from './types';
 
 export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient {
@@ -47,12 +44,10 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
             };
           }
 
+          // Auth failures are terminal: retrying with the same credential just
+          // burns the budget. Checked before shouldRetry for that reason.
           if (response.status === 401 || response.status === 403) {
-            throw new LilyAuthenticationError('Authentication failed for Lily Protocol API.', {
-              code: 'AUTHENTICATION_ERROR',
-              statusCode: response.status,
-              details: data,
-            });
+            throw mapResponseError(response.status, data, response.headers);
           }
 
           if (shouldRetry(response.status, attempt, config.retry.retries, request.method)) {
@@ -62,15 +57,15 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
             continue;
           }
 
-          throw new LilyApiError('Lily Protocol API request failed.', {
-            code: 'API_ERROR',
-            statusCode: response.status,
-            details: data,
-          });
+          throw mapResponseError(response.status, data, response.headers);
         } catch (error) {
           clearTimeout(timeout);
 
-          if (error instanceof LilyApiError || error instanceof LilyAuthenticationError) {
+          // Anything mapResponseError produced propagates as-is. Checked
+          // against LilySdkError rather than an explicit list of subclasses:
+          // a list silently re-wraps any class missing from it as a transport
+          // error, which is what happened to LilyValidationError here.
+          if (error instanceof LilySdkError) {
             throw error;
           }
 
