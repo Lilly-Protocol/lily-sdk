@@ -126,6 +126,15 @@ function buildHeaders(
     ...requestHeaders,
   };
 
+  // Applied after the spreads above, so configured credentials overwrite an
+  // `authorization` / `x-api-key` coming from defaultHeaders or from the
+  // request. That is the opposite of the usual per-request-wins convention, so
+  // it is documented under "Authentication" in the README and pinned by
+  // tests/auth-headers.test.ts. To send a different credential for one
+  // request, build a client without these fields and set the header yourself.
+  //
+  // Both are sent when both are set; they are independent credentials, not
+  // alternatives, and the API decides which to honour.
   if (config.apiKey) {
     headers['x-api-key'] = config.apiKey;
   }

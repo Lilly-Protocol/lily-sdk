@@ -54,6 +54,50 @@ console.log(health.status);
 console.log(wallet.wallet.address);
 ```
 
+## Authentication
+
+Two independent credentials, each with its own header. See
+[`LilySdkConfig`](src/config/types.ts) and `buildHeaders` in
+[`src/http/fetch-http-client.ts`](src/http/fetch-http-client.ts).
+
+| Config field | Header sent | Value |
+| --- | --- | --- |
+| `authToken` | `authorization` | `Bearer <authToken>` |
+| `apiKey` | `x-api-key` | `<apiKey>` |
+
+### When both are set
+
+**Both headers are sent.** They are not alternatives and neither takes
+precedence over the other — the SDK forwards both and the API decides what to
+honour. Set only the one your integration needs if you want to be sure which
+credential is being used.
+
+```ts
+new LilySdk({ baseUrl, authToken: 'tok', apiKey: 'key' });
+// -> authorization: Bearer tok
+// -> x-api-key: key
+```
+
+A credential that is unset, `undefined`, or an empty string is skipped, and its
+header is not sent at all.
+
+### Precedence against your own headers
+
+This is the part worth reading twice. `authToken` and `apiKey` are applied
+**after** `defaultHeaders` and after any per-request `headers`, so they
+**overwrite** an `authorization` or `x-api-key` you set yourself:
+
+```ts
+const sdk = new LilySdk({ baseUrl, authToken: 'from-config' });
+// a per-request authorization header does NOT win:
+// -> authorization: Bearer from-config
+```
+
+This is the opposite of the usual convention, where a per-request value
+overrides configuration. To send a different credential for one request,
+construct a client without `authToken` / `apiKey` and supply the header
+yourself, rather than trying to override it per request.
+
 ## Public API Overview
 
 ```ts
