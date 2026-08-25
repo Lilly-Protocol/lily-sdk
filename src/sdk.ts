@@ -26,4 +26,34 @@ export class LilySdk {
     this.identity = new IdentityClient(resolvedHttpClient);
     this.system = new SystemClient(resolvedHttpClient);
   }
+
+  /**
+   * Creates a LilySdk instance with sensible defaults from environment variables.
+   * Explicit options always win over env vars.
+   *
+   * Env vars read:
+   * - LILY_API_URL (default: https://api.lilyprotocol.com)
+   * - LILY_API_KEY
+   * - LILY_AUTH_TOKEN
+   */
+  public static create(
+    options?: Partial<LilySdkConfig>,
+    httpClient?: HttpClient,
+  ): LilySdk {
+    const baseUrl =
+      options?.baseUrl ??
+      process.env.LILY_API_URL ??
+      'https://api.lilyprotocol.com';
+    const apiKey = options?.apiKey ?? process.env.LILY_API_KEY;
+    const authToken = options?.authToken ?? process.env.LILY_AUTH_TOKEN;
+
+    const config: LilySdkConfig = {
+      baseUrl,
+      ...(apiKey ? { apiKey } : {}),
+      ...(authToken ? { authToken } : {}),
+      ...options,
+    };
+
+    return new LilySdk(config, httpClient);
+  }
 }
