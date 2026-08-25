@@ -39,56 +39,74 @@ describe('client behavior', () => {
     expect(health.status).toBe('ok');
   });
 
-  it('adds auth headers to transport requests', async () => {
-    const fetchSpy = vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
-      expect(init?.headers).toMatchObject({
-        authorization: 'Bearer secret-token',
+  it.each([
+    {
+      name: 'api key only',
+      credentials: { apiKey: 'secret-key' },
+      authHeaders: { 'x-api-key': 'secret-key' },
+    },
+    {
+      name: 'auth token only',
+      credentials: { authToken: 'secret-token' },
+      authHeaders: { authorization: 'Bearer secret-token' },
+    },
+    {
+      name: 'both credentials',
+      credentials: { apiKey: 'secret-key', authToken: 'secret-token' },
+      authHeaders: {
         'x-api-key': 'secret-key',
+        authorization: 'Bearer secret-token',
+      },
+    },
+    {
+      name: 'no credentials',
+      credentials: {},
+      authHeaders: {},
+    },
+  ])(
+    'forwards the correct auth headers with $name',
+    async ({ credentials, authHeaders }) => {
+      const fetchSpy = vi.fn((input: URL | RequestInfo, init?: RequestInit) => {
+        expect(input).toEqual(
+          new URL('https://api.lily.test/v1/system/health'),
+        );
+        expect(init?.method).toBe('GET');
+
+        return Promise.resolve(
+          new Response(null, {
+            status: 200,
+          }),
+        );
       });
 
-      return Promise.resolve(
-        new Response(
-          JSON.stringify({
-            status: 'ok',
-            version: '0.1.0',
-            timestamp: new Date().toISOString(),
-            checks: {
-              api: 'ok',
-            },
-          }),
-          {
-            status: 200,
-            headers: {
-              'content-type': 'application/json',
-            },
-          },
-        ),
-      );
-    });
+      const httpClient = createFetchHttpClient({
+        baseUrl: new URL('https://api.lily.test/'),
+        timeoutMs: 2_000,
+        retry: {
+          retries: 0,
+          retryDelayMs: 0,
+          retryableStatusCodes: [],
+        },
+        defaultHeaders: {},
+        userAgent: 'lily-sdk/test',
+        fetch: fetchSpy,
+        ...credentials,
+      });
 
-    const httpClient = createFetchHttpClient({
-      baseUrl: new URL('https://api.lily.test/'),
-      apiKey: 'secret-key',
-      authToken: 'secret-token',
-      timeoutMs: 2_000,
-      retry: {
-        retries: 0,
-        retryDelayMs: 0,
-        retryableStatusCodes: [],
-      },
-      defaultHeaders: {},
-      userAgent: 'lily-sdk/test',
-      fetch: fetchSpy,
-    });
+      await httpClient.request({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
 
-    const response = await httpClient.request({
-      method: 'GET',
-      path: '/v1/system/health',
-    });
-
-    expect(response.status).toBe(200);
-    expect(fetchSpy).toHaveBeenCalledOnce();
-  });
+      expect(fetchSpy).toHaveBeenCalledOnce();
+      expect(fetchSpy.mock.calls[0]?.[1]?.headers).toEqual({
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'user-agent': 'lily-sdk/test',
+        ...authHeaders,
+      });
+    },
+  );
 
   it('maps authentication failures to a typed error', async () => {
     const httpClient = createFetchHttpClient({
