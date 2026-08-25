@@ -16,6 +16,20 @@ describe('resolveLilySdkConfig', () => {
     expect(config.userAgent).toBe('lily-sdk/0.1.0');
   });
 
+  it('preserves a path prefix and appends a trailing slash', () => {
+    const withoutSlash = resolveLilySdkConfig({
+      baseUrl: 'https://host/lily/api',
+      fetch: globalThis.fetch,
+    });
+    const withSlash = resolveLilySdkConfig({
+      baseUrl: 'https://host/lily/api/',
+      fetch: globalThis.fetch,
+    });
+
+    expect(withoutSlash.baseUrl.toString()).toBe('https://host/lily/api/');
+    expect(withSlash.baseUrl.toString()).toBe('https://host/lily/api/');
+  });
+
   it('throws when base url is invalid', () => {
     expect(() =>
       resolveLilySdkConfig({

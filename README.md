@@ -72,6 +72,23 @@ sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
 ```
 
+## Configuration
+
+`baseUrl` must be an absolute URL. The SDK always normalizes it with a trailing slash, then resolves request paths against that origin with WHATWG `URL` rules (`new URL(path, baseUrl)` after stripping a leading slash from the request path). Path prefixes are preserved, so a reverse-proxy mount is not dropped:
+
+```ts
+// Host-root API (trailing slash is optional)
+new LilySdk({ baseUrl: 'https://api.lilyprotocol.com' });
+// GET /v1/system/health -> https://api.lilyprotocol.com/v1/system/health
+
+// Path-prefixed API (with or without a trailing slash)
+new LilySdk({ baseUrl: 'https://host/lily/api' });
+new LilySdk({ baseUrl: 'https://host/lily/api/' });
+// GET /v1/system/health -> https://host/lily/api/v1/system/health
+```
+
+Query parameters are appended to that absolute URL. A `baseUrl` of `https://host/lily/api` therefore produces `https://host/lily/api/v1/...`, not `https://host/v1/...`.
+
 ## Repository Structure
 
 ```text
