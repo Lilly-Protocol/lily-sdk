@@ -77,6 +77,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run --coverage",
+    "test:dist": "node test/dist-smoke.mjs",
     "test:watch": "vitest",
     "example": "tsx examples/quickstart.ts",
     "prepublishOnly": "npm run clean && npm run build && npm run test"
