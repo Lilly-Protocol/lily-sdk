@@ -1,4 +1,5 @@
 import type {
+  PaginationQuery,
   ProvisionWalletRequest,
   Wallet,
   WalletProvisioningResult,
@@ -19,6 +20,16 @@ export class WalletClient extends BaseClient implements WalletClientContract {
     return this.request({
       method: 'GET',
       path: `/v1/wallets/${walletId}`,
+    });
+  }
+
+  public list(query: PaginationQuery = {}): Promise<readonly Wallet[]> {
+    return this.request({
+      method: 'GET',
+      path: '/v1/wallets',
+      query: {
+        ...query,
+      },
     });
   }
 }

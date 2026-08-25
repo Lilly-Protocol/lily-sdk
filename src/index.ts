@@ -1,4 +1,5 @@
 export { LilySdk } from './sdk';
+export { SDK_VERSION } from './version';
 export type { LilySdkConfig, ResolvedLilySdkConfig } from './config/types';
 export { resolveLilySdkConfig } from './config/resolve-config';
 export {

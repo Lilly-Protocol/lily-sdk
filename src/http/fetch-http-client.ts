@@ -100,13 +100,21 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
 function buildUrl(
   baseUrl: URL,
   path: string,
-  query?: Record<string, string | number | boolean | undefined>,
+  query?: Record<string, string | number | boolean | undefined | (string | number | boolean)[]>,
 ): URL {
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   const url = new URL(cleanPath, baseUrl);
 
   for (const [key, value] of Object.entries(query ?? {})) {
-    if (value !== undefined) {
+    if (value === undefined) {
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        url.searchParams.append(key, String(item));
+      }
+    } else {
       url.searchParams.set(key, String(value));
     }
   }

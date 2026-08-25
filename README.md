@@ -116,6 +116,10 @@ npm run example
 - Webhook verification, observability hooks, and advanced auth flows
 - More complete Stellar asset and payment orchestration coverage
 
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for version history and notable changes.
+
 ## Contributing
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.

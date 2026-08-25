@@ -7,9 +7,12 @@ import { resolveLilySdkConfig } from './config/resolve-config';
 import type { LilySdkConfig, ResolvedLilySdkConfig } from './config/types';
 import { LilyConfigError } from './errors/sdk-error';
 import { createFetchHttpClient } from './http/fetch-http-client';
-import type { HttpClient } from './http/types';
+import type { HttpClient, HttpRequest, HttpResponse } from './http/types';
+import { SDK_VERSION } from './version';
 
 export class LilySdk {
+  public static readonly version: string = SDK_VERSION;
+
   public readonly config: ResolvedLilySdkConfig;
   public readonly agents: AgentClient;
   public readonly wallets: WalletClient;
@@ -17,15 +20,27 @@ export class LilySdk {
   public readonly identity: IdentityClient;
   public readonly system: SystemClient;
 
+  private readonly _httpClient: HttpClient;
+
   public constructor(config: LilySdkConfig, httpClient?: HttpClient) {
     this.config = resolveLilySdkConfig(config);
-    const resolvedHttpClient = httpClient ?? createFetchHttpClient(this.config);
+    this._httpClient = httpClient ?? createFetchHttpClient(this.config);
 
-    this.agents = new AgentClient(resolvedHttpClient);
-    this.wallets = new WalletClient(resolvedHttpClient);
-    this.payments = new PaymentClient(resolvedHttpClient);
-    this.identity = new IdentityClient(resolvedHttpClient);
-    this.system = new SystemClient(resolvedHttpClient);
+    this.agents = new AgentClient(this._httpClient);
+    this.wallets = new WalletClient(this._httpClient);
+    this.payments = new PaymentClient(this._httpClient);
+    this.identity = new IdentityClient(this._httpClient);
+    this.system = new SystemClient(this._httpClient);
+  }
+
+  /**
+   * Typed passthrough to the underlying HTTP client.
+   * Useful for calling endpoints not covered by the typed clients.
+   */
+  public request<TResponse, TRequest = unknown>(
+    request: HttpRequest<TRequest>,
+  ): Promise<HttpResponse<TResponse>> {
+    return this._httpClient.request<TResponse, TRequest>(request);
   }
 
   /**
