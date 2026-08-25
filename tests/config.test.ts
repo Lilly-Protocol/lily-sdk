@@ -34,4 +34,39 @@ describe('resolveLilySdkConfig', () => {
       }),
     ).toThrow('`timeoutMs` must be a positive number.');
   });
+
+  it('accepts valid retryable status codes', () => {
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.lily.test',
+      retry: { retryableStatusCodes: [408, 429, 500, 599] },
+      fetch: globalThis.fetch,
+    });
+
+    expect(config.retry.retryableStatusCodes).toEqual([408, 429, 500, 599]);
+  });
+
+  it('accepts an empty retryable status code array', () => {
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.lily.test',
+      retry: { retryableStatusCodes: [] },
+      fetch: globalThis.fetch,
+    });
+
+    expect(config.retry.retryableStatusCodes).toEqual([]);
+  });
+
+  it.each(['429', [429, 'oops'], [429, 5.5], [99], [600]])(
+    'throws when retryable status codes are invalid: %j',
+    (retryableStatusCodes) => {
+      expect(() =>
+        resolveLilySdkConfig({
+          baseUrl: 'https://api.lily.test',
+          retry: {
+            retryableStatusCodes: retryableStatusCodes as unknown as number[],
+          },
+          fetch: globalThis.fetch,
+        }),
+      ).toThrow(LilyConfigError);
+    },
+  );
 });
