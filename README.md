@@ -54,6 +54,39 @@ console.log(health.status);
 console.log(wallet.wallet.address);
 ```
 
+### Tenant-scoped instances
+
+Use `withConfig` to derive an independent SDK for each tenant while preserving the parent
+instance's transport settings. Tenant credentials and API endpoints remain isolated, and the
+original instance is not modified.
+
+```ts
+const serviceSdk = new LilySdk({
+  baseUrl: 'https://api.lilyprotocol.com',
+  timeoutMs: 15_000,
+});
+
+function sdkForTenant(tenant: {
+  apiUrl: string;
+  apiKey: string;
+  authToken: string;
+}) {
+  return serviceSdk.withConfig({
+    baseUrl: tenant.apiUrl,
+    apiKey: tenant.apiKey,
+    authToken: tenant.authToken,
+  });
+}
+
+const tenantSdk = sdkForTenant({
+  apiUrl: 'https://tenant-a.api.lilyprotocol.com',
+  apiKey: process.env.TENANT_A_LILY_API_KEY!,
+  authToken: process.env.TENANT_A_LILY_AUTH_TOKEN!,
+});
+
+await tenantSdk.wallets.list();
+```
+
 ## Public API Overview
 
 ```ts
