@@ -1,0 +1,33 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:base"],
+  "schedule": ["before 6am on monday"],
+  "timezone": "America/New_York",
+  "packageRules": [
+    {
+      "groupName": "eslint",
+      "matchPackagePatterns": ["eslint", "@eslint/js", "typescript-eslint", "eslint-config-prettier"]
+    },
+    {
+      "groupName": "vitest",
+      "matchPackagePatterns": ["vitest", "@vitest/coverage-v8"]
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": false
+    }
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2
+}

@@ -25,7 +25,12 @@
   "type": "module",
   "sideEffects": false,
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "packageManager": "npm@10.8.2",
+  "publishConfig": {
+    "access": "public"
   },
   "files": [
     "dist",
@@ -77,6 +82,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run --coverage",
+    "test:unit": "vitest run",
     "test:watch": "vitest",
     "example": "tsx examples/quickstart.ts",
     "prepublishOnly": "npm run clean && npm run build && npm run test"

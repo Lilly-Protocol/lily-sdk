@@ -1,7 +1,7 @@
 import type { RetryPolicy } from '../http/types';
 
 export interface LilySdkConfig {
-  baseUrl: string;
+  baseUrl: string | URL;
   apiKey?: string;
   authToken?: string;
   timeoutMs?: number;
@@ -20,4 +20,5 @@ export interface ResolvedLilySdkConfig {
   readonly defaultHeaders: Readonly<Record<string, string>>;
   readonly userAgent: string;
   readonly fetch: typeof globalThis.fetch;
+  readonly toHeaders: () => Record<string, string>;
 }

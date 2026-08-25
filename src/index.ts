@@ -8,6 +8,8 @@ export {
   LilyAuthenticationError,
   LilyTransportError,
   LilyValidationError,
+  LILY_ERROR_CODES,
+  isLilySdkError,
 } from './errors/sdk-error';
 export { AgentClient } from './clients/agent-client';
 export { IdentityClient } from './clients/identity-client';
