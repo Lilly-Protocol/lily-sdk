@@ -10,6 +10,7 @@ import type { HttpClient } from './http/types';
 
 export class LilySdk {
   public readonly config: ResolvedLilySdkConfig;
+  public readonly http: HttpClient;
   public readonly agents: AgentClient;
   public readonly wallets: WalletClient;
   public readonly payments: PaymentClient;
@@ -18,12 +19,12 @@ export class LilySdk {
 
   public constructor(config: LilySdkConfig, httpClient?: HttpClient) {
     this.config = resolveLilySdkConfig(config);
-    const resolvedHttpClient = httpClient ?? createFetchHttpClient(this.config);
+    this.http = httpClient ?? createFetchHttpClient(this.config);
 
-    this.agents = new AgentClient(resolvedHttpClient);
-    this.wallets = new WalletClient(resolvedHttpClient);
-    this.payments = new PaymentClient(resolvedHttpClient);
-    this.identity = new IdentityClient(resolvedHttpClient);
-    this.system = new SystemClient(resolvedHttpClient);
+    this.agents = new AgentClient(this.http);
+    this.wallets = new WalletClient(this.http);
+    this.payments = new PaymentClient(this.http);
+    this.identity = new IdentityClient(this.http);
+    this.system = new SystemClient(this.http);
   }
 }
