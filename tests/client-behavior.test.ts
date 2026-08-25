@@ -121,3 +121,68 @@ describe('client behavior', () => {
     ).rejects.toBeInstanceOf(LilyAuthenticationError);
   });
 });
+
+it('accepts Headers instance for request headers', async () => {
+  const fetchSpy = vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
+    expect(init?.headers).toMatchObject({
+      'x-custom': 'value',
+    });
+    return Promise.resolve(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+  });
+
+  const httpClient = createFetchHttpClient({
+    baseUrl: new URL('https://api.lily.test/'),
+    timeoutMs: 2_000,
+    retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
+    defaultHeaders: {},
+    userAgent: 'lily-sdk/test',
+    fetch: fetchSpy,
+  });
+
+  const headers = new Headers();
+  headers.set('x-custom', 'value');
+
+  await httpClient.request({
+    method: 'GET',
+    path: '/v1/test',
+    headers,
+  });
+
+  expect(fetchSpy).toHaveBeenCalledOnce();
+});
+
+it('accepts entries array for request headers', async () => {
+  const fetchSpy = vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
+    expect(init?.headers).toMatchObject({
+      'x-entry': 'arr',
+    });
+    return Promise.resolve(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+  });
+
+  const httpClient = createFetchHttpClient({
+    baseUrl: new URL('https://api.lily.test/'),
+    timeoutMs: 2_000,
+    retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
+    defaultHeaders: {},
+    userAgent: 'lily-sdk/test',
+    fetch: fetchSpy,
+  });
+
+  await httpClient.request({
+    method: 'GET',
+    path: '/v1/test',
+    headers: [['x-entry', 'arr']],
+  });
+
+  expect(fetchSpy).toHaveBeenCalledOnce();
+});

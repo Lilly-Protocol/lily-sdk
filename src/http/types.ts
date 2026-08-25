@@ -1,6 +1,6 @@
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-export type HttpHeaders = Record<string, string>;
+export type HttpHeaders = HeadersInit;
 
 export interface RetryPolicy {
   retries: number;
@@ -24,5 +24,7 @@ export interface HttpResponse<TData = unknown> {
 }
 
 export interface HttpClient {
-  request<TResponse, TRequest = unknown>(request: HttpRequest<TRequest>): Promise<HttpResponse<TResponse>>;
+  request<TResponse, TRequest = unknown>(
+    request: HttpRequest<TRequest>,
+  ): Promise<HttpResponse<TResponse>>;
 }
