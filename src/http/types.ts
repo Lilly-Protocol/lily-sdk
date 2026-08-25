@@ -14,6 +14,7 @@ export interface HttpRequest<TBody = unknown> {
   headers?: HttpHeaders;
   query?: Record<string, string | number | boolean | undefined>;
   body?: TBody;
+  /** Request timeout in milliseconds. Set to `0` to disable the timeout for this request. */
   timeoutMs?: number;
 }
 

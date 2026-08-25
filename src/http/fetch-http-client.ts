@@ -18,15 +18,17 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
       let attempt = 0;
 
       for (;;) {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => {
-          controller.abort();
-        }, timeoutMs);
+        const controller = timeoutMs === 0 ? undefined : new AbortController();
+        const timeout = controller
+          ? setTimeout(() => {
+              controller.abort();
+            }, timeoutMs)
+          : undefined;
         const body = serializeBody(request.body);
         const requestInit: RequestInit = {
           method: request.method,
           headers,
-          signal: controller.signal,
+          ...(controller ? { signal: controller.signal } : {}),
         };
 
         if (body !== undefined) {
@@ -39,7 +41,7 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
           const data = (await parseResponse(response)) as TResponse;
 
           if (response.ok) {
-            clearTimeout(timeout);
+            if (timeout) clearTimeout(timeout);
             return {
               status: response.status,
               headers: response.headers,
@@ -56,7 +58,7 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
           }
 
           if (shouldRetry(response.status, attempt, config.retry.retries, request.method)) {
-            clearTimeout(timeout);
+            if (timeout) clearTimeout(timeout);
             attempt += 1;
             await sleep(config.retry.retryDelayMs * attempt);
             continue;
@@ -68,7 +70,7 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
             details: data,
           });
         } catch (error) {
-          clearTimeout(timeout);
+          if (timeout) clearTimeout(timeout);
 
           if (error instanceof LilyApiError || error instanceof LilyAuthenticationError) {
             throw error;
