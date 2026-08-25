@@ -90,6 +90,50 @@ describe('client behavior', () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
   });
 
+  it('merges default and per-request headers', async () => {
+    const fetchSpy = vi.fn<typeof globalThis.fetch>(() =>
+      Promise.resolve(
+        new Response(null, {
+          status: 204,
+        }),
+      ),
+    );
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {
+        'x-tenant': 'acme',
+        'x-precedence': 'default',
+      },
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
+    });
+
+    await httpClient.request({
+      method: 'GET',
+      path: '/v1/system/health',
+      headers: {
+        'x-request-id': 'request-123',
+        'x-precedence': 'request',
+      },
+    });
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(fetchSpy.mock.calls[0]?.[1]?.headers).toEqual({
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'user-agent': 'lily-sdk/test',
+      'x-tenant': 'acme',
+      'x-precedence': 'request',
+      'x-request-id': 'request-123',
+    });
+  });
+
   it('maps authentication failures to a typed error', async () => {
     const httpClient = createFetchHttpClient({
       baseUrl: new URL('https://api.lily.test/'),
