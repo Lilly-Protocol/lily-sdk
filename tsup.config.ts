@@ -22,3 +22,25 @@ export default defineConfig({
   target: 'node20',
   outDir: 'dist',
 });
+
+// Browser-target build configuration
+export const browserConfig = defineConfig({
+  entry: [
+    'src/index.ts',
+  ],
+  format: ['esm'],
+  dts: false,
+  sourcemap: true,
+  clean: false,
+  splitting: false,
+  treeshake: true,
+  target: 'es2022',
+  outDir: 'dist/browser',
+  platform: 'browser',
+  env: {
+    NODE_ENV: 'production',
+  },
+  define: {
+    'process.env.NODE_ENV': '"production"',
+  },
+});

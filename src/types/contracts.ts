@@ -24,6 +24,7 @@ export interface AgentClientContract {
   get(agentId: string): Promise<Agent>;
   create(input: CreateAgentRequest): Promise<Agent>;
   update(agentId: string, input: UpdateAgentRequest): Promise<Agent>;
+  delete(agentId: string): Promise<void>;
 }
 
 export interface WalletClientContract {

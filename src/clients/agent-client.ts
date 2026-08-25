@@ -40,4 +40,11 @@ export class AgentClient extends BaseClient implements AgentClientContract {
       body: input,
     });
   }
+
+  public delete(agentId: string): Promise<void> {
+    return this.request({
+      method: 'DELETE',
+      path: `/v1/agents/${agentId}`,
+    });
+  }
 }

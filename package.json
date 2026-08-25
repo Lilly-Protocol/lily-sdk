@@ -43,6 +43,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "browser": "./dist/browser/index.js",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
@@ -85,6 +86,10 @@
     "test:unit": "vitest run",
     "test:watch": "vitest",
     "example": "tsx examples/quickstart.ts",
+    "build:browser": "tsup --config tsup.config.ts --config-name browserConfig",
+    "build:minified": "tsup --minify",
+    "smoke:dist": "node -e \"require('./dist/index.cjs')\" && node --input-type=module -e \"import('./dist/index.js')\"",
+    "api-report": "tsc --project tsconfig.json --declaration --emitDeclarationOnly --outDir dist/api-report",
     "prepublishOnly": "npm run clean && npm run build && npm run test"
   },
   "devDependencies": {
