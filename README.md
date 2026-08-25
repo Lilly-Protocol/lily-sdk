@@ -21,6 +21,10 @@ This repository is production-oriented foundation work. The public API, tooling,
 - Vitest test suite, ESLint, Prettier, and GitHub Actions CI
 - Contributor-ready project docs, issue templates, and example script
 
+## Security
+
+Please see [SECURITY.md](./SECURITY.md) for vulnerability reporting and disclosure policy.
+
 ## Installation
 
 ```bash
