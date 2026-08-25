@@ -21,6 +21,12 @@ This repository is production-oriented foundation work. The public API, tooling,
 - Vitest test suite, ESLint, Prettier, and GitHub Actions CI
 - Contributor-ready project docs, issue templates, and example script
 
+## Examples
+
+- [Quick Start](./examples/quickstart.ts) — basic SDK usage with mock fetch
+- [Error Handling](./examples/error-handling.ts) — retry configuration and typed error handling
+- [Logging HttpClient](./examples/with-logging-http-client.ts) — decorating the transport with request/response logging
+
 ## Installation
 
 ```bash
