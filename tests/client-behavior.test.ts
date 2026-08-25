@@ -6,6 +6,72 @@ import { LilySdk } from '../src/sdk';
 import { createMockHttpClient } from './helpers/mock-http-client';
 
 describe('client behavior', () => {
+  it.each(['1', '1.0', '01.5', '0.000001'])(
+    'passes MoneyAmount string %s through payment requests unchanged',
+    async (amount) => {
+      const requestSpy = vi.fn(() =>
+        Promise.resolve({
+          status: 200,
+          headers: new Headers(),
+          data: {},
+        }),
+      );
+
+      const sdk = new LilySdk(
+        {
+          baseUrl: 'https://api.lily.test',
+          fetch: globalThis.fetch,
+        },
+        createMockHttpClient(requestSpy),
+      );
+      const moneyAmount = {
+        assetCode: 'USDC',
+        assetIssuer: 'GISSUER',
+        amount,
+      };
+
+      await sdk.payments.quote({
+        fromWalletId: 'wallet-1',
+        toAddress: 'GDESTINATION',
+        amount: moneyAmount,
+      });
+      await sdk.payments.execute({
+        fromWalletId: 'wallet-1',
+        toAddress: 'GDESTINATION',
+        amount: moneyAmount,
+        memo: 'test payment',
+      });
+
+      expect(requestSpy).toHaveBeenNthCalledWith(1, {
+        method: 'POST',
+        path: '/v1/payments/quote',
+        body: {
+          fromWalletId: 'wallet-1',
+          toAddress: 'GDESTINATION',
+          amount: {
+            assetCode: 'USDC',
+            assetIssuer: 'GISSUER',
+            amount,
+          },
+        },
+      });
+      expect(requestSpy).toHaveBeenNthCalledWith(2, {
+        method: 'POST',
+        path: '/v1/payments',
+        body: {
+          fromWalletId: 'wallet-1',
+          toAddress: 'GDESTINATION',
+          amount: {
+            assetCode: 'USDC',
+            assetIssuer: 'GISSUER',
+            amount,
+          },
+          memo: 'test payment',
+        },
+      });
+    },
+  );
+
   it('calls system health endpoint through the system client', async () => {
     const requestSpy = vi.fn(() =>
       Promise.resolve({
