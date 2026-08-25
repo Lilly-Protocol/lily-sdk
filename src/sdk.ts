@@ -33,6 +33,10 @@ export class LilySdk {
     this.system = new SystemClient(this._httpClient);
   }
 
+  public get httpClient(): HttpClient {
+    return this._httpClient;
+  }
+
   /**
    * Typed passthrough to the underlying HTTP client.
    * Useful for calling endpoints not covered by the typed clients.
