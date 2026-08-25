@@ -30,10 +30,10 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
     throw new LilyConfigError('`timeoutMs` must be a positive number.');
   }
 
-  return {
+  const resolved: ResolvedLilySdkConfig = {
     baseUrl,
     timeoutMs,
-    retry,
+    retry: Object.freeze({ ...retry }),
     defaultHeaders: Object.freeze({
       ...config.defaultHeaders,
     }),
@@ -42,6 +42,8 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
     ...(config.apiKey ? { apiKey: config.apiKey } : {}),
     ...(config.authToken ? { authToken: config.authToken } : {}),
   };
+
+  return Object.freeze(resolved);
 }
 
 function safeUrl(rawUrl: string): URL {
