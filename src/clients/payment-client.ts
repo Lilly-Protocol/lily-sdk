@@ -27,7 +27,7 @@ export class PaymentClient extends BaseClient implements PaymentClientContract {
   public get(paymentId: string): Promise<Payment> {
     return this.request({
       method: 'GET',
-      path: `/v1/payments/${paymentId}`,
+      path: this.buildPath('v1', 'payments', paymentId),
     });
   }
 }

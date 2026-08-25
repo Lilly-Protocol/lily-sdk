@@ -21,7 +21,7 @@ export class AgentClient extends BaseClient implements AgentClientContract {
   public get(agentId: string): Promise<Agent> {
     return this.request({
       method: 'GET',
-      path: `/v1/agents/${agentId}`,
+      path: this.buildPath('v1', 'agents', agentId),
     });
   }
 
@@ -36,7 +36,7 @@ export class AgentClient extends BaseClient implements AgentClientContract {
   public update(agentId: string, input: UpdateAgentRequest): Promise<Agent> {
     return this.request({
       method: 'PATCH',
-      path: `/v1/agents/${agentId}`,
+      path: this.buildPath('v1', 'agents', agentId),
       body: input,
     });
   }

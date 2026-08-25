@@ -6,6 +6,75 @@ import { LilySdk } from '../src/sdk';
 import { createMockHttpClient } from './helpers/mock-http-client';
 
 describe('client behavior', () => {
+  it.each([
+    [
+      'agent',
+      (sdk: LilySdk) => sdk.agents.get('agent/with?special #id'),
+      '/v1/agents/agent%2Fwith%3Fspecial%20%23id',
+    ],
+    [
+      'wallet',
+      (sdk: LilySdk) => sdk.wallets.get('wallet/with?special #id'),
+      '/v1/wallets/wallet%2Fwith%3Fspecial%20%23id',
+    ],
+    [
+      'payment',
+      (sdk: LilySdk) => sdk.payments.get('payment/with?special #id'),
+      '/v1/payments/payment%2Fwith%3Fspecial%20%23id',
+    ],
+  ])(
+    'URL-encodes special characters in %s ids',
+    async (_client, getResource, expectedPath) => {
+      const requestSpy = vi.fn(() =>
+        Promise.resolve({
+          status: 200,
+          headers: new Headers(),
+          data: {},
+        }),
+      );
+      const sdk = new LilySdk(
+        {
+          baseUrl: 'https://api.lily.test',
+          fetch: globalThis.fetch,
+        },
+        createMockHttpClient(requestSpy),
+      );
+
+      await getResource(sdk);
+
+      expect(requestSpy).toHaveBeenCalledWith({
+        method: 'GET',
+        path: expectedPath,
+      });
+    },
+  );
+
+  it('URL-encodes special characters when updating an agent', async () => {
+    const requestSpy = vi.fn(() =>
+      Promise.resolve({
+        status: 200,
+        headers: new Headers(),
+        data: {},
+      }),
+    );
+    const sdk = new LilySdk(
+      {
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+      },
+      createMockHttpClient(requestSpy),
+    );
+    const input = { name: 'Updated agent' };
+
+    await sdk.agents.update('agent/with?special #id', input);
+
+    expect(requestSpy).toHaveBeenCalledWith({
+      method: 'PATCH',
+      path: '/v1/agents/agent%2Fwith%3Fspecial%20%23id',
+      body: input,
+    });
+  });
+
   it('calls system health endpoint through the system client', async () => {
     const requestSpy = vi.fn(() =>
       Promise.resolve({

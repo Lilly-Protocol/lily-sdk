@@ -18,7 +18,7 @@ export class WalletClient extends BaseClient implements WalletClientContract {
   public get(walletId: string): Promise<Wallet> {
     return this.request({
       method: 'GET',
-      path: `/v1/wallets/${walletId}`,
+      path: this.buildPath('v1', 'wallets', walletId),
     });
   }
 }
