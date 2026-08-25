@@ -4,9 +4,16 @@ import {
   LilyAuthenticationError,
   LilyTransportError,
 } from '../errors/sdk-error';
-import type { HttpClient, HttpHeaders, HttpRequest, HttpResponse } from './types';
+import type {
+  HttpClient,
+  HttpHeaders,
+  HttpRequest,
+  HttpResponse,
+} from './types';
 
-export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient {
+export function createFetchHttpClient(
+  config: ResolvedLilySdkConfig,
+): HttpClient {
   return {
     async request<TResponse, TRequest = unknown>(
       request: HttpRequest<TRequest>,
@@ -19,8 +26,27 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
 
       for (;;) {
         const controller = new AbortController();
+        let abortSource: 'external' | 'timeout' | undefined;
+        const abortFromExternalSignal = (): void => {
+          if (abortSource === undefined) {
+            abortSource = 'external';
+            controller.abort();
+          }
+        };
+
+        if (request.signal?.aborted) {
+          abortFromExternalSignal();
+        } else {
+          request.signal?.addEventListener('abort', abortFromExternalSignal, {
+            once: true,
+          });
+        }
+
         const timeout = setTimeout(() => {
-          controller.abort();
+          if (abortSource === undefined) {
+            abortSource = 'timeout';
+            controller.abort();
+          }
         }, timeoutMs);
         const body = serializeBody(request.body);
         const requestInit: RequestInit = {
@@ -48,14 +74,24 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
           }
 
           if (response.status === 401 || response.status === 403) {
-            throw new LilyAuthenticationError('Authentication failed for Lily Protocol API.', {
-              code: 'AUTHENTICATION_ERROR',
-              statusCode: response.status,
-              details: data,
-            });
+            throw new LilyAuthenticationError(
+              'Authentication failed for Lily Protocol API.',
+              {
+                code: 'AUTHENTICATION_ERROR',
+                statusCode: response.status,
+                details: data,
+              },
+            );
           }
 
-          if (shouldRetry(response.status, attempt, config.retry.retries, request.method)) {
+          if (
+            shouldRetry(
+              response.status,
+              attempt,
+              config.retry.retries,
+              request.method,
+            )
+          ) {
             clearTimeout(timeout);
             attempt += 1;
             await sleep(config.retry.retryDelayMs * attempt);
@@ -70,27 +106,52 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
         } catch (error) {
           clearTimeout(timeout);
 
-          if (error instanceof LilyApiError || error instanceof LilyAuthenticationError) {
+          if (
+            error instanceof LilyApiError ||
+            error instanceof LilyAuthenticationError
+          ) {
             throw error;
           }
 
           if (error instanceof Error && error.name === 'AbortError') {
-            throw new LilyTransportError('Request timed out while calling Lily Protocol API.', {
-              code: 'TIMEOUT',
-              cause: error,
-            });
+            if (abortSource === 'external') {
+              throw new LilyTransportError(
+                'Request was cancelled while calling Lily Protocol API.',
+                {
+                  code: 'CANCELLED',
+                  cause: error,
+                },
+              );
+            }
+
+            throw new LilyTransportError(
+              'Request timed out while calling Lily Protocol API.',
+              {
+                code: 'TIMEOUT',
+                cause: error,
+              },
+            );
           }
 
-          if (attempt < config.retry.retries && isRetryableTransportError(error, request.method)) {
+          if (
+            attempt < config.retry.retries &&
+            isRetryableTransportError(error, request.method)
+          ) {
             attempt += 1;
             await sleep(config.retry.retryDelayMs * attempt);
             continue;
           }
 
-          throw new LilyTransportError('Network error while calling Lily Protocol API.', {
-            code: 'TRANSPORT_ERROR',
-            cause: error,
-          });
+          throw new LilyTransportError(
+            'Network error while calling Lily Protocol API.',
+            {
+              code: 'TRANSPORT_ERROR',
+              cause: error,
+            },
+          );
+        } finally {
+          clearTimeout(timeout);
+          request.signal?.removeEventListener('abort', abortFromExternalSignal);
         }
       }
     },
@@ -165,13 +226,19 @@ function shouldRetry(
   maxRetries: number,
   method: string,
 ): boolean {
-  const isSafeOrIdempotent = method === 'GET' || method === 'PUT' || method === 'DELETE';
+  const isSafeOrIdempotent =
+    method === 'GET' || method === 'PUT' || method === 'DELETE';
 
-  return isSafeOrIdempotent && attempt < maxRetries && [408, 409, 425, 429, 500, 502, 503, 504].includes(statusCode);
+  return (
+    isSafeOrIdempotent &&
+    attempt < maxRetries &&
+    [408, 409, 425, 429, 500, 502, 503, 504].includes(statusCode)
+  );
 }
 
 function isRetryableTransportError(error: unknown, method: string): boolean {
-  const isSafeOrIdempotent = method === 'GET' || method === 'PUT' || method === 'DELETE';
+  const isSafeOrIdempotent =
+    method === 'GET' || method === 'PUT' || method === 'DELETE';
 
   return isSafeOrIdempotent && error instanceof Error;
 }
