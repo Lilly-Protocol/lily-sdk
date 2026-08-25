@@ -90,6 +90,62 @@ describe('client behavior', () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
   });
 
+  it('sends the payment idempotency key as a transport request header', async () => {
+    const requestSpy = vi.fn(() =>
+      Promise.resolve({
+        status: 200,
+        headers: new Headers(),
+        data: { id: 'payment-1' },
+      }),
+    );
+    const sdk = new LilySdk(
+      { baseUrl: 'https://api.lily.test' },
+      createMockHttpClient(requestSpy),
+    );
+    const input = {
+      fromWalletId: 'wallet-1',
+      toAddress: 'destination',
+      amount: { amount: '10', assetCode: 'USDC' },
+      idempotencyKey: 'payment-key-1',
+    };
+
+    await sdk.payments.execute(input);
+
+    expect(requestSpy).toHaveBeenCalledWith({
+      method: 'POST',
+      path: '/v1/payments',
+      headers: { 'Idempotency-Key': 'payment-key-1' },
+      body: input,
+    });
+  });
+
+  it('does not send an idempotency header when the payment has no key', async () => {
+    const requestSpy = vi.fn(() =>
+      Promise.resolve({
+        status: 200,
+        headers: new Headers(),
+        data: { id: 'payment-1' },
+      }),
+    );
+    const sdk = new LilySdk(
+      { baseUrl: 'https://api.lily.test' },
+      createMockHttpClient(requestSpy),
+    );
+    const input = {
+      fromWalletId: 'wallet-1',
+      toAddress: 'destination',
+      amount: { amount: '10', assetCode: 'USDC' },
+    };
+
+    await sdk.payments.execute(input);
+
+    expect(requestSpy).toHaveBeenCalledWith({
+      method: 'POST',
+      path: '/v1/payments',
+      body: input,
+    });
+  });
+
   it('maps authentication failures to a typed error', async () => {
     const httpClient = createFetchHttpClient({
       baseUrl: new URL('https://api.lily.test/'),
