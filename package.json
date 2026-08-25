@@ -45,7 +45,8 @@
       "types": "./dist/index.d.ts",
       "browser": "./dist/browser/index.js",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.cjs"
     },
     "./config": {
       "types": "./dist/config.d.ts",
