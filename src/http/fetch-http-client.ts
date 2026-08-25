@@ -12,6 +12,11 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
       request: HttpRequest<TRequest>,
     ): Promise<HttpResponse<TResponse>> {
       const url = buildUrl(config.baseUrl, request.path, request.query);
+      const requestMetadata = {
+        method: request.method,
+        path: request.path,
+        url: url.toString(),
+      };
       const headers = buildHeaders(config, request.headers);
       const timeoutMs = request.timeoutMs ?? config.timeoutMs;
 
@@ -52,6 +57,7 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
               code: 'AUTHENTICATION_ERROR',
               statusCode: response.status,
               details: data,
+              request: requestMetadata,
             });
           }
 
@@ -66,6 +72,7 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
             code: 'API_ERROR',
             statusCode: response.status,
             details: data,
+            request: requestMetadata,
           });
         } catch (error) {
           clearTimeout(timeout);
@@ -78,6 +85,7 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
             throw new LilyTransportError('Request timed out while calling Lily Protocol API.', {
               code: 'TIMEOUT',
               cause: error,
+              request: requestMetadata,
             });
           }
 
@@ -90,6 +98,7 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
           throw new LilyTransportError('Network error while calling Lily Protocol API.', {
             code: 'TRANSPORT_ERROR',
             cause: error,
+            request: requestMetadata,
           });
         }
       }
