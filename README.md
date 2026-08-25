@@ -93,6 +93,8 @@ examples/        runnable local examples
 npm install
 npm run lint
 npm run typecheck
+npm run test:unit
+npm run test:coverage
 npm run test
 npm run build
 ```
