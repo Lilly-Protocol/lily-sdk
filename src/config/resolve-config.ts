@@ -45,11 +45,21 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
 }
 
 function safeUrl(rawUrl: string): URL {
+  let url: URL;
+
   try {
-    return new URL(rawUrl.endsWith('/') ? rawUrl : `${rawUrl}/`);
+    url = new URL(rawUrl.endsWith('/') ? rawUrl : `${rawUrl}/`);
   } catch {
     throw new LilyConfigError('`baseUrl` must be a valid absolute URL.');
   }
+
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new LilyConfigError(
+      `\`baseUrl\` must use the \`http:\` or \`https:\` scheme; received \`${url.protocol}\`.`,
+    );
+  }
+
+  return url;
 }
 
 function resolveRetryPolicy(policy?: Partial<RetryPolicy>): RetryPolicy {

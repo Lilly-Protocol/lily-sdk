@@ -16,6 +16,29 @@ describe('resolveLilySdkConfig', () => {
     expect(config.userAgent).toBe('lily-sdk/0.1.0');
   });
 
+  it.each(['http://api.lily.test', 'https://api.lily.test'])(
+    'accepts an HTTP base url: %s',
+    (baseUrl) => {
+      const config = resolveLilySdkConfig({
+        baseUrl,
+        fetch: globalThis.fetch,
+      });
+
+      expect(config.baseUrl.toString()).toBe(`${baseUrl}/`);
+    },
+  );
+
+  it.each(['ftp:', 'file:', 'ws:'])('rejects the %s scheme', (scheme) => {
+    const resolve = () =>
+      resolveLilySdkConfig({
+        baseUrl: `${scheme}//example.test`,
+        fetch: globalThis.fetch,
+      });
+
+    expect(resolve).toThrow(LilyConfigError);
+    expect(resolve).toThrow(scheme);
+  });
+
   it('throws when base url is invalid', () => {
     expect(() =>
       resolveLilySdkConfig({
