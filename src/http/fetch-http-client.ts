@@ -12,7 +12,8 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
       request: HttpRequest<TRequest>,
     ): Promise<HttpResponse<TResponse>> {
       const url = buildUrl(config.baseUrl, request.path, request.query);
-      const headers = buildHeaders(config, request.headers);
+      const body = serializeBody(request.body);
+      const headers = buildHeaders(config, body, request.headers);
       const timeoutMs = request.timeoutMs ?? config.timeoutMs;
 
       let attempt = 0;
@@ -22,7 +23,6 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
         const timeout = setTimeout(() => {
           controller.abort();
         }, timeoutMs);
-        const body = serializeBody(request.body);
         const requestInit: RequestInit = {
           method: request.method,
           headers,
@@ -116,12 +116,13 @@ function buildUrl(
 
 function buildHeaders(
   config: ResolvedLilySdkConfig,
+  body: BodyInit | undefined,
   requestHeaders?: HttpHeaders,
 ): HttpHeaders {
   const headers: HttpHeaders = {
     accept: 'application/json',
-    'content-type': 'application/json',
     'user-agent': config.userAgent,
+    ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
     ...config.defaultHeaders,
     ...requestHeaders,
   };
