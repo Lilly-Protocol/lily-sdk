@@ -19,6 +19,8 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const retry = resolveRetryPolicy(config.retry);
   const fetchImpl = config.fetch ?? globalThis.fetch;
+  const apiKey = resolveCredential(config.apiKey, 'apiKey');
+  const authToken = resolveCredential(config.authToken, 'authToken');
 
   if (typeof fetchImpl !== 'function') {
     throw new LilyConfigError(
@@ -39,9 +41,21 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
     }),
     userAgent: config.userAgent ?? DEFAULT_USER_AGENT,
     fetch: fetchImpl,
-    ...(config.apiKey ? { apiKey: config.apiKey } : {}),
-    ...(config.authToken ? { authToken: config.authToken } : {}),
+    ...(apiKey !== undefined ? { apiKey } : {}),
+    ...(authToken !== undefined ? { authToken } : {}),
   };
+}
+
+function resolveCredential(value: unknown, field: 'apiKey' | 'authToken'): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new LilyConfigError(`\`${field}\` must be a non-empty string.`);
+  }
+
+  return value;
 }
 
 function safeUrl(rawUrl: string): URL {

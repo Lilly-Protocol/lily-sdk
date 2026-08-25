@@ -34,4 +34,56 @@ describe('resolveLilySdkConfig', () => {
       }),
     ).toThrow('`timeoutMs` must be a positive number.');
   });
+
+  it.each([
+    ['apiKey', { apiKey: '' }, '`apiKey` must be a non-empty string.'],
+    ['authToken', { authToken: '' }, '`authToken` must be a non-empty string.'],
+  ])('throws when %s is empty', (_field, credential, message) => {
+    expect(() =>
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+        ...credential,
+      }),
+    ).toThrowError(LilyConfigError);
+
+    expect(() =>
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+        ...credential,
+      }),
+    ).toThrow(message);
+  });
+
+  it.each([
+    ['apiKey', 123],
+    ['authToken', null],
+  ])('throws when %s is not a string', (field, value) => {
+    expect(() =>
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+        [field]: value,
+      } as Parameters<typeof resolveLilySdkConfig>[0]),
+    ).toThrow(`\`${field}\` must be a non-empty string.`);
+  });
+
+  it('preserves legitimate credentials and permits absent credentials', () => {
+    const authenticated = resolveLilySdkConfig({
+      baseUrl: 'https://api.lily.test',
+      apiKey: 'key',
+      authToken: 'token',
+      fetch: globalThis.fetch,
+    });
+    const unauthenticated = resolveLilySdkConfig({
+      baseUrl: 'https://api.lily.test',
+      fetch: globalThis.fetch,
+    });
+
+    expect(authenticated.apiKey).toBe('key');
+    expect(authenticated.authToken).toBe('token');
+    expect(unauthenticated).not.toHaveProperty('apiKey');
+    expect(unauthenticated).not.toHaveProperty('authToken');
+  });
 });
