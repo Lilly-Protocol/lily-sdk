@@ -1,4 +1,9 @@
 import { defineConfig } from 'tsup';
+import { readFileSync } from 'node:fs';
+
+const packageJson = JSON.parse(
+  readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
+) as { version: string };
 
 export default defineConfig({
   entry: [
@@ -21,4 +26,7 @@ export default defineConfig({
   treeshake: true,
   target: 'node20',
   outDir: 'dist',
+  define: {
+    __LILY_SDK_VERSION__: JSON.stringify(packageJson.version),
+  },
 });
