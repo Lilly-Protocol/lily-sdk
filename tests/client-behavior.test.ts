@@ -1,11 +1,79 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { LilyAuthenticationError } from '../src/errors/sdk-error';
+import {
+  LilyAuthenticationError,
+  LilyValidationError,
+} from '../src/errors/sdk-error';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import { LilySdk } from '../src/sdk';
 import { createMockHttpClient } from './helpers/mock-http-client';
 
 describe('client behavior', () => {
+  it('rejects identity resolution without a usable resolver key before dispatch', () => {
+    const requestSpy = vi.fn();
+    const sdk = new LilySdk(
+      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
+      createMockHttpClient(requestSpy),
+    );
+
+    expect(() => sdk.identity.resolve({ agentId: '  ' })).toThrowError(
+      expect.objectContaining({
+        name: 'LilyValidationError',
+        code: 'VALIDATION_ERROR',
+        message: expect.stringContaining('At least one of'),
+      }),
+    );
+    expect(requestSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejects wallet provisioning with an empty agent id before dispatch', () => {
+    const requestSpy = vi.fn();
+    const sdk = new LilySdk(
+      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
+      createMockHttpClient(requestSpy),
+    );
+
+    let thrown: unknown;
+    try {
+      sdk.wallets.provision({ agentId: '', network: 'stellar-testnet' });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(LilyValidationError);
+    expect(thrown).toEqual(
+      expect.objectContaining({ code: 'VALIDATION_ERROR' }),
+    );
+    expect(requestSpy).not.toHaveBeenCalled();
+  });
+
+  it('dispatches valid identity and wallet requests unchanged', async () => {
+    const requestSpy = vi.fn(() =>
+      Promise.resolve({ status: 200, headers: new Headers(), data: {} }),
+    );
+    const sdk = new LilySdk(
+      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
+      createMockHttpClient(requestSpy),
+    );
+
+    await sdk.identity.resolve({ domain: 'agent.example' });
+    await sdk.wallets.provision({
+      agentId: 'agent-1',
+      network: 'stellar-testnet',
+    });
+
+    expect(requestSpy).toHaveBeenNthCalledWith(1, {
+      method: 'POST',
+      path: '/v1/identity/resolve',
+      body: { domain: 'agent.example' },
+    });
+    expect(requestSpy).toHaveBeenNthCalledWith(2, {
+      method: 'POST',
+      path: '/v1/wallets/provision',
+      body: { agentId: 'agent-1', network: 'stellar-testnet' },
+    });
+  });
+
   it('calls system health endpoint through the system client', async () => {
     const requestSpy = vi.fn(() =>
       Promise.resolve({
