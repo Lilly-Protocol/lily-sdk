@@ -5,7 +5,13 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'eslint.config.js'],
+    ignores: [
+      'dist/**',
+      'coverage/**',
+      'node_modules/**',
+      'eslint.config.js',
+      'scripts/check-browser-build.mjs',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
