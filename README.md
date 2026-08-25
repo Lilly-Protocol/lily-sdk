@@ -72,6 +72,98 @@ sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
 ```
 
+## Error Handling
+
+The SDK ships a typed error hierarchy from `@lily-protocol/sdk` (also re-exported as `@lily-protocol/sdk/errors`). Every SDK failure extends `LilySdkError`, which itself extends `Error`.
+
+### Shared fields
+
+All six classes accept the same constructor options. These fields are available on the thrown error:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `code` | `string \| undefined` | Machine-readable code such as `AUTHENTICATION_ERROR`, `API_ERROR`, `TIMEOUT`, or `TRANSPORT_ERROR`. |
+| `statusCode` | `number \| undefined` | HTTP status when the failure came from the Lily Protocol API. |
+| `details` | `unknown` | Parsed response body or other structured context from the throw site. |
+| `cause` | `unknown` | Original exception, exposed as standard `Error.cause` when the SDK wraps a lower-level failure. |
+
+### Decision table
+
+| Error class | When it throws | Fields typically set |
+| --- | --- | --- |
+| `LilySdkError` | Base class for all SDK errors. Catch this to handle any Lily failure. | `code`, `statusCode`, `details`, and `cause` as provided by subclasses |
+| `LilyConfigError` | Invalid SDK constructor config: missing or invalid `baseUrl`, invalid `timeoutMs` or retry policy, or missing `fetch` in unsupported runtimes. | message; HTTP fields are usually unset |
+| `LilyTransportError` | Request timed out (`code: 'TIMEOUT'`) or a network/fetch failure after retries (`code: 'TRANSPORT_ERROR'`). | `code`, `cause` |
+| `LilyValidationError` | Reserved for request or response validation failures. It is part of the public hierarchy even if current throw sites do not yet use it. | `code`, `details` when thrown |
+| `LilyAuthenticationError` | HTTP 401 or 403 from the Lily Protocol API. | `code: 'AUTHENTICATION_ERROR'`, `statusCode`, `details` |
+| `LilyApiError` | Other non-OK HTTP responses after retries (not 401/403). | `code: 'API_ERROR'`, `statusCode`, `details` |
+
+The HTTP client retries selected 4xx/5xx statuses and retryable transport errors for safe/idempotent methods (`GET`, `PUT`, `DELETE`) before throwing. Authentication failures are never retried.
+
+### Catch guide
+
+Use `instanceof` so auth failures are not treated as retryable API or network errors.
+
+```ts
+import {
+  LilySdk,
+  LilyApiError,
+  LilyAuthenticationError,
+  LilyTransportError,
+} from '@lily-protocol/sdk';
+
+const sdk = new LilySdk({
+  baseUrl: 'https://api.lilyprotocol.com',
+  authToken: process.env.LILY_AUTH_TOKEN,
+});
+
+async function withRetry<T>(operation: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+
+      // Auth failures need new credentials, not another attempt.
+      if (error instanceof LilyAuthenticationError) {
+        throw error;
+      }
+
+      const retryableTransport =
+        error instanceof LilyTransportError &&
+        (error.code === 'TIMEOUT' || error.code === 'TRANSPORT_ERROR');
+      const retryableApi =
+        error instanceof LilyApiError &&
+        error.statusCode !== undefined &&
+        [408, 409, 425, 429, 500, 502, 503, 504].includes(error.statusCode);
+
+      if (!retryableTransport && !retryableApi) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+try {
+  const health = await withRetry(() => sdk.system.health());
+  console.log(health.status);
+} catch (error) {
+  if (error instanceof LilyAuthenticationError) {
+    console.error('Refresh credentials', error.statusCode, error.details);
+  } else if (error instanceof LilyApiError) {
+    console.error('API request failed', error.code, error.statusCode, error.details);
+  } else if (error instanceof LilyTransportError) {
+    console.error('Network or timeout', error.code, error.cause);
+  } else {
+    throw error;
+  }
+}
+```
+
 ## Repository Structure
 
 ```text
