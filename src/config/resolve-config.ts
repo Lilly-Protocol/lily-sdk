@@ -66,6 +66,10 @@ function resolveRetryPolicy(policy?: Partial<RetryPolicy>): RetryPolicy {
     throw new LilyConfigError('`retry.retryDelayMs` must be a non-negative number.');
   }
 
+  if (!Array.isArray(retryableStatusCodes)) {
+    throw new LilyConfigError('`retry.retryableStatusCodes` must be an array of HTTP status codes.');
+  }
+
   return {
     retries,
     retryDelayMs,
