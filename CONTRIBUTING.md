@@ -49,6 +49,23 @@ npm run test
 - Improved examples and integration recipes
 - Release automation and npm publishing hardening
 
+## Publishing
+
+This package is scoped (`@lily-protocol/sdk`) and uses `publishConfig.access: "public"` in `package.json` so the public npm registry accepts it without EACCES errors.
+
+To publish a release:
+
+```bash
+npm run prepublishOnly   # clean + build + test
+npm publish              # publishes to the public registry
+```
+
+To preview the tarball without publishing:
+
+```bash
+npm pack --dry-run
+```
+
 ## Pull Requests
 
 - Keep PR descriptions clear and outcome-focused.
