@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { LilyAuthenticationError } from '../src/errors/sdk-error';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
+import type { HealthStatus, ServiceInfo } from '../src/models';
 import { LilySdk } from '../src/sdk';
 import { createMockHttpClient } from './helpers/mock-http-client';
 
@@ -30,13 +31,52 @@ describe('client behavior', () => {
       createMockHttpClient(requestSpy),
     );
 
-    const health = await sdk.system.health();
+    const health: HealthStatus = await sdk.system.health();
 
     expect(requestSpy).toHaveBeenCalledWith({
       method: 'GET',
       path: '/v1/system/health',
     });
-    expect(health.status).toBe('ok');
+    expect(health).toEqual({
+      status: 'ok',
+      version: '0.1.0',
+      timestamp: expect.any(String),
+      checks: {
+        api: 'ok',
+      },
+    });
+  });
+
+  it('calls system info endpoint and returns service information', async () => {
+    const serviceInfo: ServiceInfo = {
+      name: 'lily-api',
+      version: '0.1.0',
+      environment: 'staging',
+      docsUrl: 'https://docs.lily.test',
+    };
+    const requestSpy = vi.fn(() =>
+      Promise.resolve({
+        status: 200,
+        headers: new Headers(),
+        data: serviceInfo,
+      }),
+    );
+
+    const sdk = new LilySdk(
+      {
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+      },
+      createMockHttpClient(requestSpy),
+    );
+
+    const info: ServiceInfo = await sdk.system.info();
+
+    expect(requestSpy).toHaveBeenCalledWith({
+      method: 'GET',
+      path: '/v1/system/info',
+    });
+    expect(info).toEqual(serviceInfo);
   });
 
   it('adds auth headers to transport requests', async () => {
