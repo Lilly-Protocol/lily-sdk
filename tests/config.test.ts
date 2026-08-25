@@ -35,3 +35,21 @@ describe('resolveLilySdkConfig', () => {
     ).toThrow('`timeoutMs` must be a positive number.');
   });
 });
+
+it('accepts URL instance for baseUrl', () => {
+  const config = resolveLilySdkConfig({
+    baseUrl: new URL('https://api.lily.test'),
+    fetch: globalThis.fetch,
+  });
+
+  expect(config.baseUrl.toString()).toBe('https://api.lily.test/');
+});
+
+it('normalizes URL instance with trailing slash', () => {
+  const config = resolveLilySdkConfig({
+    baseUrl: new URL('https://api.lily.test/'),
+    fetch: globalThis.fetch,
+  });
+
+  expect(config.baseUrl.toString()).toBe('https://api.lily.test/');
+});
