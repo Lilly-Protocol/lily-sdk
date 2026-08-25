@@ -55,7 +55,15 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
             });
           }
 
-          if (shouldRetry(response.status, attempt, config.retry.retries, request.method)) {
+          if (
+            shouldRetry(
+              response.status,
+              attempt,
+              config.retry.retries,
+              config.retry.retryableStatusCodes,
+              request.method,
+            )
+          ) {
             clearTimeout(timeout);
             attempt += 1;
             await sleep(config.retry.retryDelayMs * attempt);
@@ -163,11 +171,16 @@ function shouldRetry(
   statusCode: number,
   attempt: number,
   maxRetries: number,
+  retryableStatusCodes: readonly number[],
   method: string,
 ): boolean {
   const isSafeOrIdempotent = method === 'GET' || method === 'PUT' || method === 'DELETE';
 
-  return isSafeOrIdempotent && attempt < maxRetries && [408, 409, 425, 429, 500, 502, 503, 504].includes(statusCode);
+  return (
+    isSafeOrIdempotent &&
+    attempt < maxRetries &&
+    retryableStatusCodes.includes(statusCode)
+  );
 }
 
 function isRetryableTransportError(error: unknown, method: string): boolean {
