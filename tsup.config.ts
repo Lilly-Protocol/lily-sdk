@@ -19,6 +19,7 @@ export default defineConfig({
   clean: true,
   splitting: false,
   treeshake: true,
+  minify: true,
   target: 'node20',
   outDir: 'dist',
 });
