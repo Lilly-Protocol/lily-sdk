@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { LilyAuthenticationError } from '../src/errors/sdk-error';
+import { LilyApiError, LilyAuthenticationError } from '../src/errors/sdk-error';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import { LilySdk } from '../src/sdk';
 import { createMockHttpClient } from './helpers/mock-http-client';
@@ -90,7 +90,50 @@ describe('client behavior', () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
   });
 
-  it('maps authentication failures to a typed error', async () => {
+  it.each([401, 403])(
+    'maps a %i authentication failure with its payload to a typed error',
+    async (statusCode) => {
+      const details = { message: 'nope' };
+      const httpClient = createFetchHttpClient({
+        baseUrl: new URL('https://api.lily.test/'),
+        timeoutMs: 2_000,
+        retry: {
+          retries: 0,
+          retryDelayMs: 0,
+          retryableStatusCodes: [],
+        },
+        defaultHeaders: {},
+        userAgent: 'lily-sdk/test',
+        fetch: vi.fn(() =>
+          Promise.resolve(
+            new Response(JSON.stringify(details), {
+              status: statusCode,
+              headers: {
+                'content-type': 'application/json',
+              },
+            }),
+          ),
+        ),
+      });
+
+      const error = await httpClient
+        .request({
+          method: 'GET',
+          path: '/v1/system/health',
+        })
+        .catch((requestError: unknown) => requestError);
+
+      expect(error).toBeInstanceOf(LilyAuthenticationError);
+      expect(error).toMatchObject({
+        statusCode,
+        code: 'AUTHENTICATION_ERROR',
+        details,
+      });
+    },
+  );
+
+  it('maps a non-retryable API failure with its payload to a typed error', async () => {
+    const details = { message: 'internal failure', requestId: 'request-123' };
     const httpClient = createFetchHttpClient({
       baseUrl: new URL('https://api.lily.test/'),
       timeoutMs: 2_000,
@@ -103,8 +146,8 @@ describe('client behavior', () => {
       userAgent: 'lily-sdk/test',
       fetch: vi.fn(() =>
         Promise.resolve(
-          new Response(JSON.stringify({ message: 'nope' }), {
-            status: 401,
+          new Response(JSON.stringify(details), {
+            status: 500,
             headers: {
               'content-type': 'application/json',
             },
@@ -113,11 +156,18 @@ describe('client behavior', () => {
       ),
     });
 
-    await expect(
-      httpClient.request({
+    const error = await httpClient
+      .request({
         method: 'GET',
         path: '/v1/system/health',
-      }),
-    ).rejects.toBeInstanceOf(LilyAuthenticationError);
+      })
+      .catch((requestError: unknown) => requestError);
+
+    expect(error).toBeInstanceOf(LilyApiError);
+    expect(error).toMatchObject({
+      statusCode: 500,
+      code: 'API_ERROR',
+      details,
+    });
   });
 });
