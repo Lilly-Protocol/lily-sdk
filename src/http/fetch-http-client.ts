@@ -142,6 +142,10 @@ function serializeBody(body: unknown): BodyInit | undefined {
     return undefined;
   }
 
+  if (typeof body === 'string') {
+    return body;
+  }
+
   return JSON.stringify(body);
 }
 
