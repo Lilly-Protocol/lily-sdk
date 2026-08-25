@@ -90,6 +90,63 @@ describe('client behavior', () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
   });
 
+  it('retries a 429 response and returns the successful response', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const fetchSpy = vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ message: 'rate limited' }), {
+            status: 429,
+            headers: {
+              'content-type': 'application/json',
+            },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ status: 'ok' }), {
+            status: 200,
+            headers: {
+              'content-type': 'application/json',
+            },
+          }),
+        );
+      const retryDelayMs = 100;
+      const httpClient = createFetchHttpClient({
+        baseUrl: new URL('https://api.lily.test/'),
+        timeoutMs: 2_000,
+        retry: {
+          retries: 1,
+          retryDelayMs,
+          retryableStatusCodes: [429],
+        },
+        defaultHeaders: {},
+        userAgent: 'lily-sdk/test',
+        fetch: fetchSpy,
+      });
+
+      const responsePromise = httpClient.request<{ status: string }>({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
+
+      await vi.advanceTimersByTimeAsync(retryDelayMs * 1 - 1);
+      expect(fetchSpy).toHaveBeenCalledOnce();
+
+      await vi.advanceTimersByTimeAsync(1);
+      const response = await responsePromise;
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(response).toMatchObject({
+        status: 200,
+        data: { status: 'ok' },
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('maps authentication failures to a typed error', async () => {
     const httpClient = createFetchHttpClient({
       baseUrl: new URL('https://api.lily.test/'),
