@@ -11,6 +11,10 @@ export interface LilySdkConfig {
   fetch?: typeof globalThis.fetch;
 }
 
+export interface LilySdkCreateOptions extends Omit<LilySdkConfig, 'baseUrl'> {
+  baseUrl?: string;
+}
+
 export interface ResolvedLilySdkConfig {
   readonly baseUrl: URL;
   readonly apiKey?: string;

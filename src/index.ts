@@ -1,5 +1,9 @@
 export { LilySdk } from './sdk';
-export type { LilySdkConfig, ResolvedLilySdkConfig } from './config/types';
+export type {
+  LilySdkConfig,
+  LilySdkCreateOptions,
+  ResolvedLilySdkConfig,
+} from './config/types';
 export { resolveLilySdkConfig } from './config/resolve-config';
 export {
   LilySdkError,
@@ -14,5 +18,10 @@ export { IdentityClient } from './clients/identity-client';
 export { PaymentClient } from './clients/payment-client';
 export { SystemClient } from './clients/system-client';
 export { WalletClient } from './clients/wallet-client';
-export type { HttpClient, HttpRequest, HttpResponse, RetryPolicy } from './http/types';
+export type {
+  HttpClient,
+  HttpRequest,
+  HttpResponse,
+  RetryPolicy,
+} from './http/types';
 export * from './models';
