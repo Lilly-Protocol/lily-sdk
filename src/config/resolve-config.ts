@@ -30,18 +30,18 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
     throw new LilyConfigError('`timeoutMs` must be a positive number.');
   }
 
-  return {
+  return deepFreeze({
     baseUrl,
     timeoutMs,
     retry,
-    defaultHeaders: Object.freeze({
+    defaultHeaders: {
       ...config.defaultHeaders,
-    }),
+    },
     userAgent: config.userAgent ?? DEFAULT_USER_AGENT,
     fetch: fetchImpl,
     ...(config.apiKey ? { apiKey: config.apiKey } : {}),
     ...(config.authToken ? { authToken: config.authToken } : {}),
-  };
+  });
 }
 
 function safeUrl(rawUrl: string): URL {
@@ -69,6 +69,18 @@ function resolveRetryPolicy(policy?: Partial<RetryPolicy>): RetryPolicy {
   return {
     retries,
     retryDelayMs,
-    retryableStatusCodes,
+    retryableStatusCodes: [...retryableStatusCodes],
   };
+}
+
+function deepFreeze<T>(value: T): T {
+  if (value === null || typeof value !== 'object') {
+    return value;
+  }
+
+  for (const nestedValue of Object.values(value)) {
+    deepFreeze(nestedValue);
+  }
+
+  return Object.freeze(value);
 }
