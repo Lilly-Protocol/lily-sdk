@@ -3,6 +3,7 @@ import {
   LilyApiError,
   LilyAuthenticationError,
   LilyTransportError,
+  LilyValidationError,
 } from '../errors/sdk-error';
 import type { HttpClient, HttpHeaders, HttpRequest, HttpResponse } from './types';
 
@@ -70,7 +71,11 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
         } catch (error) {
           clearTimeout(timeout);
 
-          if (error instanceof LilyApiError || error instanceof LilyAuthenticationError) {
+          if (
+            error instanceof LilyApiError ||
+            error instanceof LilyAuthenticationError ||
+            error instanceof LilyValidationError
+          ) {
             throw error;
           }
 
@@ -153,7 +158,18 @@ async function parseResponse(response: Response): Promise<unknown> {
   const contentType = response.headers.get('content-type') ?? '';
 
   if (contentType.includes('application/json')) {
-    return (await response.json()) as unknown;
+    try {
+      return (await response.json()) as unknown;
+    } catch (error) {
+      throw new LilyValidationError(
+        `Failed to parse response body as JSON (status ${response.status}, content-type: ${contentType}).`,
+        {
+          code: 'RESPONSE_VALIDATION_ERROR',
+          statusCode: response.status,
+          cause: error,
+        },
+      );
+    }
   }
 
   return await response.text();
