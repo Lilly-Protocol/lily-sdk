@@ -44,6 +44,8 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
               status: response.status,
               headers: response.headers,
               data,
+              attempts: attempt + 1,
+              retried: attempt > 0,
             };
           }
 
