@@ -25,7 +25,8 @@
   "type": "module",
   "sideEffects": false,
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.0.0",
+    "npm": ">=10"
   },
   "files": [
     "dist",
@@ -96,5 +97,6 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.32.0",
     "vitest": "^3.2.4"
-  }
+  },
+  "packageManager": "npm@10.9.8"
 }
