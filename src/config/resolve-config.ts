@@ -39,6 +39,7 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
     }),
     userAgent: config.userAgent ?? DEFAULT_USER_AGENT,
     fetch: fetchImpl,
+    validateResponses: config.validateResponses ?? false,
     ...(config.apiKey ? { apiKey: config.apiKey } : {}),
     ...(config.authToken ? { authToken: config.authToken } : {}),
   };

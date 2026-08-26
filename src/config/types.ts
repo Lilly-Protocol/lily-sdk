@@ -9,6 +9,8 @@ export interface LilySdkConfig {
   defaultHeaders?: Record<string, string>;
   userAgent?: string;
   fetch?: typeof globalThis.fetch;
+  /** Enable runtime response validation for known models. Default: false. */
+  validateResponses?: boolean;
 }
 
 export interface ResolvedLilySdkConfig {
@@ -20,4 +22,5 @@ export interface ResolvedLilySdkConfig {
   readonly defaultHeaders: Readonly<Record<string, string>>;
   readonly userAgent: string;
   readonly fetch: typeof globalThis.fetch;
+  readonly validateResponses: boolean;
 }
