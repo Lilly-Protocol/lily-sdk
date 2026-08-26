@@ -87,6 +87,15 @@ examples/        runnable local examples
 .github/         CI and contributor workflow templates
 ```
 
+## Testing
+
+| Command | Description |
+| --- | --- |
+| `npm test` | Run tests with coverage (default) |
+| `npm run test:unit` | Fast tests without coverage instrumentation |
+| `npm run test:coverage` | Explicit coverage run (same as `npm test`) |
+| `npm run test:watch` | Watch mode for development |
+
 ## Development
 
 ```bash
