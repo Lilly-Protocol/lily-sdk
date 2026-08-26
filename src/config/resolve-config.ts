@@ -10,7 +10,9 @@ const DEFAULT_RETRY_POLICY: RetryPolicy = {
   retryableStatusCodes: [408, 409, 425, 429, 500, 502, 503, 504],
 };
 
-export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConfig {
+export function resolveLilySdkConfig(
+  config: LilySdkConfig,
+): ResolvedLilySdkConfig {
   if (!config.baseUrl) {
     throw new LilyConfigError('`baseUrl` is required.');
   }
@@ -54,16 +56,21 @@ function safeUrl(rawUrl: string): URL {
 
 function resolveRetryPolicy(policy?: Partial<RetryPolicy>): RetryPolicy {
   const retries = policy?.retries ?? DEFAULT_RETRY_POLICY.retries;
-  const retryDelayMs = policy?.retryDelayMs ?? DEFAULT_RETRY_POLICY.retryDelayMs;
+  const retryDelayMs =
+    policy?.retryDelayMs ?? DEFAULT_RETRY_POLICY.retryDelayMs;
   const retryableStatusCodes =
     policy?.retryableStatusCodes ?? DEFAULT_RETRY_POLICY.retryableStatusCodes;
 
   if (!Number.isInteger(retries) || retries < 0) {
-    throw new LilyConfigError('`retry.retries` must be a non-negative integer.');
+    throw new LilyConfigError(
+      '`retry.retries` must be a non-negative integer.',
+    );
   }
 
   if (!Number.isFinite(retryDelayMs) || retryDelayMs < 0) {
-    throw new LilyConfigError('`retry.retryDelayMs` must be a non-negative number.');
+    throw new LilyConfigError(
+      '`retry.retryDelayMs` must be a non-negative number.',
+    );
   }
 
   return {
