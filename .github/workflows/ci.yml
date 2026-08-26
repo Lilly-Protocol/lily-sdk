@@ -36,3 +36,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Tarball exports smoke test
+        run: ./scripts/tarball-smoke-test.sh
