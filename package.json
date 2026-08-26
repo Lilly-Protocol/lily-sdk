@@ -79,7 +79,8 @@
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "example": "tsx examples/quickstart.ts",
-    "prepublishOnly": "npm run clean && npm run build && npm run test"
+    "prepublishOnly": "npm run clean && npm run build && npm run test",
+    "test:types": "vitest run tests/public-api-types.test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.27.0",
