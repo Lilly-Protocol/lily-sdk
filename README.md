@@ -33,6 +33,39 @@ For local development in this repository:
 npm install
 ```
 
+## Requirements and Compatibility
+
+- **Node.js 20 or newer** is required. CI verifies the SDK on Node.js 20 and 22.
+- The default transport requires the standard Fetch API globals, including `fetch`,
+  `Headers`, and `AbortController`. Supported Node.js versions provide these globals.
+- In another JavaScript runtime without a global `fetch`, pass a Fetch API-compatible
+  implementation through `config.fetch`:
+
+  ```ts
+  import { LilySdk } from '@lily-protocol/sdk';
+
+  const sdk = new LilySdk({
+    baseUrl: 'https://api.lilyprotocol.com',
+    fetch: customFetch,
+  });
+  ```
+
+  If neither a global nor configured `fetch` is available, SDK construction throws a
+  `LilyConfigError` with guidance to provide one. A custom implementation must return
+  Fetch API-compatible `Response` objects, including `Headers`.
+
+### Browser usage
+
+The SDK can use browser Fetch APIs, but it is primarily intended for backend and
+service-to-service integrations. Before using it in a browser:
+
+- Configure the Lily API to allow the browser origin, HTTP methods, and request headers
+  through CORS. Requests may otherwise fail before reaching the API.
+- Do not include long-lived API keys or auth tokens in a public browser bundle. Route
+  privileged calls through a trusted backend instead.
+- Confirm that the target browser provides `fetch`, `Headers`, and `AbortController`, or
+  supply compatible polyfills for the environment.
+
 ## Quick Start
 
 ```ts
