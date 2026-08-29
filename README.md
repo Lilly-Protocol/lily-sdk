@@ -54,6 +54,63 @@ console.log(health.status);
 console.log(wallet.wallet.address);
 ```
 
+## Configuration
+
+`LilySdk` accepts the following configuration options:
+
+| Option                       | Required | Default                                  | Accepted values and behavior                                                                                                             |
+| ---------------------------- | -------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `baseUrl`                    | Yes      | None                                     | A valid absolute URL. A trailing slash is added automatically.                                                                           |
+| `apiKey`                     | No       | `undefined`                              | Non-empty string sent as the `x-api-key` header.                                                                                         |
+| `authToken`                  | No       | `undefined`                              | Non-empty string sent as a Bearer `authorization` header.                                                                                |
+| `timeoutMs`                  | No       | `10000`                                  | Any finite number greater than `0`, applied to each request attempt.                                                                     |
+| `retry.retries`              | No       | `2`                                      | A non-negative integer counting retries after the initial attempt. The default permits up to three total attempts.                       |
+| `retry.retryDelayMs`         | No       | `250`                                    | Any finite, non-negative number. Delay grows linearly: `retryDelayMs * attempt`.                                                         |
+| `retry.retryableStatusCodes` | No       | `408, 409, 425, 429, 500, 502, 503, 504` | An array of HTTP status codes stored in the resolved retry policy. The current fetch transport retries the listed built-in status codes. |
+| `defaultHeaders`             | No       | `{}`                                     | String-valued headers added to every request. Per-request headers override these values.                                                 |
+| `userAgent`                  | No       | `lily-sdk/0.1.0`                         | String used for the `user-agent` header.                                                                                                 |
+| `fetch`                      | No       | `globalThis.fetch`                       | A Fetch-compatible function. It is required explicitly in runtimes without a global `fetch`.                                             |
+
+Configure timeouts, retries, and shared headers when constructing the SDK:
+
+```ts
+import { LilySdk } from '@lily-protocol/sdk';
+
+const sdk = new LilySdk({
+  baseUrl: 'https://api.lilyprotocol.com',
+  timeoutMs: 15_000,
+  retry: {
+    retries: 3,
+    retryDelayMs: 500,
+    retryableStatusCodes: [408, 429, 500, 502, 503, 504],
+  },
+  defaultHeaders: {
+    'x-correlation-id': 'service-request-id',
+  },
+});
+```
+
+Retries apply only to the safe or idempotent `GET`, `PUT`, and `DELETE`
+methods. `POST` and `PATCH` requests are never retried automatically. With the
+default policy, a retry waits 250 ms after the first failed attempt and 500 ms
+after the second. Eligible transport errors use the same schedule. HTTP 401 and
+403 responses, and requests aborted by their timeout, fail immediately.
+
+Low-level `HttpRequest` calls can override the SDK timeout for one request. The
+override must also be a finite number greater than `0`:
+
+```ts
+import type { HttpClient } from '@lily-protocol/sdk/http';
+
+declare const http: HttpClient;
+
+const response = await http.request({
+  method: 'GET',
+  path: '/api/v1/system/health',
+  timeoutMs: 2_000,
+});
+```
+
 ## Public API Overview
 
 ```ts
