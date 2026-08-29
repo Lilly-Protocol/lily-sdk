@@ -72,6 +72,109 @@ sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
 ```
 
+## Domain Models
+
+### `MoneyAmount` and Stellar Asset Semantics
+
+`MoneyAmount` (defined in `src/models/common.ts`) is the core model representing currency amounts and asset specifications across the Lily SDK, including wallet balances (`Wallet.balances`), payment quoting (`PaymentQuoteRequest`, `PaymentQuote`), and payment execution (`ExecutePaymentRequest`, `Payment`).
+
+```ts
+export interface MoneyAmount {
+  assetCode: string;
+  assetIssuer?: string;
+  amount: string;
+}
+```
+
+#### Decimal-String Semantics (`amount`)
+
+- **String, Never Float:** The `amount` field is strictly typed as a base-10 decimal `string` (e.g. `'10.50'`), **never** a JavaScript `number`.
+- **Float Precision Rationale:** Standard JavaScript numbers are IEEE 754 floating-point values, which cannot precisely represent fractional base-10 amounts (for instance, `0.1 + 0.2 === 0.30000000000000004`). In financial transactions and agent autonomous settlements, floating-point math can lead to subtle truncation bugs and balance mismatches. Using decimal strings ensures exact arithmetic and lossless serialization across API boundaries.
+- **Precision Expectations:** On the Stellar network, amounts support up to 7 decimal places of precision, corresponding to the smallest Stellar unit: 1 stroop (`0.0000001 XLM` = `10^-7 XLM`). Amounts passed in `MoneyAmount` should reflect exact decimal values up to 7 fractional digits (or the designated precision of the custom asset).
+
+#### Native vs. Issued Assets (`assetCode` & `assetIssuer`)
+
+Stellar distinguishes between native network lumens and custom issued assets:
+
+- **Native Asset (`XLM`):**
+  - `assetCode`: Set to `'XLM'`.
+  - `assetIssuer`: Must be omitted or `undefined`. The native asset is built into the ledger and has no issuing account.
+- **Issued Credit Assets (e.g., `USDC`, `EURC`):**
+  - `assetCode`: 1 to 12 character alphanumeric string (Alpha4 for 1–4 characters such as `'USDC'`, Alpha12 for 5–12 characters).
+  - `assetIssuer`: The 56-character base32-encoded Stellar public key (G-address, e.g. `'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN'`) of the issuing account or anchor.
+- **Relationship to Stellar `Asset` and Home Domains:**
+  - In the Stellar protocol, an issued asset is uniquely identified by the pair `(assetCode, assetIssuer)`. Two assets with the identical code issued by different accounts represent separate, distinct assets.
+  - Stellar issuing accounts publish a `home_domain` in their account records for SEP-1 TOML discovery, allowing clients to resolve issuer legitimacy and asset metadata.
+
+#### Asset Code and Amount Validation
+
+- **Validation Rules:** Asset codes and issuer addresses are validated by Lily backend APIs and verified on-chain by Stellar Horizon/RPC nodes during transaction submission.
+- **Asset Code Constraints:** Alphanumeric characters only (`[a-zA-Z0-9]`), length between 1 and 12 characters.
+- **Issuer Key Constraints:** Valid 56-character Ed25519 public key starting with `G` with a valid checksum.
+- **Amount Constraints:** Positive base-10 decimal strings (e.g. `'10.50'`, `'0.0000001'`). Negative numbers, exponential/scientific notation (e.g. `'1e-5'`), and non-numeric characters are invalid.
+
+#### Examples: Valid and Invalid `MoneyAmount`
+
+```ts
+import type { MoneyAmount } from '@lily-protocol/sdk';
+
+// ✅ Valid: Native XLM (no issuer, 7 decimal places)
+const validNative: MoneyAmount = {
+  assetCode: 'XLM',
+  amount: '25.5000000',
+};
+
+// ✅ Valid: Issued asset (USDC with 56-char G-address issuer)
+const validIssued: MoneyAmount = {
+  assetCode: 'USDC',
+  assetIssuer: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
+  amount: '100.00',
+};
+
+// ✅ Valid: Minimum Stellar unit (1 stroop)
+const validStroop: MoneyAmount = {
+  assetCode: 'XLM',
+  amount: '0.0000001',
+};
+
+// ✅ Valid: Whole integer amount as decimal string
+const validInteger: MoneyAmount = {
+  assetCode: 'XLM',
+  amount: '50',
+};
+
+// ❌ Invalid: Using a number instead of a decimal string
+const invalidFloat = {
+  assetCode: 'XLM',
+  amount: 10.5, // Type error: amount must be a string to avoid float precision bugs
+};
+
+// ❌ Invalid: Scientific / exponential notation is not allowed
+const invalidExponential: MoneyAmount = {
+  assetCode: 'XLM',
+  amount: '1e-7', // Invalid format: must be standard decimal string
+};
+
+// ❌ Invalid: Incomplete decimal point notation
+const invalidDecimal: MoneyAmount = {
+  assetCode: 'XLM',
+  amount: '10.', // Invalid format: missing fractional digits
+};
+
+// ❌ Invalid: Native asset (XLM) with an issuer
+const invalidNativeIssuer: MoneyAmount = {
+  assetCode: 'XLM',
+  assetIssuer: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN', // XLM has no issuer
+  amount: '10.00',
+};
+
+// ❌ Invalid: Issued asset without the required assetIssuer
+const invalidMissingIssuer: MoneyAmount = {
+  assetCode: 'USDC', // Issued assets require assetIssuer to identify the anchor
+  amount: '100.00',
+};
+```
+
 ## Repository Structure
 
 ```text
