@@ -8,8 +8,8 @@
     "stellar",
     "sdk",
     "typescript",
-    "agents",
-    "payments",
+    "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts' 'examples/**/*.ts'",
+    "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts' 'examples/**/*.ts'"
     "wallet"
   ],
   "homepage": "https://github.com/lily-protocol/lily-sdk#readme",

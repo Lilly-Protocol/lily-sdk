@@ -1,9 +1,9 @@
 import { LilySdk } from '../src';
 
 const sdk = new LilySdk({
-  baseUrl: 'https://api.lily.example',
-  authToken: 'demo-token',
-  fetch: (_input, init) => {
+  const sdk = new LilySDK({ apiKey: process.env.LILY_API_KEY! });
+  const agent = await sdk.agents.create({ name: "demo" });
+  console.log(agent.id);
     const requestUrl =
       typeof _input === 'string'
         ? _input
