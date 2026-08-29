@@ -72,6 +72,30 @@ sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
 ```
 
+## HTTP Response Data
+
+The HTTP client preserves the response status separately from the parsed `data` value:
+
+| Response | `HttpResponse.data` |
+| --- | --- |
+| `204 No Content` | `null` |
+| A response with an `application/json` content type | The parsed JSON value (object, array, primitive, or `null`) |
+| Any other content type, including `text/plain` or `text/html` | The raw response body as a string |
+
+Always check `status` before interpreting `data`. A successful response and an error response can both contain JSON or text, so the data shape alone does not indicate whether the request succeeded:
+
+```ts
+const response = await sdk.system.health();
+
+if (response.status >= 200 && response.status < 300) {
+  // `response.data` is the successful payload; a 204 response has `data === null`.
+  console.log(response.data);
+} else {
+  // Error payloads may be parsed JSON or raw text, depending on Content-Type.
+  console.error(`Request failed with HTTP ${response.status}`, response.data);
+}
+```
+
 ## Repository Structure
 
 ```text
