@@ -72,6 +72,54 @@ sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
 ```
 
+## Configuration
+
+Pass a `LilySdkConfig` object to `new LilySdk(...)`. The constructor validates and resolves defaults via `resolveLilySdkConfig`.
+
+| Option | Default | Notes |
+| --- | --- | --- |
+| `baseUrl` | *(required)* | Absolute URL. A trailing slash is added if missing. |
+| `apiKey` | `undefined` | Sent as `x-api-key` when set. |
+| `authToken` | `undefined` | Sent as `Authorization: Bearer …` when set. |
+| `timeoutMs` | `10000` | Finite number greater than `0`. |
+| `retry.retries` | `2` | Non-negative integer. |
+| `retry.retryDelayMs` | `250` | Non-negative finite number (milliseconds). |
+| `retry.retryableStatusCodes` | `[408, 409, 425, 429, 500, 502, 503, 504]` | Default retry status set. |
+| `defaultHeaders` | `{}` | Merged into every request; per-request headers override. |
+| `userAgent` | `lily-sdk/0.1.0` | Sent as the `user-agent` header. |
+| `fetch` | `globalThis.fetch` | Must be a function. Pass an implementation in runtimes without `fetch`. |
+
+Invalid `baseUrl`, non-positive `timeoutMs`, a missing `fetch`, a negative or non-integer `retry.retries`, or a negative `retry.retryDelayMs` throw `LilyConfigError`.
+
+### Timeouts
+
+SDK-level `timeoutMs` applies to every HTTP call. Individual transport requests may set `HttpRequest.timeoutMs`, which overrides the SDK default for that call (`request.timeoutMs ?? config.timeoutMs`).
+
+### Retries
+
+Retries apply **only to `GET`, `PUT`, and `DELETE`**. `POST` and `PATCH` are never retried.
+
+Eligible methods are retried on HTTP status `408`, `409`, `425`, `429`, `500`, `502`, `503`, and `504`, and on network transport errors. Timeouts abort the request and are not retried.
+
+Delay grows linearly: `retryDelayMs * attempt`. With the defaults that is 250ms before the first retry and 500ms before the second.
+
+```ts
+import { LilySdk } from '@lily-protocol/sdk';
+
+const sdk = new LilySdk({
+  baseUrl: 'https://api.lilyprotocol.com',
+  timeoutMs: 15_000,
+  retry: {
+    retries: 3,
+    retryDelayMs: 400,
+    retryableStatusCodes: [408, 409, 425, 429, 500, 502, 503, 504],
+  },
+  defaultHeaders: {
+    'x-request-source': 'billing-service',
+  },
+});
+```
+
 ## Repository Structure
 
 ```text
