@@ -72,6 +72,80 @@ sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
 ```
 
+## Subpath Imports
+
+The root package `@lily-protocol/sdk` is the convenience surface: `LilySdk`, domain clients, and re-exported helpers (config types, errors, models, and a subset of HTTP types).
+
+These five `package.json` exports are also **stable public entrypoints**. Prefer them when you want a smaller import, tree-shaking, or a helper that is not on the root (notably `createFetchHttpClient`). Deep imports such as `@lily-protocol/sdk/dist/...` or unpublished `src/` paths are not part of the public API.
+
+### `@lily-protocol/sdk/config`
+
+SDK configuration types and the resolver used by `LilySdk`.
+
+Main symbols: `LilySdkConfig`, `ResolvedLilySdkConfig`, `resolveLilySdkConfig`.
+
+```ts
+import {
+  resolveLilySdkConfig,
+  type LilySdkConfig,
+  type ResolvedLilySdkConfig,
+} from '@lily-protocol/sdk/config';
+```
+
+### `@lily-protocol/sdk/errors`
+
+Typed error hierarchy for config, transport, validation, auth, and API failures.
+
+Main symbols: `LilySdkError`, `LilyConfigError`, `LilyTransportError`, `LilyValidationError`, `LilyAuthenticationError`, `LilyApiError`.
+
+```ts
+import {
+  LilyApiError,
+  LilyAuthenticationError,
+  LilyConfigError,
+  LilySdkError,
+} from '@lily-protocol/sdk/errors';
+```
+
+### `@lily-protocol/sdk/http`
+
+HTTP transport contract and the default fetch-based client. Use this entrypoint to construct or swap the transport passed into `LilySdk`.
+
+Main symbols: `createFetchHttpClient`, `HttpClient`, `HttpRequest`, `HttpResponse`, `HttpHeaders`, `HttpMethod`, `RetryPolicy`.
+
+```ts
+import { createFetchHttpClient, type HttpClient } from '@lily-protocol/sdk/http';
+```
+
+### `@lily-protocol/sdk/models`
+
+Public request/response and domain model types (agents, wallets, payments, identity, system health, shared money/pagination types).
+
+Main symbols include `Agent`, `Wallet`, `Payment`, `IdentityProfile`, `HealthStatus`, `ProvisionWalletRequest`, and related request/result types.
+
+```ts
+import type {
+  Agent,
+  HealthStatus,
+  Payment,
+  ProvisionWalletRequest,
+  Wallet,
+} from '@lily-protocol/sdk/models';
+```
+
+### `@lily-protocol/sdk/types`
+
+Client contracts for implementing or mocking domain modules without importing concrete client classes.
+
+Main symbols: `AgentClientContract`, `WalletClientContract`, `PaymentClientContract`, `IdentityClientContract`, `SystemClientContract`.
+
+```ts
+import type {
+  AgentClientContract,
+  WalletClientContract,
+} from '@lily-protocol/sdk/types';
+```
+
 ## Repository Structure
 
 ```text
