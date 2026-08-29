@@ -1,20 +1,20 @@
 import { LilySdk } from '../src';
 
-const sdk = new LilySdk({
-  baseUrl: 'https://api.lily.example',
-  authToken: 'demo-token',
-  fetch: (_input, init) => {
-    const requestUrl =
-      typeof _input === 'string'
-        ? _input
-        : _input instanceof URL
-          ? _input.toString()
-          : _input.url;
-
-    if (requestUrl.endsWith('/v1/system/health')) {
-      return Promise.resolve(
+async function main() {
+  const sdk = new LilySDK({ apiKey: process.env.LILY_API_KEY! });
+  const agent = await sdk.agents.get("agent_123");
+  console.log(agent.name);
+  if (agent.status === "active") {
+    const payment = await sdk.payments.create({
+      agentId: agent.id,
+      amount: 100,
+      currency: "USD",
+    });
+    console.log(payment.id);
+  }
+}
         new Response(
-        JSON.stringify({
+main().catch(console.error);
           status: 'ok',
           version: '0.1.0',
           timestamp: new Date().toISOString(),

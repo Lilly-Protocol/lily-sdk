@@ -8,7 +8,7 @@
     "stellar",
     "sdk",
     "typescript",
-    "agents",
+    "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts' 'examples/**/*.ts'",
     "payments",
     "wallet"
   ],
