@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { LilyAuthenticationError } from '../src/errors/sdk-error';
+import {
+  LilyAuthenticationError,
+  LilyTransportError,
+} from '../src/errors/sdk-error';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import { LilySdk } from '../src/sdk';
 import { createMockHttpClient } from './helpers/mock-http-client';
@@ -119,5 +122,76 @@ describe('client behavior', () => {
         path: '/v1/system/health',
       }),
     ).rejects.toBeInstanceOf(LilyAuthenticationError);
+  });
+
+  it('preserves the original fetch rejection as the transport error cause', async () => {
+    const networkError = new Error('connection refused');
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn(() => Promise.reject(networkError)),
+    });
+
+    try {
+      await httpClient.request({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
+      expect.unreachable('request should reject with LilyTransportError');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyTransportError);
+      expect(error).toMatchObject({
+        code: 'TRANSPORT_ERROR',
+        cause: networkError,
+      });
+    }
+  });
+
+  it('preserves the AbortError as the timeout transport error cause', async () => {
+    let abortError: DOMException | undefined;
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 1,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn(
+        (_input: URL | RequestInfo, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => {
+              abortError = new DOMException(
+                'The operation was aborted.',
+                'AbortError',
+              );
+              reject(abortError);
+            });
+          }),
+      ),
+    });
+
+    try {
+      await httpClient.request({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
+      expect.unreachable('request should reject with LilyTransportError');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyTransportError);
+      expect(error).toMatchObject({
+        code: 'TIMEOUT',
+        cause: abortError,
+      });
+    }
   });
 });
