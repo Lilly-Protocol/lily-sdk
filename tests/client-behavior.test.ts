@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { LilyAuthenticationError } from '../src/errors/sdk-error';
+import {
+  LilyAuthenticationError,
+  LilyTransportError,
+} from '../src/errors/sdk-error';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import { LilySdk } from '../src/sdk';
 import { createMockHttpClient } from './helpers/mock-http-client';
@@ -119,5 +122,79 @@ describe('client behavior', () => {
         path: '/v1/system/health',
       }),
     ).rejects.toBeInstanceOf(LilyAuthenticationError);
+  });
+
+  it('preserves the original network error as the transport error cause', async () => {
+    const networkError = new Error('socket closed');
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn(() => Promise.reject(networkError)),
+    });
+
+    const error = await httpClient
+      .request({ method: 'GET', path: '/v1/system/health' })
+      .catch((cause: unknown) => cause);
+
+    expect(error).toBeInstanceOf(LilyTransportError);
+    expect(error).toMatchObject({
+      code: 'TRANSPORT_ERROR',
+      cause: networkError,
+    });
+  });
+
+  it('preserves the AbortError raised by a real timeout signal', async () => {
+    vi.useFakeTimers();
+    const abortError = new DOMException(
+      'The operation was aborted.',
+      'AbortError',
+    );
+    const fetchSpy = vi.fn(
+      (_input: URL | RequestInfo, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener(
+            'abort',
+            () => {
+              reject(abortError);
+            },
+            { once: true },
+          );
+        }),
+    );
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 25,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
+    });
+
+    const outcome = httpClient
+      .request({ method: 'GET', path: '/v1/system/health' })
+      .catch((cause: unknown) => cause);
+
+    let error: unknown;
+    try {
+      await vi.advanceTimersByTimeAsync(25);
+      error = await outcome;
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(fetchSpy.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
+    expect(error).toBeInstanceOf(LilyTransportError);
+    expect(error).toMatchObject({ code: 'TIMEOUT', cause: abortError });
   });
 });
