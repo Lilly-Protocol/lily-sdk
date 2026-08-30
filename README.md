@@ -72,6 +72,63 @@ sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
 ```
 
+## Custom HTTP Transports
+
+Use `config.fetch` when the standard Lily transport behavior is appropriate but requests need to run through a mock, proxy-aware, or runtime-specific `fetch` implementation. The injected function receives the same `RequestInfo` and `RequestInit` values as the global Fetch API.
+
+```ts
+import { LilySdk } from '@lily-protocol/sdk';
+
+const mockFetch: typeof globalThis.fetch = async (input, init) => {
+  console.log(init?.method, input.toString());
+
+  return new Response(JSON.stringify({ status: 'ok' }), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  });
+};
+
+const sdk = new LilySdk({
+  baseUrl: 'https://api.lilyprotocol.com',
+  fetch: mockFetch,
+});
+
+await sdk.system.health();
+```
+
+Implement [`HttpClient`](./src/http/types.ts) when an application needs to own the complete request lifecycle, such as routing through a custom proxy or adding structured transport logs. The same client instance is shared by every domain client created by `LilySdk`.
+
+```ts
+import {
+  LilySdk,
+  type HttpClient,
+  type HttpRequest,
+  type HttpResponse,
+} from '@lily-protocol/sdk';
+
+class LoggingHttpClient implements HttpClient {
+  public async request<TResponse, TRequest = unknown>(
+    request: HttpRequest<TRequest>,
+  ): Promise<HttpResponse<TResponse>> {
+    console.log('Lily request', request.method, request.path);
+
+    // Forward the request with your proxy or HTTP library here.
+    return {
+      status: 200,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      data: { status: 'ok' } as TResponse,
+    };
+  }
+}
+
+const sdk = new LilySdk(
+  { baseUrl: 'https://api.lilyprotocol.com' },
+  new LoggingHttpClient(),
+);
+```
+
+The optional `HttpClient` constructor argument takes precedence over `config.fetch`. Supply one customization path at a time: use `config.fetch` to retain the built-in transport's authentication, timeout, and retry behavior, or provide an `HttpClient` to replace that transport entirely. See the public [`HttpRequest`](./src/http/types.ts) and [`HttpResponse`](./src/http/types.ts) definitions for the full contract.
+
 ## Repository Structure
 
 ```text
