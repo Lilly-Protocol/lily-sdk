@@ -4,6 +4,7 @@ import {
   LilyAuthenticationError,
   LilyTransportError,
 } from '../errors/sdk-error';
+import { resolveAuthHeaders } from './auth-headers';
 import type { HttpClient, HttpHeaders, HttpRequest, HttpResponse } from './types';
 
 export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient {
@@ -118,23 +119,14 @@ function buildHeaders(
   config: ResolvedLilySdkConfig,
   requestHeaders?: HttpHeaders,
 ): HttpHeaders {
-  const headers: HttpHeaders = {
+  return {
     accept: 'application/json',
     'content-type': 'application/json',
     'user-agent': config.userAgent,
     ...config.defaultHeaders,
+    ...resolveAuthHeaders(config),
     ...requestHeaders,
   };
-
-  if (config.apiKey) {
-    headers['x-api-key'] = config.apiKey;
-  }
-
-  if (config.authToken) {
-    headers.authorization = `Bearer ${config.authToken}`;
-  }
-
-  return headers;
 }
 
 function serializeBody(body: unknown): BodyInit | undefined {
