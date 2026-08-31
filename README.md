@@ -54,6 +54,51 @@ console.log(health.status);
 console.log(wallet.wallet.address);
 ```
 
+## Configuration
+
+The SDK accepts a `LilySdkConfig` object. All fields except `baseUrl` are optional and have sensible defaults.
+
+| Field | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `baseUrl` | `string` | *required* | Absolute URL for the Lily Protocol API (e.g. `https://api.lilyprotocol.com`). |
+| `apiKey` | `string` | `undefined` | API key sent as `x-api-key` header when provided. |
+| `authToken` | `string` | `undefined` | Bearer token sent as `Authorization` header when provided. |
+| `timeoutMs` | `number` | `10000` | Request timeout in milliseconds. Must be positive. Can be overridden per-request via `HttpRequest.timeoutMs`. |
+| `retry` | `Partial<RetryPolicy>` | `{ retries: 2, retryDelayMs: 250, retryableStatusCodes: [408,409,425,429,500,502,503,504] }` | Retry behaviour for failed requests. See below. |
+| `defaultHeaders` | `Record<string,string>` | `{}` | Extra headers merged into every request. |
+| `userAgent` | `string` | `lily-sdk/0.1.0` | Value of the `User-Agent` header. |
+| `fetch` | `typeof fetch` | `globalThis.fetch` | Custom fetch implementation for unsupported runtimes. |
+
+### Retry semantics
+
+- Retries only apply to **safe/idempotent** methods: `GET`, `PUT`, and `DELETE`. Requests using `POST` or `PATCH` fail immediately on error.
+- Eligible status codes default to `[408, 409, 425, 429, 500, 502, 503, 504]` and can be customised via `retry.retryableStatusCodes`.
+- Transport-level errors (network failures, DNS errors) are retried under the same method constraint.
+- The delay between attempts grows linearly: `retryDelayMs × attemptNumber` (e.g. 250 ms, then 500 ms).
+- Timeouts (`AbortError`) are wrapped as `LilyTransportError` with code `TIMEOUT` and are not retried beyond the transport policy.
+
+### Example
+
+```ts
+const sdk = new LilySdk({
+  baseUrl: 'https://api.lilyprotocol.com',
+  authToken: process.env.LILY_AUTH_TOKEN,
+  timeoutMs: 15_000,
+  retry: { retries: 3, retryDelayMs: 500 },
+  defaultHeaders: { 'x-request-source': 'billing-service' },
+});
+```
+
+Per-request overrides work the same way:
+
+```ts
+await sdk.wallets.provision(
+  { agentId: 'agent_123', network: 'stellar-testnet' },
+  { timeoutMs: 5_000 }, // overrides the global timeout for this call only
+);
+```
+
+
 ## Public API Overview
 
 ```ts
