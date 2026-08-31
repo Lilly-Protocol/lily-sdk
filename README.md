@@ -119,3 +119,21 @@ npm run example
 ## Contributing
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
+
+## Requirements and Compatibility
+
+- **Node.js**: Version 20 or newer is required. The SDK relies on built-in `fetch`, `AbortController`, and `Headers` APIs available in Node 20+.
+- **CI-Supported Versions**: Automated tests run against Node.js 20 and 22.
+- **Global Fetch**: A standards-compliant global `fetch` implementation is required by default. If your runtime lacks native fetch (e.g., older Node versions or specialized environments), provide a custom implementation via the `fetch` config option:
+
+  ```ts
+  import { LilySdk } from '@lily-protocol/sdk';
+  import fetch from 'node-fetch'; // or any compatible polyfill
+
+  const sdk = new LilySdk({
+    baseUrl: 'https://api.lilyprotocol.com',
+    fetch: fetch as typeof globalThis.fetch,
+  });
+  ```
+
+- **Browser Usage**: The SDK can run in browsers that support the Fetch API. Note that browser environments are subject to CORS restrictions enforced by the server. Ensure the Lily backend allows requests from your origin, or use a proxy/backend-for-frontend pattern.
