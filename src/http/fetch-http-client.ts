@@ -19,9 +19,25 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
 
       for (;;) {
         const controller = new AbortController();
+        let externalAbortHandler: (() => void) | undefined;
+
+        if (request.signal) {
+          if (request.signal.aborted) {
+            throw new LilyTransportError('Request aborted by caller signal.', {
+              code: 'CANCELLED',
+              cause: request.signal.reason instanceof Error ? request.signal.reason : undefined,
+            });
+          }
+          externalAbortHandler = () => {
+            controller.abort(request.signal?.reason);
+          };
+          request.signal.addEventListener('abort', externalAbortHandler, { once: true });
+        }
+
         const timeout = setTimeout(() => {
           controller.abort();
         }, timeoutMs);
+
         const body = serializeBody(request.body);
         const requestInit: RequestInit = {
           method: request.method,
@@ -40,6 +56,9 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
 
           if (response.ok) {
             clearTimeout(timeout);
+            if (externalAbortHandler && request.signal) {
+              request.signal.removeEventListener('abort', externalAbortHandler);
+            }
             return {
               status: response.status,
               headers: response.headers,
@@ -57,6 +76,9 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
 
           if (shouldRetry(response.status, attempt, config.retry.retries, request.method)) {
             clearTimeout(timeout);
+            if (externalAbortHandler && request.signal) {
+              request.signal.removeEventListener('abort', externalAbortHandler);
+            }
             attempt += 1;
             await sleep(config.retry.retryDelayMs * attempt);
             continue;
@@ -69,12 +91,21 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
           });
         } catch (error) {
           clearTimeout(timeout);
+          if (externalAbortHandler && request.signal) {
+            request.signal.removeEventListener('abort', externalAbortHandler);
+          }
 
           if (error instanceof LilyApiError || error instanceof LilyAuthenticationError) {
             throw error;
           }
 
           if (error instanceof Error && error.name === 'AbortError') {
+            if (request.signal?.aborted) {
+              throw new LilyTransportError('Request aborted by caller signal.', {
+                code: 'CANCELLED',
+                cause: error,
+              });
+            }
             throw new LilyTransportError('Request timed out while calling Lily Protocol API.', {
               code: 'TIMEOUT',
               cause: error,
