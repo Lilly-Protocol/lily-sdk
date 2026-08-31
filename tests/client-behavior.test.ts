@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { LilyAuthenticationError } from '../src/errors/sdk-error';
+import { LilyApiError, LilyAuthenticationError } from '../src/errors/sdk-error';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import { LilySdk } from '../src/sdk';
 import { createMockHttpClient } from './helpers/mock-http-client';
@@ -90,7 +90,7 @@ describe('client behavior', () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
   });
 
-  it('maps authentication failures to a typed error', async () => {
+  it('maps authentication failures to a typed error with full payload', async () => {
     const httpClient = createFetchHttpClient({
       baseUrl: new URL('https://api.lily.test/'),
       timeoutMs: 2_000,
@@ -103,7 +103,7 @@ describe('client behavior', () => {
       userAgent: 'lily-sdk/test',
       fetch: vi.fn(() =>
         Promise.resolve(
-          new Response(JSON.stringify({ message: 'nope' }), {
+          new Response(JSON.stringify({ message: 'nope', code: 'INVALID_TOKEN' }), {
             status: 401,
             headers: {
               'content-type': 'application/json',
@@ -113,11 +113,56 @@ describe('client behavior', () => {
       ),
     });
 
-    await expect(
-      httpClient.request({
+    try {
+      await httpClient.request({
         method: 'GET',
         path: '/v1/system/health',
-      }),
-    ).rejects.toBeInstanceOf(LilyAuthenticationError);
+      });
+      expect.fail('Expected LilyAuthenticationError to be thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyAuthenticationError);
+      const authError = error as LilyAuthenticationError;
+      expect(authError.statusCode).toBe(401);
+      expect(authError.code).toBe('AUTHENTICATION_ERROR');
+      expect(authError.details).toEqual({ message: 'nope', code: 'INVALID_TOKEN' });
+    }
+  });
+
+  it('propagates full error payload for non-retryable API errors', async () => {
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ message: 'internal failure', traceId: 'abc-123' }), {
+            status: 500,
+            headers: {
+              'content-type': 'application/json',
+            },
+          }),
+        ),
+      ),
+    });
+
+    try {
+      await httpClient.request({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
+      expect.fail('Expected LilyApiError to be thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyApiError);
+      const apiError = error as LilyApiError;
+      expect(apiError.statusCode).toBe(500);
+      expect(apiError.code).toBe('API_ERROR');
+      expect(apiError.details).toEqual({ message: 'internal failure', traceId: 'abc-123' });
+    }
   });
 });
