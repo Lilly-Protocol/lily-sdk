@@ -34,4 +34,40 @@ describe('resolveLilySdkConfig', () => {
       }),
     ).toThrow('`timeoutMs` must be a positive number.');
   });
+
+  it('throws when fetch implementation is missing', () => {
+    const originalFetch = globalThis.fetch;
+    // @ts-expect-error - intentionally removing fetch to test validation
+    delete globalThis.fetch;
+
+    try {
+      expect(() =>
+        resolveLilySdkConfig({
+          baseUrl: 'https://api.lily.test',
+        }),
+      ).toThrow(LilyConfigError);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('throws when retry.retries is not an integer', () => {
+    expect(() =>
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+        retry: { retries: 1.5 },
+      }),
+    ).toThrow('`retry.retries` must be a non-negative integer.');
+  });
+
+  it('throws when retry.retryDelayMs is negative', () => {
+    expect(() =>
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+        retry: { retryDelayMs: -1 },
+      }),
+    ).toThrow('`retry.retryDelayMs` must be a non-negative number.');
+  });
 });
