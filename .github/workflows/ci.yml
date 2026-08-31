@@ -34,5 +34,12 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/coverage-final.json
+          fail_ci_if_error: false
+        if: matrix.node-version == '20'
+
       - name: Build
         run: npm run build
