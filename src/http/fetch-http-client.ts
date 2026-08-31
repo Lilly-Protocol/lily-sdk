@@ -1,4 +1,5 @@
 import type { ResolvedLilySdkConfig } from '../config/types';
+import { resolveAuthHeaders } from './resolve-auth-headers';
 import {
   LilyApiError,
   LilyAuthenticationError,
@@ -118,23 +119,14 @@ function buildHeaders(
   config: ResolvedLilySdkConfig,
   requestHeaders?: HttpHeaders,
 ): HttpHeaders {
-  const headers: HttpHeaders = {
+  return {
     accept: 'application/json',
     'content-type': 'application/json',
     'user-agent': config.userAgent,
     ...config.defaultHeaders,
+    ...resolveAuthHeaders(config),
     ...requestHeaders,
   };
-
-  if (config.apiKey) {
-    headers['x-api-key'] = config.apiKey;
-  }
-
-  if (config.authToken) {
-    headers.authorization = `Bearer ${config.authToken}`;
-  }
-
-  return headers;
 }
 
 function serializeBody(body: unknown): BodyInit | undefined {
