@@ -17,7 +17,7 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
 
   const baseUrl = safeUrl(config.baseUrl);
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const retry = resolveRetryPolicy(config.retry);
+  const retry = Object.freeze(resolveRetryPolicy(config.retry));
   const fetchImpl = config.fetch ?? globalThis.fetch;
 
   if (typeof fetchImpl !== 'function') {
@@ -30,7 +30,7 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
     throw new LilyConfigError('`timeoutMs` must be a positive number.');
   }
 
-  return {
+  const resolved: ResolvedLilySdkConfig = Object.freeze({
     baseUrl,
     timeoutMs,
     retry,
@@ -41,7 +41,9 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
     fetch: fetchImpl,
     ...(config.apiKey ? { apiKey: config.apiKey } : {}),
     ...(config.authToken ? { authToken: config.authToken } : {}),
-  };
+  });
+
+  return resolved;
 }
 
 function safeUrl(rawUrl: string): URL {
