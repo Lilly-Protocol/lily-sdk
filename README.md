@@ -119,3 +119,25 @@ npm run example
 ## Contributing
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
+
+## HTTP Response Parsing
+
+The SDK's fetch transport normalizes responses before returning them to client methods. Understanding these rules helps avoid surprises when working with DELETE endpoints, error pages, or non-standard APIs:
+
+- **204 No Content** → `data` is `null`. This is common for DELETE and some UPDATE operations. Always check `response.status === 204` before accessing properties on `data`.
+- **JSON responses** (`application/json`) → `data` is the parsed object.
+- **All other responses** → `data` is a raw string (e.g., HTML error pages, plain-text messages).
+
+```ts
+const response = await sdk.httpClient.request({ method: 'DELETE', path: '/agents/agent_123' });
+
+if (response.status === 204) {
+  console.log('Agent deleted successfully');
+} else if (typeof response.data === 'string') {
+  console.error('Unexpected non-JSON response:', response.data);
+} else {
+  console.log('Response payload:', response.data);
+}
+```
+
+This behavior is implemented in `src/http/fetch-http-client.ts` (`parseResponse`). Custom `HttpClient` implementations should follow the same contract to remain compatible with existing clients.
