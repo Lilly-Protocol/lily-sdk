@@ -109,6 +109,29 @@ npm run example
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
 - The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.
 
+## HTTP Response Handling
+
+The SDK transport normalizes every response before returning it to client code. Understanding these rules prevents surprises when working with DELETE endpoints, error pages, or non-JSON services:
+
+- **204 No Content** → `data` is `null`. Always check `response.status === 204` before accessing fields on `data`.
+- **`application/json`** → parsed JSON object. Type narrowing is still required at the call site because the transport returns `unknown`.
+- **Any other content type** → raw string. HTML error pages, plain-text diagnostics, and binary payloads all arrive as strings; inspect `response.headers.get('content-type')` if you need to branch.
+
+```ts
+const response = await sdk.httpClient.request({
+  method: 'DELETE',
+  path: '/agents/abc123',
+});
+
+if (response.status === 204) {
+  console.log('Agent deleted');
+} else if (typeof response.data === 'string') {
+  console.warn('Non-JSON response:', response.data);
+} else {
+  console.log('Structured payload:', response.data);
+}
+```
+
 ## Roadmap Themes
 
 - Real backend endpoint alignment and response model hardening
