@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { LilyAuthenticationError } from '../src/errors/sdk-error';
+import {
+  LilyApiError,
+  LilyAuthenticationError,
+  LilyTransportError,
+} from '../src/errors/sdk-error';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import { LilySdk } from '../src/sdk';
 import { createMockHttpClient } from './helpers/mock-http-client';
@@ -113,11 +117,133 @@ describe('client behavior', () => {
       ),
     });
 
-    await expect(
-      httpClient.request({
+    try {
+      await httpClient.request({
         method: 'GET',
         path: '/v1/system/health',
+      });
+      expect.fail('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyAuthenticationError);
+      const authError = error as LilyAuthenticationError;
+      expect(authError.request).toEqual({
+        method: 'GET',
+        path: '/v1/system/health',
+        url: 'https://api.lily.test/v1/system/health',
+      });
+    }
+  });
+
+  it('attaches request metadata to api errors', async () => {
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ message: 'fail' }), {
+            status: 500,
+            headers: {
+              'content-type': 'application/json',
+            },
+          }),
+        ),
+      ),
+    });
+
+    try {
+      await httpClient.request({
+        method: 'GET',
+        path: '/v1/items',
+      });
+      expect.fail('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyApiError);
+      const apiError = error as LilyApiError;
+      expect(apiError.request).toEqual({
+        method: 'GET',
+        path: '/v1/items',
+        url: 'https://api.lily.test/v1/items',
+      });
+    }
+  });
+
+  it('attaches request metadata to transport timeout errors', async () => {
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 10,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn((...args: unknown[]) => {
+        const init = args[1] as RequestInit | undefined;
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            const abortError = new Error('The operation was aborted');
+            abortError.name = 'AbortError';
+            reject(abortError);
+          });
+        });
       }),
-    ).rejects.toBeInstanceOf(LilyAuthenticationError);
+    });
+
+    try {
+      await httpClient.request({
+        method: 'GET',
+        path: '/v1/slow',
+      });
+      expect.fail('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyTransportError);
+      const transportError = error as LilyTransportError;
+      expect(transportError.code).toBe('TIMEOUT');
+      expect(transportError.request).toEqual({
+        method: 'GET',
+        path: '/v1/slow',
+        url: 'https://api.lily.test/v1/slow',
+      });
+    }
+  });
+
+  it('attaches request metadata to network transport errors', async () => {
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn(() => Promise.reject(new Error('network down'))),
+    });
+
+    try {
+      await httpClient.request({
+        method: 'POST',
+        path: '/v1/data',
+      });
+      expect.fail('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyTransportError);
+      const transportError = error as LilyTransportError;
+      expect(transportError.code).toBe('TRANSPORT_ERROR');
+      expect(transportError.request).toEqual({
+        method: 'POST',
+        path: '/v1/data',
+        url: 'https://api.lily.test/v1/data',
+      });
+    }
   });
 });
