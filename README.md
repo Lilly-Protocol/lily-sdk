@@ -109,6 +109,24 @@ npm run example
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
 - The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.
 
+## Subpath Imports
+
+The package exposes stable subpath entrypoints so you can import only what you need without pulling in the entire SDK surface. Each subpath ships CJS, ESM, and TypeScript declarations:
+
+- `@lily-protocol/sdk/config` — `LilySdkConfig`, `ResolvedLilySdkConfig`, and `resolveLilySdkConfig`
+- `@lily-protocol/sdk/errors` — `LilySdkError`, `LilyApiError`, `LilyAuthenticationError`, `LilyTransportError`
+- `@lily-protocol/sdk/http` — `HttpClient`, `HttpRequest`, `HttpResponse`, `createFetchHttpClient`
+- `@lily-protocol/sdk/models` — domain types like `Agent`, `Payment`, `Wallet`, and their request/response variants
+- `@lily-protocol/sdk/types` — contract interfaces (`AgentClientContract`, `PaymentClientContract`, etc.)
+
+```ts
+import type { LilySdkConfig } from '@lily-protocol/sdk/config';
+import type { HttpClient } from '@lily-protocol/sdk/http';
+import type { Agent } from '@lily-protocol/sdk/models';
+```
+
+These entrypoints are covered by the export-surface tests and will not be removed or renamed without a major version bump.
+
 ## Roadmap Themes
 
 - Real backend endpoint alignment and response model hardening
