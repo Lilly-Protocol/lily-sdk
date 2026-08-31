@@ -123,16 +123,9 @@ function buildHeaders(
     'content-type': 'application/json',
     'user-agent': config.userAgent,
     ...config.defaultHeaders,
+    ...resolveAuthHeaders(config),
     ...requestHeaders,
   };
-
-  if (config.apiKey) {
-    headers['x-api-key'] = config.apiKey;
-  }
-
-  if (config.authToken) {
-    headers.authorization = `Bearer ${config.authToken}`;
-  }
 
   return headers;
 }
@@ -181,3 +174,4 @@ async function sleep(ms: number): Promise<void> {
     setTimeout(resolve, ms);
   });
 }
+import { resolveAuthHeaders } from './auth-headers';
