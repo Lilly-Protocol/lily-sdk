@@ -74,17 +74,22 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
             throw error;
           }
 
-          if (error instanceof Error && error.name === 'AbortError') {
+          const isTimeout = error instanceof Error && error.name === 'AbortError';
+
+          if (
+            attempt < config.retry.retries &&
+            (isTimeout ? isRetryableMethod(request.method) : isRetryableTransportError(error, request.method))
+          ) {
+            attempt += 1;
+            await sleep(config.retry.retryDelayMs * attempt);
+            continue;
+          }
+
+          if (isTimeout) {
             throw new LilyTransportError('Request timed out while calling Lily Protocol API.', {
               code: 'TIMEOUT',
               cause: error,
             });
-          }
-
-          if (attempt < config.retry.retries && isRetryableTransportError(error, request.method)) {
-            attempt += 1;
-            await sleep(config.retry.retryDelayMs * attempt);
-            continue;
           }
 
           throw new LilyTransportError('Network error while calling Lily Protocol API.', {
@@ -170,10 +175,12 @@ function shouldRetry(
   return isSafeOrIdempotent && attempt < maxRetries && [408, 409, 425, 429, 500, 502, 503, 504].includes(statusCode);
 }
 
-function isRetryableTransportError(error: unknown, method: string): boolean {
-  const isSafeOrIdempotent = method === 'GET' || method === 'PUT' || method === 'DELETE';
+function isRetryableMethod(method: string): boolean {
+  return method === 'GET' || method === 'PUT' || method === 'DELETE';
+}
 
-  return isSafeOrIdempotent && error instanceof Error;
+function isRetryableTransportError(error: unknown, method: string): boolean {
+  return isRetryableMethod(method) && error instanceof Error;
 }
 
 async function sleep(ms: number): Promise<void> {
