@@ -109,6 +109,46 @@ npm run example
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
 - The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.
 
+## Domain Models
+
+### MoneyAmount
+
+All monetary values in the SDK use the `MoneyAmount` interface. Amounts are **decimal strings**, not floating-point numbers, to avoid precision loss during serialization and arithmetic.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `amount` | `string` | Yes | Decimal string representation (e.g. `"10.50"`, `"0.0000001"`). Never use floats. |
+| `assetCode` | `string` | Yes | Stellar asset code (e.g. `"USDC"`, `"XLM"`). |
+| `assetIssuer` | `string` | No | Stellar account ID of the asset issuer. Omit for native XLM. |
+
+#### Valid Examples
+
+```ts
+// Native Stellar Lumens
+{ amount: "100.0000000", assetCode: "XLM" }
+
+// USDC on Stellar
+{ amount: "25.50", assetCode: "USDC", assetIssuer: "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN" }
+
+// Small decimal precision
+{ amount: "0.0000001", assetCode: "XLM" }
+```
+
+#### Invalid Examples
+
+```ts
+// ❌ Float instead of string — will lose precision
+{ amount: 10.5, assetCode: "USDC" }
+
+// ❌ Missing asset code
+{ amount: "10.00" }
+
+// ❌ Scientific notation is not guaranteed to be accepted by all validators
+{ amount: "1e-7", assetCode: "XLM" }
+```
+
+Asset validation (code format, issuer checksum) is performed server-side. The SDK passes values through as-is; integrators should validate locally before sending to avoid unnecessary round trips.
+
 ## Roadmap Themes
 
 - Real backend endpoint alignment and response model hardening
