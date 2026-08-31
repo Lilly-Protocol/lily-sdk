@@ -26,4 +26,35 @@ export class LilySdk {
     this.identity = new IdentityClient(resolvedHttpClient);
     this.system = new SystemClient(resolvedHttpClient);
   }
+
+  /**
+   * Creates a new LilySdk instance with merged configuration.
+   * Useful for multi-tenant scenarios where credentials or baseUrl differ per tenant.
+   */
+  public withConfig(overrides: Partial<LilySdkConfig>): LilySdk {
+    // Construct a fresh config object from resolved values to satisfy
+    // exactOptionalPropertyTypes. Only defined overrides replace base values.
+    const merged: LilySdkConfig = {
+      baseUrl: overrides.baseUrl ?? String(this.config.baseUrl),
+      timeoutMs: overrides.timeoutMs ?? this.config.timeoutMs,
+      retry: overrides.retry ?? this.config.retry,
+      defaultHeaders: overrides.defaultHeaders ?? Object.fromEntries(Object.entries(this.config.defaultHeaders)),
+      userAgent: overrides.userAgent ?? this.config.userAgent,
+      fetch: overrides.fetch ?? this.config.fetch,
+    };
+
+    if (overrides.apiKey !== undefined) {
+      merged.apiKey = overrides.apiKey;
+    } else if (this.config.apiKey !== undefined) {
+      merged.apiKey = this.config.apiKey;
+    }
+
+    if (overrides.authToken !== undefined) {
+      merged.authToken = overrides.authToken;
+    } else if (this.config.authToken !== undefined) {
+      merged.authToken = this.config.authToken;
+    }
+
+    return new LilySdk(merged);
+  }
 }
