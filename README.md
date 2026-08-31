@@ -1,5 +1,9 @@
 # Lily SDK
 
+## Security
+
+Please see [SECURITY.md](SECURITY.md) for vulnerability reporting and security policy.
+
 [![CI](https://github.com/lily-protocol/lily-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/lily-protocol/lily-sdk/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/typed-TypeScript-3178C6.svg)](https://www.typescriptlang.org/)
