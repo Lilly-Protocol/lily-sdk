@@ -109,6 +109,39 @@ npm run example
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
 - The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.
 
+## Subpath Imports
+
+The SDK exposes stable subpath exports for targeted imports. Use these to access specific modules without pulling in the entire SDK surface:
+
+- **`@lily-protocol/sdk/config`**: Configuration types and resolution utilities.
+  ```ts
+  import { resolveLilySdkConfig } from '@lily-protocol/sdk/config';
+  import type { LilySdkConfig } from '@lily-protocol/sdk/config';
+  ```
+
+- **`@lily-protocol/sdk/errors`**: Typed error hierarchy for handling SDK failures.
+  ```ts
+  import { LilyApiError, LilyTransportError } from '@lily-protocol/sdk/errors';
+  ```
+
+- **`@lily-protocol/sdk/http`**: Transport primitives and custom client factories.
+  ```ts
+  import { createFetchHttpClient } from '@lily-protocol/sdk/http';
+  import type { HttpClient, HttpRequest } from '@lily-protocol/sdk/http';
+  ```
+
+- **`@lily-protocol/sdk/models`**: Public request/response and domain model types.
+  ```ts
+  import type { WalletProvisionRequest, AgentSummary } from '@lily-protocol/sdk/models';
+  ```
+
+- **`@lily-protocol/sdk/types`**: Client contracts and shared public interfaces.
+  ```ts
+  import type { WalletClientContract } from '@lily-protocol/sdk/types';
+  ```
+
+These subpaths are considered stable public entrypoints alongside the root `@lily-protocol/sdk` export. Prefer them when you only need a specific subset of the SDK to reduce bundle size and improve type isolation.
+
 ## Roadmap Themes
 
 - Real backend endpoint alignment and response model hardening
