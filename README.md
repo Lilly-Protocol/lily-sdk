@@ -109,6 +109,10 @@ npm run example
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
 - The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.
 
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for a full list of changes. The changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and is updated with every release.
+
 ## Roadmap Themes
 
 - Real backend endpoint alignment and response model hardening
