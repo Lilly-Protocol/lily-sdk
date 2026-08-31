@@ -70,6 +70,7 @@
   },
   "scripts": {
     "clean": "rm -rf dist coverage .turbo",
+    "prebuild": "bash scripts/generate-version.sh",
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --project tsconfig.json --noEmit",
