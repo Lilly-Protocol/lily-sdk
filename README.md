@@ -109,6 +109,46 @@ npm run example
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
 - The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.
 
+## Custom Transport & Fetch Injection
+
+The SDK supports two levels of transport customization:
+
+- **Custom `fetch`**: Pass a custom fetch implementation via `config.fetch` to mock requests in tests, route through a proxy, or support runtimes without native fetch.
+
+```ts
+import { LilySdk } from '@lily-protocol/sdk';
+
+const sdk = new LilySdk({
+  baseUrl: 'https://api.lilyprotocol.com',
+  fetch: async (input, init) => {
+    // Mock, log, or delegate to another fetch implementation
+    console.log('Request:', input, init);
+    return globalThis.fetch(input, init);
+  },
+});
+```
+
+- **Custom `HttpClient`**: Implement the `HttpClient` interface (`src/http/types.ts`) to fully replace the default transport. This is useful for adding logging, metrics, caching, or routing requests through a non-standard backend.
+
+```ts
+import type { HttpClient, HttpRequest, HttpResponse } from '@lily-protocol/sdk';
+
+class LoggingHttpClient implements HttpClient {
+  constructor(private inner: HttpClient) {}
+
+  async request<TResponse, TRequest = unknown>(
+    req: HttpRequest<TRequest>,
+  ): Promise<HttpResponse<TResponse>> {
+    console.log(`[HTTP] ${req.method} ${req.path}`);
+    const res = await this.inner.request<TResponse, TRequest>(req);
+    console.log(`[HTTP] ${res.status}`);
+    return res;
+  }
+}
+```
+
+When both are provided, a custom `HttpClient` takes precedence over `config.fetch`. Use `config.fetch` for simple overrides and `HttpClient` for full transport control.
+
 ## Roadmap Themes
 
 - Real backend endpoint alignment and response model hardening
