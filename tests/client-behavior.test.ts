@@ -121,3 +121,58 @@ describe('client behavior', () => {
     ).rejects.toBeInstanceOf(LilyAuthenticationError);
   });
 });
+
+describe('cause propagation on LilyTransportError', () => {
+  it('preserves the original error as cause when fetch rejects with a network error', async () => {
+    const { LilyTransportError } = await import('../src/errors/sdk-error');
+    const originalError = new Error('ECONNREFUSED');
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn(() => Promise.reject(originalError)),
+    });
+
+    try {
+      await httpClient.request({ method: 'GET', path: '/v1/system/health' });
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(LilyTransportError);
+      const transportErr = err as InstanceType<typeof LilyTransportError>;
+      expect(transportErr.cause).toBe(originalError);
+      expect(transportErr.code).toBe('TRANSPORT_ERROR');
+    }
+  });
+
+  it('preserves AbortError as cause when request times out via AbortController', async () => {
+    const { LilyTransportError } = await import('../src/errors/sdk-error');
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 50,
+      retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
+        return new Promise<never>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            const abortError = new DOMException('The operation was aborted.', 'AbortError');
+            reject(abortError);
+          });
+        });
+      }),
+    });
+
+    try {
+      await httpClient.request({ method: 'GET', path: '/v1/system/health' });
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(LilyTransportError);
+      const transportErr = err as InstanceType<typeof LilyTransportError>;
+      expect(transportErr.code).toBe('TIMEOUT');
+      expect(transportErr.cause).toBeInstanceOf(Error);
+      expect((transportErr.cause as Error).name).toBe('AbortError');
+    }
+  });
+});
