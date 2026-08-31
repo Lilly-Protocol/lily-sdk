@@ -26,4 +26,26 @@ export class LilySdk {
     this.identity = new IdentityClient(resolvedHttpClient);
     this.system = new SystemClient(resolvedHttpClient);
   }
+
+  /**
+   * Creates a new LilySdk instance with sensible defaults.
+   * Reads LILY_API_URL and LILY_API_KEY from environment variables if not provided.
+   * Explicit options always take precedence over environment variables.
+   */
+  public static create(options?: Partial<LilySdkConfig>): LilySdk {
+    const baseUrl = options?.baseUrl ?? process.env.LILY_API_URL;
+    const apiKey = options?.apiKey ?? process.env.LILY_API_KEY;
+
+    if (!baseUrl) {
+      throw new Error(
+        'baseUrl is required. Provide it in options or set the LILY_API_URL environment variable.',
+      );
+    }
+
+    return new LilySdk({
+      ...options,
+      baseUrl,
+      ...(apiKey ? { apiKey } : {}),
+    });
+  }
 }
