@@ -109,6 +109,34 @@ npm run example
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
 - The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.
 
+## Environment Variables
+
+The SDK does not read environment variables automatically. The canonical names below are a convention for integrators to build their own `LilySdkConfig` objects consistently across services.
+
+| Variable | Type | Maps To | Notes |
+|---|---|---|---|
+| `LILY_BASE_URL` | `string` | `baseUrl` | Override for self-hosted or staging environments. |
+| `LILY_API_KEY` | `string` | `apiKey` | Required unless `LILY_AUTH_TOKEN` is set. |
+| `LILY_AUTH_TOKEN` | `string` | `authToken` | Takes precedence over `LILY_API_KEY` when both are present. |
+| `LILY_TIMEOUT_MS` | `number` | `timeoutMs` | Parsed as integer; ignored if empty or non-numeric. |
+
+### Building Config from Environment
+
+```ts
+const config = {
+  baseUrl: process.env.LILY_BASE_URL,
+  apiKey: process.env.LILY_API_KEY,
+  authToken: process.env.LILY_AUTH_TOKEN,
+  timeoutMs: process.env.LILY_TIMEOUT_MS
+    ? Number(process.env.LILY_TIMEOUT_MS)
+    : undefined,
+};
+
+const sdk = new LilySdk(config);
+```
+
+A dedicated `configFromEnv()` helper is tracked in [#49](https://github.com/Lilly-Protocol/lily-sdk/issues/49) and will be added in a future release. Until then, use the pattern above to keep env-var naming consistent across your infrastructure.
+
 ## Roadmap Themes
 
 - Real backend endpoint alignment and response model hardening
