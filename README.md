@@ -109,6 +109,55 @@ npm run example
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
 - The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.
 
+## Error Handling
+
+The SDK exports a typed error hierarchy rooted at `LilySdkError`. Every error carries optional `code`, `statusCode`, `details`, and `cause` fields for programmatic handling.
+
+| Error Class | When It Is Thrown | Key Fields |
+|---|---|---|
+| `LilySdkError` | Base class for all SDK errors. Catch this as a fallback. | `code`, `cause` |
+| `LilyConfigError` | Invalid or missing configuration at construction time. | `code`, `details` |
+| `LilyTransportError` | Network failure, DNS error, timeout, or aborted request. | `code` (e.g. `TIMEOUT`, `NETWORK`), `cause` |
+| `LilyValidationError` | Request payload failed client-side validation before sending. | `code`, `details` |
+| `LilyAuthenticationError` | API returned `401` or `403`. | `statusCode`, `code`, `details` |
+| `LilyApiError` | API returned any other non-2xx status (`400`, `404`, `500`, etc.). | `statusCode`, `code`, `details` |
+
+### Catching Errors
+
+Use `instanceof` to distinguish error types. Always check `statusCode` on API errors and `code` on transport errors.
+
+```ts
+import {
+  LilyApiError,
+  LilyAuthenticationError,
+  LilyTransportError,
+} from 'lily-sdk';
+
+try {
+  const wallet = await sdk.wallets.get('wal_abc123');
+} catch (err) {
+  if (err instanceof LilyAuthenticationError) {
+    // 401/403 — refresh token or re-authenticate
+    console.error('Auth failed:', err.statusCode, err.details);
+  } else if (err instanceof LilyApiError) {
+    // Business logic error from the API
+    console.error(`API ${err.statusCode}: [${err.code}] ${err.message}`);
+  } else if (err instanceof LilyTransportError) {
+    // Network-level failure; retries may have been exhausted
+    console.error('Transport:', err.code, err.cause);
+  } else {
+    throw err; // Unexpected error — rethrow
+  }
+}
+```
+
+### Error Fields Reference
+
+- **`code`** (`string | undefined`): Machine-readable error identifier. Transport errors use codes like `TIMEOUT`, `NETWORK`, `ABORTED`. API errors mirror the backend error code when available.
+- **`statusCode`** (`number | undefined`): HTTP status code for `LilyApiError` and `LilyAuthenticationError`. Undefined for transport and config errors.
+- **`details`** (`unknown`): Structured payload from the API response body or validation context. Shape depends on the endpoint.
+- **`cause`** (`unknown`): Original error that triggered this one (e.g., the underlying `fetch` error for transport failures). Useful for logging and debugging.
+
 ## Roadmap Themes
 
 - Real backend endpoint alignment and response model hardening
