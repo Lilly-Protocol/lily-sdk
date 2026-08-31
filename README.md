@@ -72,6 +72,23 @@ sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
 ```
 
+## HTTP response handling
+
+The SDK parses responses automatically based on status code and `Content-Type`:
+
+- **204 No Content** — `response.data` is `null`.
+- **`application/json`** — `response.data` is the parsed JSON body.
+- **Any other content type** — `response.data` is the raw response text.
+
+Always inspect `response.status` before interpreting `response.data`, especially for error pages or non-JSON responses:
+
+```ts
+const response = await sdk.system.health();
+if (response.status === 200) {
+  console.log(response.data); // parsed JSON
+}
+```
+
 ## Repository Structure
 
 ```text
