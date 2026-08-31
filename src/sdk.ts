@@ -16,6 +16,10 @@ export class LilySdk {
   public readonly identity: IdentityClient;
   public readonly system: SystemClient;
 
+  public static create(config?: LilySdkConfig, httpClient?: HttpClient): LilySdk {
+    return new LilySdk(config ?? {}, httpClient);
+  }
+
   public constructor(config: LilySdkConfig, httpClient?: HttpClient) {
     this.config = resolveLilySdkConfig(config);
     const resolvedHttpClient = httpClient ?? createFetchHttpClient(this.config);
