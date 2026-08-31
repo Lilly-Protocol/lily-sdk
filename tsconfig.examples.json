@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    "strict": true,
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "target": "es2022"
+  },
+  "include": ["examples/**/*.ts", "src/**/*.ts"]
+}
