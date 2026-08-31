@@ -36,3 +36,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Verify npm pack contents
+        run: ./scripts/check-npm-pack.sh
