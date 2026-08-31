@@ -119,3 +119,21 @@ npm run example
 ## Contributing
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
+
+## Subpath Imports
+
+The SDK exposes stable subpath exports for targeted imports:
+
+- `@lily-protocol/sdk/config` — Configuration types and resolution (`LilySdkConfig`, `ResolvedLilySdkConfig`, `resolveLilySdkConfig`)
+- `@lily-protocol/sdk/errors` — Typed error hierarchy (`LilyApiError`, `LilyAuthenticationError`, `LilyConfigError`, `LilySdkError`, `LilyTransportError`, `LilyValidationError`)
+- `@lily-protocol/sdk/http` — HTTP transport abstraction (`createFetchHttpClient`, `HttpClient`, `HttpRequest`, `HttpResponse`, `RetryPolicy`)
+- `@lily-protocol/sdk/models` — Domain models and request/response types (re-exports all public models)
+- `@lily-protocol/sdk/types` — Client contracts (`AgentClientContract`, `IdentityClientContract`, `PaymentClientContract`, `SystemClientContract`, `WalletClientContract`)
+
+Example:
+
+```ts
+import { LilyApiError, LilyAuthenticationError } from '@lily-protocol/sdk/errors';
+import { createFetchHttpClient } from '@lily-protocol/sdk/http';
+import type { AgentClientContract } from '@lily-protocol/sdk/types';
+```
