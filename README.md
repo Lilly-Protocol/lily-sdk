@@ -72,6 +72,39 @@ sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
 ```
 
+## Configuration
+
+`LilySdkConfig` accepts the following options. All fields except `baseUrl` are optional and use sensible defaults.
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `baseUrl` | `string` | required | Root URL of the Lily Protocol API. |
+| `apiKey` | `string` | — | API key sent as `x-api-key`. |
+| `authToken` | `string` | — | Bearer token sent as `Authorization`. |
+| `timeoutMs` | `number` | `10000` | Request timeout in milliseconds. Must be positive. |
+| `retry.retries` | `number` | `2` | Maximum retry attempts for eligible requests. |
+| `retry.retryDelayMs` | `number` | `250` | Base delay between retries in milliseconds. Grows linearly with the attempt number (`retryDelayMs * attempt`). |
+| `retry.retryableStatusCodes` | `number[]` | `[408, 409, 425, 429, 500, 502, 503, 504]` | Status codes that trigger a retry. |
+| `defaultHeaders` | `Record<string, string>` | `{}` | Headers added to every request. |
+| `userAgent` | `string` | `"lily-sdk/0.1.0"` | User-Agent header value. |
+| `fetch` | `typeof fetch` | `globalThis.fetch` | Custom fetch implementation. |
+
+Retries only apply to safe/idempotent methods (`GET`, `PUT`, `DELETE`). `POST` and `PATCH` are never retried automatically.
+
+You can also override `timeoutMs` on a per-request basis via `HttpRequest.timeoutMs`.
+
+```ts
+import { LilySdk } from '@lily-protocol/sdk';
+
+const sdk = new LilySdk({
+  baseUrl: 'https://api.lilyprotocol.com',
+  authToken: process.env.LILY_AUTH_TOKEN,
+  timeoutMs: 5000,
+  retry: { retries: 3, retryDelayMs: 500 },
+  defaultHeaders: { 'x-request-source': 'my-service' },
+});
+```
+
 ## Repository Structure
 
 ```text
