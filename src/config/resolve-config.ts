@@ -10,12 +10,13 @@ const DEFAULT_RETRY_POLICY: RetryPolicy = {
   retryableStatusCodes: [408, 409, 425, 429, 500, 502, 503, 504],
 };
 
-export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConfig {
-  if (!config.baseUrl) {
+export function resolveLilySdkConfig(config: Partial<LilySdkConfig>): ResolvedLilySdkConfig {
+  const rawBaseUrl = config.baseUrl ?? process.env.LILY_API_URL;
+  if (!rawBaseUrl) {
     throw new LilyConfigError('`baseUrl` is required.');
   }
 
-  const baseUrl = safeUrl(config.baseUrl);
+  const baseUrl = safeUrl(rawBaseUrl);
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const retry = resolveRetryPolicy(config.retry);
   const fetchImpl = config.fetch ?? globalThis.fetch;
@@ -30,7 +31,10 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
     throw new LilyConfigError('`timeoutMs` must be a positive number.');
   }
 
-  return {
+  const apiKey = config.apiKey ?? process.env.LILY_API_KEY;
+  const authToken = config.authToken ?? process.env.LILY_AUTH_TOKEN;
+
+  return Object.freeze({
     baseUrl,
     timeoutMs,
     retry,
@@ -39,9 +43,9 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
     }),
     userAgent: config.userAgent ?? DEFAULT_USER_AGENT,
     fetch: fetchImpl,
-    ...(config.apiKey ? { apiKey: config.apiKey } : {}),
-    ...(config.authToken ? { authToken: config.authToken } : {}),
-  };
+    ...(apiKey ? { apiKey } : {}),
+    ...(authToken ? { authToken } : {}),
+  });
 }
 
 function safeUrl(rawUrl: string): URL {
