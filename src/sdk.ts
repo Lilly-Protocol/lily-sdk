@@ -15,15 +15,35 @@ export class LilySdk {
   public readonly payments: PaymentClient;
   public readonly identity: IdentityClient;
   public readonly system: SystemClient;
+  private readonly httpClient: HttpClient;
 
   public constructor(config: LilySdkConfig, httpClient?: HttpClient) {
     this.config = resolveLilySdkConfig(config);
-    const resolvedHttpClient = httpClient ?? createFetchHttpClient(this.config);
+    this.httpClient = httpClient ?? createFetchHttpClient(this.config);
 
-    this.agents = new AgentClient(resolvedHttpClient);
-    this.wallets = new WalletClient(resolvedHttpClient);
-    this.payments = new PaymentClient(resolvedHttpClient);
-    this.identity = new IdentityClient(resolvedHttpClient);
-    this.system = new SystemClient(resolvedHttpClient);
+    this.agents = new AgentClient(this.httpClient);
+    this.wallets = new WalletClient(this.httpClient);
+    this.payments = new PaymentClient(this.httpClient);
+    this.identity = new IdentityClient(this.httpClient);
+    this.system = new SystemClient(this.httpClient);
+  }
+
+  /**
+   * Creates a new LilySdk instance with merged configuration overrides.
+   * Useful for multi-tenant scenarios where credentials or baseUrl differ per tenant.
+   * Shares the underlying HttpClient transport shape but applies new config resolution.
+   */
+  public withConfig(overrides: Partial<LilySdkConfig>): LilySdk {
+    const merged: LilySdkConfig = {
+      baseUrl: overrides.baseUrl ?? this.config.baseUrl.toString(),
+      apiKey: overrides.apiKey ?? this.config.apiKey,
+      authToken: overrides.authToken ?? this.config.authToken,
+      timeoutMs: overrides.timeoutMs ?? this.config.timeoutMs,
+      retry: overrides.retry ?? this.config.retry,
+      defaultHeaders: overrides.defaultHeaders ?? this.config.defaultHeaders,
+      userAgent: overrides.userAgent ?? this.config.userAgent,
+      fetch: overrides.fetch ?? this.config.fetch,
+    };
+    return new LilySdk(merged, this.httpClient);
   }
 }
