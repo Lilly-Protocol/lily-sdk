@@ -36,3 +36,21 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Verify npm pack contents
+        run: |
+          PACK_OUTPUT=$(npm pack --dry-run --json)
+          echo "$PACK_OUTPUT" | jq -e '
+            .[0].files
+            | map(.path)
+            | map(select(test("\\.(map|cts)$") | not))
+            | map(select(startswith("dist/types-") | not))
+            | sort
+          ' > /tmp/pack-files.json
+          echo '["LICENSE","README.md","dist/config.cjs","dist/config.d.ts","dist/config.js","dist/errors.cjs","dist/errors.d.ts","dist/errors.js","dist/http.cjs","dist/http.d.ts","dist/http.js","dist/index.cjs","dist/index.d.ts","dist/index.js","dist/models.cjs","dist/models.d.ts","dist/models.js","dist/types.cjs","dist/types.d.ts","dist/types.js","package.json"]' > /tmp/expected.json
+          if ! jq --slurpfile expected /tmp/expected.json -e '. == $expected[0]' /tmp/pack-files.json > /dev/null; then
+            echo "Unexpected files in npm pack output:"
+            diff <(jq . /tmp/expected.json) <(jq . /tmp/pack-files.json)
+            exit 1
+          fi
+          echo "Pack contents verified"
