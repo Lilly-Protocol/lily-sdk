@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { LilyAuthenticationError } from '../src/errors/sdk-error';
+import {
+  LilyApiError,
+  LilyAuthenticationError,
+} from '../src/errors/sdk-error';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import { LilySdk } from '../src/sdk';
 import { createMockHttpClient } from './helpers/mock-http-client';
@@ -119,5 +122,86 @@ describe('client behavior', () => {
         path: '/v1/system/health',
       }),
     ).rejects.toBeInstanceOf(LilyAuthenticationError);
+  });
+
+  it('does not retry POST requests on retryable statuses', async () => {
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ message: 'fail' }), {
+          status: 500,
+          headers: {
+            'content-type': 'application/json',
+          },
+        }),
+      ),
+    );
+
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 3,
+        retryDelayMs: 0,
+        retryableStatusCodes: [408, 409, 425, 429, 500, 502, 503, 504],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
+    });
+
+    try {
+      await httpClient.request({
+        method: 'POST',
+        path: '/v1/payments',
+      });
+      expect.fail('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyApiError);
+      const apiError = error as LilyApiError;
+      expect(apiError.statusCode).toBe(500);
+    }
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries GET requests on retryable statuses', async () => {
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ message: 'fail' }), {
+          status: 500,
+          headers: {
+            'content-type': 'application/json',
+          },
+        }),
+      ),
+    );
+
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 2,
+        retryDelayMs: 0,
+        retryableStatusCodes: [408, 409, 425, 429, 500, 502, 503, 504],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
+    });
+
+    try {
+      await httpClient.request({
+        method: 'GET',
+        path: '/v1/items',
+      });
+      expect.fail('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyApiError);
+      const apiError = error as LilyApiError;
+      expect(apiError.statusCode).toBe(500);
+    }
+
+    // Initial attempt + 2 retries = 3 total calls
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
 });
