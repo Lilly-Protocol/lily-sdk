@@ -109,6 +109,47 @@ npm run example
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
 - The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.
 
+## Configuration Reference
+
+The SDK is configured via the `LilySdkConfig` object passed to the client constructor. All fields are optional and fall back to sensible defaults.
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `baseUrl` | `string` | `https://api.lillyprotocol.com` | Base URL for all API requests. Override for self-hosted or staging environments. |
+| `apiKey` | `string` | — | API key for authentication. Required unless `authToken` is provided. |
+| `authToken` | `string` | — | Bearer token for authentication. Takes precedence over `apiKey` when both are set. |
+| `timeoutMs` | `number` | `10000` | Request timeout in milliseconds. Applies per-attempt, not across retries. |
+| `retry.maxAttempts` | `number` | `2` | Maximum number of retry attempts for eligible requests. Set to `0` to disable retries. |
+| `retry.delayMs` | `number` | `250` | Base delay between retries in milliseconds. Actual delay scales linearly with attempt number. |
+| `retry.retryableStatusCodes` | `number[]` | `[408, 409, 425, 429, 500, 502, 503, 504]` | HTTP status codes that trigger a retry. Only applies to idempotent methods. |
+| `defaultHeaders` | `Record<string, string>` | `{}` | Headers merged into every request. Overridden by per-request headers. |
+| `userAgent` | `string` | `lily-sdk/<version>` | User-Agent header value. |
+| `fetch` | `typeof fetch` | Global `fetch` | Custom fetch implementation. Useful for testing or non-standard runtimes. |
+
+### Retry Semantics
+
+Retries apply only to **idempotent** HTTP methods (`GET`, `PUT`, `DELETE`, `HEAD`, `OPTIONS`). `POST` and `PATCH` requests are never retried automatically because they may have side effects.
+
+A request is retried when:
+
+- The response status code is in `retry.retryableStatusCodes`, **or**
+- A transport-level error occurs (network failure, DNS resolution error, timeout).
+
+The delay between attempts uses **linear backoff**: `delayMs × attemptNumber`. For the default configuration this produces a 250 ms wait before the first retry and a 500 ms wait before the second.
+
+```ts
+const client = new LilyClient({
+  baseUrl: 'https://api.example.com',
+  apiKey: process.env.LILLY_API_KEY,
+  timeoutMs: 5000,
+  retry: {
+    maxAttempts: 3,
+    delayMs: 500,
+    retryableStatusCodes: [429, 500, 502, 503],
+  },
+});
+```
+
 ## Roadmap Themes
 
 - Real backend endpoint alignment and response model hardening
