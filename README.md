@@ -109,6 +109,24 @@ npm run example
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
 - The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.
 
+## API Reference
+
+Full API documentation is generated from the public TypeScript types using [TypeDoc](https://typedoc.org/).
+
+- **Online:** Published via GitHub Pages at `https://lilly-protocol.github.io/lily-sdk/` (once CI is configured)
+- **Local:** Run `npm run docs` to generate HTML into `docs/api/`
+
+The generated reference covers all five subpath entrypoints:
+
+| Entrypoint | Contents |
+|---|---|
+| `lily-sdk` | `LilySdk`, client classes, error hierarchy |
+| `lily-sdk/config` | `LilySdkConfig`, `resolveLilySdkConfig` |
+| `lily-sdk/errors` | All error classes and `LilyErrorOptions` |
+| `lily-sdk/http` | `HttpClient`, `createFetchHttpClient`, `BaseClient` |
+| `lily-sdk/models` | Request/response models (`MoneyAmount`, `PaymentStatus`, etc.) |
+| `lily-sdk/types` | Shared type aliases and interfaces |
+
 ## Roadmap Themes
 
 - Real backend endpoint alignment and response model hardening
