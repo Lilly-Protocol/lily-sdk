@@ -26,4 +26,44 @@ export class LilySdk {
     this.identity = new IdentityClient(resolvedHttpClient);
     this.system = new SystemClient(resolvedHttpClient);
   }
+
+  /**
+   * Creates a LilySdk instance with zero-config defaults.
+   * Reads LILY_API_URL, LILY_API_KEY, and LILY_AUTH_TOKEN from environment.
+   * Explicit options override environment variables.
+   */
+  public static create(options?: Partial<LilySdkConfig>): LilySdk {
+    const envBaseUrl = process.env.LILY_API_URL;
+    const envApiKey = process.env.LILY_API_KEY;
+    const envAuthToken = process.env.LILY_AUTH_TOKEN;
+
+    const baseUrl = options?.baseUrl ?? envBaseUrl;
+    if (!baseUrl) {
+      throw new Error(
+        'baseUrl is required. Pass it in options or set LILY_API_URL environment variable.',
+      );
+    }
+
+    const config: LilySdkConfig = {
+      baseUrl,
+    };
+
+    const apiKey = options?.apiKey ?? envApiKey;
+    if (apiKey !== undefined) {
+      config.apiKey = apiKey;
+    }
+
+    const authToken = options?.authToken ?? envAuthToken;
+    if (authToken !== undefined) {
+      config.authToken = authToken;
+    }
+
+    if (options?.timeoutMs !== undefined) config.timeoutMs = options.timeoutMs;
+    if (options?.retry !== undefined) config.retry = options.retry;
+    if (options?.defaultHeaders !== undefined) config.defaultHeaders = options.defaultHeaders;
+    if (options?.userAgent !== undefined) config.userAgent = options.userAgent;
+    if (options?.fetch !== undefined) config.fetch = options.fetch;
+
+    return new LilySdk(config);
+  }
 }
