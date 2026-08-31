@@ -120,4 +120,92 @@ describe('client behavior', () => {
       }),
     ).rejects.toBeInstanceOf(LilyAuthenticationError);
   });
+
+  it('merges defaultHeaders with per-request headers', async () => {
+    const fetchSpy = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.headers).toMatchObject({
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'user-agent': 'lily-sdk/test',
+        'x-tenant': 'acme',
+        'x-request-id': 'req-123',
+      });
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+          },
+        }),
+      );
+    });
+
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {
+        'x-tenant': 'acme',
+      },
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
+    });
+
+    await httpClient.request({
+      method: 'GET',
+      path: '/v1/items',
+      headers: {
+        'x-request-id': 'req-123',
+      },
+    });
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  it('allows per-request headers to override defaultHeaders', async () => {
+    const fetchSpy = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.headers).toMatchObject({
+        'x-tenant': 'override',
+      });
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+          },
+        }),
+      );
+    });
+
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {
+        'x-tenant': 'acme',
+      },
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
+    });
+
+    await httpClient.request({
+      method: 'GET',
+      path: '/v1/items',
+      headers: {
+        'x-tenant': 'override',
+      },
+    });
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
 });
