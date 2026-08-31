@@ -119,3 +119,40 @@ npm run example
 ## Contributing
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
+
+## Response Parsing and Status Handling
+
+The SDK's HTTP layer automatically parses responses based on content type and status code. Understanding this behavior is essential for correctly handling API responses.
+
+### Automatic Parsing Rules
+
+- **204 No Content**: Returns `null` as the response data (common for DELETE operations)
+- **application/json**: Automatically parsed into a JavaScript object
+- **Other content types**: Returned as raw text strings
+
+### Checking Status Before Using Data
+
+Always verify the response status before accessing the data payload, especially for operations that may return non-JSON error pages or empty responses.
+
+```ts
+import { LilySdk } from '@lily-protocol/sdk';
+
+const sdk = new LilySdk({ baseUrl: 'https://api.lilyprotocol.com' });
+
+// Safe response handling pattern
+const response = await sdk.wallets.delete({ walletId: 'wallet_123' });
+
+if (response.status === 204) {
+  console.log('Wallet deleted successfully');
+  // response.data will be null for 204 responses
+} else if (response.status >= 200 && response.status < 300) {
+  // For JSON responses, data is already parsed
+  console.log('Operation result:', response.data);
+} else {
+  // Error responses may be HTML or plain text
+  console.error(`Request failed with status ${response.status}`);
+  console.error('Response body:', response.data);
+}
+```
+
+This pattern ensures your code handles all response types gracefully, whether the API returns structured JSON, empty responses, or error pages in unexpected formats.
