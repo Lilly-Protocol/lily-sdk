@@ -72,6 +72,28 @@ sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
 ```
 
+## Subpath imports
+
+In addition to the root `@lily-protocol/sdk` package, stable public APIs are exposed through dedicated subpath entrypoints. Use subpaths when you only need a subset of the SDK and want to avoid importing the full client surface.
+
+| Subpath | Purpose | Main symbols |
+|---|---|---|
+| `@lily-protocol/sdk/config` | Configuration types and resolution | `LilySdkConfig`, `ResolvedLilySdkConfig`, `resolveLilySdkConfig` |
+| `@lily-protocol/sdk/errors` | Typed error hierarchy | `LilyApiError`, `LilyAuthenticationError`, `LilyTransportError`, `LilyConfigError` |
+| `@lily-protocol/sdk/http` | HTTP transport abstraction | `createFetchHttpClient`, `HttpClient`, `HttpRequest`, `HttpResponse`, `RetryPolicy` |
+| `@lily-protocol/sdk/models` | Request/response and domain models | `Agent`, `Wallet`, `PaymentQuote`, `PaymentIntent`, etc. |
+| `@lily-protocol/sdk/types` | Client contracts and shared contracts | Client interfaces and shared public types |
+
+For example, to construct a custom HTTP client:
+
+```ts
+import { createFetchHttpClient } from '@lily-protocol/sdk/http';
+import { resolveLilySdkConfig } from '@lily-protocol/sdk/config';
+
+const config = resolveLilySdkConfig({ baseUrl: 'https://api.lilyprotocol.com' });
+const httpClient = createFetchHttpClient(config);
+```
+
 ## Repository Structure
 
 ```text
