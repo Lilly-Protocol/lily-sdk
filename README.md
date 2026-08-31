@@ -109,6 +109,28 @@ npm run example
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
 - The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.
 
+## Response Handling
+
+The SDK's HTTP transport parses responses based on status code and content type:
+
+- **204 No Content**: Returns `null` as the response data. Common for DELETE operations.
+- **application/json**: Automatically parsed into a JavaScript object.
+- **Other content types**: Returned as raw text strings (e.g., HTML error pages, plain text).
+
+Always check `response.status` before accessing `response.data` to handle different response shapes safely:
+
+```ts
+const response = await sdk.wallets.delete({ walletId: 'wallet_123' });
+
+if (response.status === 204) {
+  console.log('Wallet deleted successfully');
+} else if (typeof response.data === 'object') {
+  console.log('Response:', response.data);
+} else {
+  console.log('Raw response:', response.data);
+}
+```
+
 ## Roadmap Themes
 
 - Real backend endpoint alignment and response model hardening
