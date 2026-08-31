@@ -49,6 +49,18 @@ npm run test
 - Improved examples and integration recipes
 - Release automation and npm publishing hardening
 
+## Adding a New Client (Contract-Driven Pattern)
+
+Lily SDK uses a contract-driven architecture to keep clients consistent and testable. Follow this checklist when adding a new domain client:
+
+1. **Define the Contract**: Add a `*ClientContract` interface in `src/types/contracts.ts` describing the public methods and their signatures.
+2. **Add Models**: Create request/response types in `src/models/` specific to the new domain.
+3. **Implement the Client**: Extend `BaseClient` from `src/clients/base-client.ts` and implement the contract interface. Use `this.request()` for all HTTP calls.
+4. **Register in SDK**: Export the client from `src/index.ts` and wire it into `LilySdk` in `src/sdk.ts` so it is available as `sdk.<domain>`.
+5. **Add Tests**: Write unit tests covering the new client's methods, mocking the transport layer. Ensure lint, typecheck, and test suites pass.
+
+This pattern ensures every client shares the same transport, error handling, and configuration resolution while keeping domain logic isolated.
+
 ## Pull Requests
 
 - Keep PR descriptions clear and outcome-focused.
