@@ -120,4 +120,81 @@ describe('client behavior', () => {
       }),
     ).rejects.toBeInstanceOf(LilyAuthenticationError);
   });
+
+  describe.each([
+    {
+      scenario: 'apiKey only',
+      config: { apiKey: 'my-api-key' },
+      expectedHeaders: { 'x-api-key': 'my-api-key' },
+      disallowedHeaders: ['authorization'],
+    },
+    {
+      scenario: 'authToken only',
+      config: { authToken: 'my-token' },
+      expectedHeaders: { authorization: 'Bearer my-token' },
+      disallowedHeaders: ['x-api-key'],
+    },
+    {
+      scenario: 'both apiKey and authToken',
+      config: { apiKey: 'my-api-key', authToken: 'my-token' },
+      expectedHeaders: {
+        authorization: 'Bearer my-token',
+        'x-api-key': 'my-api-key',
+      },
+      disallowedHeaders: [],
+    },
+    {
+      scenario: 'neither credential',
+      config: {},
+      expectedHeaders: {},
+      disallowedHeaders: ['authorization', 'x-api-key'],
+    },
+  ])('auth credential forwarding ($scenario)', ({ config, expectedHeaders, disallowedHeaders }) => {
+    it(`forwards the expected authentication headers for ${config}`, async () => {
+      const fetchSpy = vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
+        const headers = (init?.headers ?? {}) as Record<string, string>;
+
+        for (const [key, value] of Object.entries(expectedHeaders)) {
+          expect(headers[key]).toBe(value);
+        }
+
+        for (const key of disallowedHeaders) {
+          expect(headers[key]).toBeUndefined();
+        }
+
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ status: 'ok' }),
+            {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            },
+          ),
+        );
+      });
+
+      const httpClient = createFetchHttpClient({
+        baseUrl: new URL('https://api.lily.test/'),
+        ...config,
+        timeoutMs: 2_000,
+        retry: {
+          retries: 0,
+          retryDelayMs: 0,
+          retryableStatusCodes: [],
+        },
+        defaultHeaders: {},
+        userAgent: 'lily-sdk/test',
+        fetch: fetchSpy,
+      });
+
+      const response = await httpClient.request({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
+
+      expect(response.status).toBe(200);
+      expect(fetchSpy).toHaveBeenCalledOnce();
+    });
+  });
 });
+
