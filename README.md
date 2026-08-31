@@ -33,6 +33,13 @@ For local development in this repository:
 npm install
 ```
 
+## Requirements
+
+- **Node.js >= 20** (uses built-in `fetch`, `AbortController`, and `Headers`)
+- **Browsers**: Modern browsers with native `fetch` support; note CORS restrictions when calling backend APIs directly from browser contexts
+- **Custom Runtimes**: If your environment lacks global `fetch`, provide a compatible implementation via the `fetch` config option
+- **CI Tested On**: Node.js 20.x and 22.x
+
 ## Quick Start
 
 ```ts
