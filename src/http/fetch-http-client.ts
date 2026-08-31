@@ -52,6 +52,7 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
               code: 'AUTHENTICATION_ERROR',
               statusCode: response.status,
               details: data,
+              request: { method: request.method, path: request.path, url: url.toString() },
             });
           }
 
@@ -66,6 +67,7 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
             code: 'API_ERROR',
             statusCode: response.status,
             details: data,
+            request: { method: request.method, path: request.path, url: url.toString() },
           });
         } catch (error) {
           clearTimeout(timeout);
@@ -78,6 +80,7 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
             throw new LilyTransportError('Request timed out while calling Lily Protocol API.', {
               code: 'TIMEOUT',
               cause: error,
+              request: { method: request.method, path: request.path, url: url.toString() },
             });
           }
 
@@ -90,6 +93,7 @@ export function createFetchHttpClient(config: ResolvedLilySdkConfig): HttpClient
           throw new LilyTransportError('Network error while calling Lily Protocol API.', {
             code: 'TRANSPORT_ERROR',
             cause: error,
+            request: { method: request.method, path: request.path, url: url.toString() },
           });
         }
       }
