@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { LilyConfigError } from '../src/errors/sdk-error';
 import { resolveLilySdkConfig } from '../src/config/resolve-config';
+import { SDK_VERSION } from '../src/version';
 
 describe('resolveLilySdkConfig', () => {
   it('normalizes base url and defaults', () => {
@@ -13,7 +14,27 @@ describe('resolveLilySdkConfig', () => {
     expect(config.baseUrl.toString()).toBe('https://api.lily.test/');
     expect(config.timeoutMs).toBe(10_000);
     expect(config.retry.retries).toBe(2);
-    expect(config.userAgent).toBe('lily-sdk/0.1.0');
+    expect(config.userAgent).toBe(`lily-sdk/${SDK_VERSION}`);
+  });
+
+  it('derives default user-agent from package version', () => {
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.lily.test',
+      fetch: globalThis.fetch,
+    });
+
+    expect(config.userAgent).toBe(`lily-sdk/${SDK_VERSION}`);
+    expect(SDK_VERSION).toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  it('allows explicit userAgent to override default', () => {
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.lily.test',
+      fetch: globalThis.fetch,
+      userAgent: 'custom-agent/1.0',
+    });
+
+    expect(config.userAgent).toBe('custom-agent/1.0');
   });
 
   it('throws when base url is invalid', () => {
