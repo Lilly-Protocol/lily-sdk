@@ -49,6 +49,22 @@ npm run test
 - Improved examples and integration recipes
 - Release automation and npm publishing hardening
 
+## Adding a New Client (Contract-Driven Pattern)
+
+Lily SDK uses a contract-driven architecture to keep clients consistent, testable, and easy to extend. Follow these five steps when adding a new client:
+
+1. **Define the contract** in `src/types/contracts.ts`. Create an interface (e.g., `NewClientContract`) that lists every public method the client will expose. Use existing interfaces like `AgentClientContract` or `PaymentClientContract` as templates for naming and JSDoc style.
+
+2. **Add models** in `src/models/`. Define request and response types needed by the contract. Export them from `src/models/index.ts` so they can be imported by both the contract file and the implementation.
+
+3. **Implement the client** in `src/clients/new-client.ts`. Extend `BaseClient` from `src/clients/base-client.ts` and implement the contract interface. Use `this.request<TResponse, TRequest>()` for all HTTP calls — never call `httpClient` directly. Keep methods focused and avoid leaking transport details into business logic.
+
+4. **Register in the SDK.** Import the new client in `src/sdk.ts`, add it as a public readonly property on `LilySdk`, and instantiate it in the constructor alongside the existing clients. Also export the client class from `src/index.ts` so consumers can import it directly if needed.
+
+5. **Add tests** in `tests/`. Place test files directly in the `tests/` directory (no subdirectories). Mock `HttpClient` using classes that implement the interface rather than object literals with `vi.fn()` to satisfy `@typescript-eslint/unbound-method`. Cover happy paths, error responses, and edge cases defined by the contract.
+
+Following this pattern ensures new clients are discoverable, type-safe, and consistent with the rest of the SDK surface area.
+
 ## Pull Requests
 
 - Keep PR descriptions clear and outcome-focused.
