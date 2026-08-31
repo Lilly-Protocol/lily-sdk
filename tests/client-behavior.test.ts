@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { LilyAuthenticationError } from '../src/errors/sdk-error';
+import { LilyApiError, LilyAuthenticationError } from '../src/errors/sdk-error';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import { LilySdk } from '../src/sdk';
 import { createMockHttpClient } from './helpers/mock-http-client';
@@ -118,6 +118,64 @@ describe('client behavior', () => {
         method: 'GET',
         path: '/v1/system/health',
       }),
-    ).rejects.toBeInstanceOf(LilyAuthenticationError);
+    ).rejects.toThrow(LilyAuthenticationError);
+
+    try {
+      await httpClient.request({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyAuthenticationError);
+      const authError = error as LilyAuthenticationError;
+      expect(authError.statusCode).toBe(401);
+      expect(authError.code).toBe('AUTHENTICATION_ERROR');
+      expect(authError.details).toEqual({ message: 'nope' });
+    }
+  });
+
+  it('propagates full error payload on non-retryable API errors', async () => {
+    const errorBody = {
+      code: 'INVALID_REQUEST',
+      message: 'Missing required field',
+      field: 'amount',
+    };
+
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify(errorBody), {
+            status: 400,
+            headers: {
+              'content-type': 'application/json',
+            },
+          }),
+        ),
+      ),
+    });
+
+    try {
+      await httpClient.request({
+        method: 'POST',
+        path: '/v1/payments',
+        body: {},
+      });
+      expect.fail('Expected LilyApiError to be thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyApiError);
+      const apiError = error as LilyApiError;
+      expect(apiError.statusCode).toBe(400);
+      expect(apiError.code).toBe('API_ERROR');
+      expect(apiError.details).toEqual(errorBody);
+    }
   });
 });
