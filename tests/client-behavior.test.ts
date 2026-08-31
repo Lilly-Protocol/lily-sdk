@@ -121,3 +121,37 @@ describe('client behavior', () => {
     ).rejects.toBeInstanceOf(LilyAuthenticationError);
   });
 });
+
+describe('retry exhaustion', () => {
+  it('surfaces LilyApiError after retries + 1 attempts on persistent 503', async () => {
+    const { LilyApiError } = await import('../src/errors/sdk-error');
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ error: 'unavailable' }), {
+          status: 503,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    );
+
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: { retries: 2, retryDelayMs: 1, retryableStatusCodes: [503] },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: fetchMock,
+    });
+
+    try {
+      await httpClient.request({ method: 'GET', path: '/v1/system/health' });
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(LilyApiError);
+      const apiErr = err as InstanceType<typeof LilyApiError>;
+      expect(apiErr.statusCode).toBe(503);
+      expect(apiErr.details).toEqual({ error: 'unavailable' });
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    }
+  });
+});
