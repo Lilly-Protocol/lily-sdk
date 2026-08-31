@@ -121,3 +121,66 @@ describe('client behavior', () => {
     ).rejects.toBeInstanceOf(LilyAuthenticationError);
   });
 });
+
+describe('error payload propagation', () => {
+  it('propagates statusCode, code, and details for 401 LilyAuthenticationError', async () => {
+    const errorBody = { message: 'invalid token', hint: 'check expiry' };
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify(errorBody), {
+            status: 401,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      ),
+    });
+
+    try {
+      await httpClient.request({ method: 'GET', path: '/v1/system/health' });
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(LilyAuthenticationError);
+      const authErr = err as InstanceType<typeof LilyAuthenticationError>;
+      expect(authErr.statusCode).toBe(401);
+      expect(authErr.code).toBe('AUTHENTICATION_ERROR');
+      expect(authErr.details).toEqual(errorBody);
+    }
+  });
+
+  it('propagates statusCode, code, and details for 500 LilyApiError', async () => {
+    const { LilyApiError } = await import('../src/errors/sdk-error');
+    const errorBody = { error: 'internal failure', traceId: 'abc-123' };
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify(errorBody), {
+            status: 500,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      ),
+    });
+
+    try {
+      await httpClient.request({ method: 'GET', path: '/v1/system/health' });
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(LilyApiError);
+      const apiErr = err as InstanceType<typeof LilyApiError>;
+      expect(apiErr.statusCode).toBe(500);
+      expect(apiErr.code).toBe('API_ERROR');
+      expect(apiErr.details).toEqual(errorBody);
+    }
+  });
+});
