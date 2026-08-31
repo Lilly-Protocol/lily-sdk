@@ -15,6 +15,18 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
     throw new LilyConfigError('`baseUrl` is required.');
   }
 
+  if (config.apiKey !== undefined) {
+    if (typeof config.apiKey !== 'string' || config.apiKey === '') {
+      throw new LilyConfigError('`apiKey` must be a non-empty string.');
+    }
+  }
+
+  if (config.authToken !== undefined) {
+    if (typeof config.authToken !== 'string' || config.authToken === '') {
+      throw new LilyConfigError('`authToken` must be a non-empty string.');
+    }
+  }
+
   const baseUrl = safeUrl(config.baseUrl);
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const retry = resolveRetryPolicy(config.retry);
@@ -39,8 +51,8 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
     }),
     userAgent: config.userAgent ?? DEFAULT_USER_AGENT,
     fetch: fetchImpl,
-    ...(config.apiKey ? { apiKey: config.apiKey } : {}),
-    ...(config.authToken ? { authToken: config.authToken } : {}),
+    ...(config.apiKey !== undefined ? { apiKey: config.apiKey } : {}),
+    ...(config.authToken !== undefined ? { authToken: config.authToken } : {}),
   };
 }
 
