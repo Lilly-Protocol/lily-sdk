@@ -14,5 +14,10 @@ export { IdentityClient } from './clients/identity-client';
 export { PaymentClient } from './clients/payment-client';
 export { SystemClient } from './clients/system-client';
 export { WalletClient } from './clients/wallet-client';
-export type { HttpClient, HttpRequest, HttpResponse, RetryPolicy } from './http/types';
+export type {
+  HttpClient,
+  HttpRequest,
+  HttpResponse,
+  RetryPolicy,
+} from './http/types';
 export * from './models';

@@ -1,4 +1,8 @@
-import type { HttpClient, HttpRequest, HttpResponse } from '../../src/http/types';
+import type {
+  HttpClient,
+  HttpRequest,
+  HttpResponse,
+} from '../../src/http/types';
 
 export function createMockHttpClient(
   handler: (request: HttpRequest<any>) => Promise<HttpResponse<any>>,
