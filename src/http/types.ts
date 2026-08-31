@@ -24,5 +24,7 @@ export interface HttpResponse<TData = unknown> {
 }
 
 export interface HttpClient {
-  request<TResponse, TRequest = unknown>(request: HttpRequest<TRequest>): Promise<HttpResponse<TResponse>>;
+  request<TResponse, TRequest = unknown>(
+    request: HttpRequest<TRequest>,
+  ): Promise<HttpResponse<TResponse>>;
 }
