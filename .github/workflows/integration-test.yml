@@ -1,0 +1,22 @@
+name: Integration Tests
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    if: ${{ vars.LILY_TEST_BASE_URL != '' && secrets.LILY_TEST_API_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test:integration
+        env:
+          LILY_TEST_BASE_URL: ${{ vars.LILY_TEST_BASE_URL }}
+          LILY_TEST_API_KEY: ${{ secrets.LILY_TEST_API_KEY }}
