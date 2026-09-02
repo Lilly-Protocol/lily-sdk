@@ -1,14 +1,41 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  LilyApiError,
+  BaseClient,
   LilyAuthenticationError,
-} from '../src/errors/sdk-error';
-import { createFetchHttpClient } from '../src/http/fetch-http-client';
-import { LilySdk } from '../src/sdk';
+  LilySdk,
+  createFetchHttpClient,
+} from '../src/index';
 import { createMockHttpClient } from './helpers/mock-http-client';
 
 describe('client behavior', () => {
+  it('exposes transport primitives from the root entrypoint', () => {
+    expect(createFetchHttpClient).toBeInstanceOf(Function);
+    expect(BaseClient).toBeInstanceOf(Function);
+  });
+
+  it('allows subclassing BaseClient with a custom HTTP client', async () => {
+    const requestSpy = vi.fn(() =>
+      Promise.resolve({
+        status: 200,
+        headers: new Headers(),
+        data: { ok: true },
+      }),
+    );
+
+    class TestClient extends BaseClient {
+      async probe() {
+        return this.request<{ ok: boolean }>({ method: 'GET', path: '/probe' });
+      }
+    }
+
+    const client = new TestClient(createMockHttpClient(requestSpy));
+    const result = await client.probe();
+
+    expect(requestSpy).toHaveBeenCalledWith({ method: 'GET', path: '/probe' });
+    expect(result.ok).toBe(true);
+  });
+
   it('calls system health endpoint through the system client', async () => {
     const requestSpy = vi.fn(() =>
       Promise.resolve({
@@ -121,7 +148,229 @@ describe('client behavior', () => {
         method: 'GET',
         path: '/v1/system/health',
       }),
-    ).rejects.toBeInstanceOf(LilyAuthenticationError);
+    ).rejects.toThrow(LilyAuthenticationError);
+
+    try {
+      await httpClient.request({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyAuthenticationError);
+      const authError = error as LilyAuthenticationError;
+      expect(authError.statusCode).toBe(401);
+      expect(authError.code).toBe('AUTHENTICATION_ERROR');
+      expect(authError.details).toEqual({ message: 'nope' });
+    }
+  });
+
+  it('propagates full error payload on non-retryable API errors', async () => {
+    const errorBody = {
+      code: 'INVALID_REQUEST',
+      message: 'Missing required field',
+      field: 'amount',
+    };
+
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify(errorBody), {
+            status: 400,
+            headers: {
+              'content-type': 'application/json',
+            },
+          }),
+        ),
+      ),
+    });
+
+    try {
+      await httpClient.request({
+        method: 'POST',
+        path: '/v1/payments',
+        body: {},
+      });
+      expect.fail('Expected LilyApiError to be thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyApiError);
+      const apiError = error as LilyApiError;
+      expect(apiError.statusCode).toBe(400);
+      expect(apiError.code).toBe('API_ERROR');
+      expect(apiError.details).toEqual(errorBody);
+    }
+  });
+
+  describe.each([
+    {
+      scenario: 'apiKey only',
+      config: { apiKey: 'my-api-key' },
+      expectedHeaders: { 'x-api-key': 'my-api-key' },
+      disallowedHeaders: ['authorization'],
+    },
+    {
+      scenario: 'authToken only',
+      config: { authToken: 'my-token' },
+      expectedHeaders: { authorization: 'Bearer my-token' },
+      disallowedHeaders: ['x-api-key'],
+    },
+    {
+      scenario: 'both apiKey and authToken',
+      config: { apiKey: 'my-api-key', authToken: 'my-token' },
+      expectedHeaders: {
+        authorization: 'Bearer my-token',
+        'x-api-key': 'my-api-key',
+      },
+      disallowedHeaders: [],
+    },
+    {
+      scenario: 'neither credential',
+      config: {},
+      expectedHeaders: {},
+      disallowedHeaders: ['authorization', 'x-api-key'],
+    },
+  ])('auth credential forwarding ($scenario)', ({ config, expectedHeaders, disallowedHeaders }) => {
+    it(`forwards the expected authentication headers for ${config}`, async () => {
+      const fetchSpy = vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
+        const headers = (init?.headers ?? {}) as Record<string, string>;
+
+        for (const [key, value] of Object.entries(expectedHeaders)) {
+          expect(headers[key]).toBe(value);
+        }
+
+        for (const key of disallowedHeaders) {
+          expect(headers[key]).toBeUndefined();
+        }
+
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ status: 'ok' }),
+            {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            },
+          ),
+        );
+      });
+
+      const httpClient = createFetchHttpClient({
+        baseUrl: new URL('https://api.lily.test/'),
+        ...config,
+        timeoutMs: 2_000,
+        retry: {
+          retries: 0,
+          retryDelayMs: 0,
+          retryableStatusCodes: [],
+        },
+        defaultHeaders: {},
+        userAgent: 'lily-sdk/test',
+        fetch: fetchSpy,
+      });
+
+      const response = await httpClient.request({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
+
+      expect(response.status).toBe(200);
+      expect(fetchSpy).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('merges defaultHeaders with per-request headers', async () => {
+    const fetchSpy = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.headers).toMatchObject({
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'user-agent': 'lily-sdk/test',
+        'x-tenant': 'acme',
+        'x-request-id': 'req-123',
+      });
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+          },
+        }),
+      );
+    });
+
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {
+        'x-tenant': 'acme',
+      },
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
+    });
+
+    await httpClient.request({
+      method: 'GET',
+      path: '/v1/items',
+      headers: {
+        'x-request-id': 'req-123',
+      },
+    });
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  it('allows per-request headers to override defaultHeaders', async () => {
+    const fetchSpy = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.headers).toMatchObject({
+        'x-tenant': 'override',
+      });
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+          },
+        }),
+      );
+    });
+
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {
+        'x-tenant': 'acme',
+      },
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
+    });
+
+    await httpClient.request({
+      method: 'GET',
+      path: '/v1/items',
+      headers: {
+        'x-tenant': 'override',
+      },
+    });
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
   });
 
   it('does not retry POST requests on retryable statuses', async () => {
@@ -205,3 +454,4 @@ describe('client behavior', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
 });
+
