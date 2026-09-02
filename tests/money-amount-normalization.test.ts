@@ -1,67 +1,82 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createFetchHttpClient } from '../src/http/fetch-http-client';
-import { resolveLilySdkConfig } from '../src/config/resolve-config';
-import type { ExecutePaymentRequest } from '../src/models/payment';
+import type { HttpRequest } from '../src/http/types';
+import { LilySdk } from '../src/sdk';
+import { createMockHttpClient } from './helpers/mock-http-client';
 
-describe('MoneyAmount decimal normalization passthrough', () => {
-  const baseConfig = {
-    baseUrl: 'https://api.lily.test',
-    apiKey: 'test-key',
-    timeoutMs: 2_000,
-    retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
-    defaultHeaders: {},
-    userAgent: 'lily-sdk/test',
-  };
+describe('MoneyAmount decimal normalization', () => {
+  const cases = ['1', '1.0', '01.5', '0.000001'] as const;
 
-  const cases: { label: string; amount: string }[] = [
-    { label: 'integer string', amount: '1' },
-    { label: 'single decimal zero', amount: '1.0' },
-    { label: 'leading zero', amount: '01.5' },
-    { label: 'micro amount', amount: '0.000001' },
-  ];
-
-  for (const { label, amount } of cases) {
-    it(`passes ${label} "${amount}" unchanged in execute payment body`, async () => {
-      let capturedBody: unknown = null;
-      const fetchSpy = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
-        if (init?.body != null) {
-          capturedBody = JSON.parse(init.body as string);
-        }
-        return Promise.resolve(
-          new Response(
-            JSON.stringify({
-              id: 'pay-1',
-              status: 'queued',
-              fromWalletId: 'w-1',
-              toAddress: 'addr-1',
-              amount: { assetCode: 'USD', amount },
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            }),
-            { status: 200, headers: { 'content-type': 'application/json' } },
-          ),
-        );
+  for (const amount of cases) {
+    it(`preserves amount "${amount}" unchanged in quote request`, async () => {
+      let capturedBody: unknown;
+      const requestSpy = vi.fn((req: HttpRequest) => {
+        capturedBody = req.body;
+        return Promise.resolve({
+          status: 200,
+          headers: new Headers(),
+          data: {
+            amount: { assetCode: 'BTC', amount },
+            estimatedFee: {
+              assetCode: 'USD',
+              amount: '0.5',
+            },
+            expiresAt: new Date(Date.now() + 60_000).toISOString(),
+          },
+        });
       });
 
-      const config = resolveLilySdkConfig({ ...baseConfig, fetch: fetchSpy });
-      const client = createFetchHttpClient(config);
+      const sdk = new LilySdk(
+        { baseUrl: 'https://api.lily.test' },
+        createMockHttpClient(requestSpy),
+      );
 
-      const payload: ExecutePaymentRequest = {
-        fromWalletId: 'w-1',
-        toAddress: 'addr-1',
-        amount: { assetCode: 'USD', amount },
-      };
-
-      await client.request({
-        method: 'POST',
-        path: '/v1/payments/execute',
-        body: payload,
+      await sdk.payments.quote({
+        fromWalletId: 'wallet_test',
+        toAddress: 'addr_test',
+        amount: {
+          assetCode: 'BTC',
+          amount,
+        },
       });
 
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
-      expect(capturedBody).not.toBeNull();
-      const body = capturedBody as ExecutePaymentRequest;
+      expect(requestSpy).toHaveBeenCalledOnce();
+      const body = capturedBody as { amount: { amount: string } };
+      expect(body.amount.amount).toBe(amount);
+    });
+
+    it(`preserves amount "${amount}" unchanged in execute request`, async () => {
+      let capturedBody: unknown;
+      const requestSpy = vi.fn((req: HttpRequest) => {
+        capturedBody = req.body;
+        return Promise.resolve({
+          status: 200,
+          headers: new Headers(),
+          data: {
+            id: 'pay_test',
+            status: 'pending',
+            amount: { assetCode: 'BTC', amount },
+            createdAt: new Date().toISOString(),
+          },
+        });
+      });
+
+      const sdk = new LilySdk(
+        { baseUrl: 'https://api.lily.test' },
+        createMockHttpClient(requestSpy),
+      );
+
+      await sdk.payments.execute({
+        fromWalletId: 'wallet_test',
+        toAddress: 'addr_test',
+        amount: {
+          assetCode: 'BTC',
+          amount,
+        },
+      });
+
+      expect(requestSpy).toHaveBeenCalledOnce();
+      const body = capturedBody as { amount: { amount: string } };
       expect(body.amount.amount).toBe(amount);
     });
   }
