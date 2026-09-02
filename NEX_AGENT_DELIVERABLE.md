@@ -1,7 +1,7 @@
-# Deliverable for issue #42
+# Deliverable for issue #43
 
-GH discussion — reward $75
+GH discussion — reward $30
 
 ## Code
 
-See `gh-disc-42-Lilly-Protocol-lily-sdk.ts`.
+See `gh-disc-43-Lilly-Protocol-lily-sdk.ts`.
