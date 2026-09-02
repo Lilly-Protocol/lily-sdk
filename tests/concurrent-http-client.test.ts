@@ -1,28 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
-import type { ResolvedLilySdkConfig } from '../src/config/types';
-import type { HttpRequest } from '../src/http/types';
 
-describe('concurrent http client stress test (#103)', () => {
-  let mockFetch: ReturnType<typeof vi.fn>;
-  let config: ResolvedLilySdkConfig;
-
+describe('concurrent http client stress test', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    mockFetch = vi.fn();
-    config = {
-      baseUrl: new URL('https://api.example.com'),
-      apiKey: 'test-key',
-      authToken: '',
-      timeoutMs: 1000,
-      userAgent: 'lily-sdk-test',
-      defaultHeaders: {},
-      fetch: mockFetch as unknown as typeof fetch,
-      retry: {
-        retries: 2,
-        retryDelayMs: 100,
-      },
-    } as unknown as ResolvedLilySdkConfig;
   });
 
   afterEach(() => {
@@ -31,108 +13,102 @@ describe('concurrent http client stress test (#103)', () => {
 
   it('handles concurrent requests with isolated timeouts and retries', async () => {
     const requestCount = 10;
-    const responses: { status: number; ok: boolean; headers: Headers; json: () => Promise<unknown> }[] = [];
+    let callIndex = 0;
 
-    for (let i = 0; i < requestCount; i++) {
-      responses.push({
-        status: 200,
-        ok: true,
-        headers: new Headers({ 'content-type': 'application/json' }),
-        json: () => Promise.resolve({ requestId: i, timestamp: Date.now() }),
-      });
-    }
+    const fetchSpy = vi.fn(async (_input: URL | RequestInfo, init?: RequestInit) => {
+      const index = callIndex++;
+      await new Promise((resolve) => setTimeout(resolve, (index + 1) * 10));
 
-    mockFetch.mockImplementation(async (_url: string, init: RequestInit) => {
-      const signal = init.signal ?? new AbortController().signal;
-      if (signal.aborted) {
-        throw new DOMException('Aborted', 'AbortError');
+      if (init?.signal?.aborted) {
+        throw new Error('Aborted');
       }
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      return responses.shift() as Response;
+
+      return new Response(
+        JSON.stringify({ id: index, status: 'ok' }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      );
     });
 
-    const client = createFetchHttpClient(config);
-    const requests: Promise<unknown>[] = [];
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 500,
+      retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
+    });
 
-    for (let i = 0; i < requestCount; i++) {
-      const req: HttpRequest = {
+    const promises = Array.from({ length: requestCount }, (_, i) =>
+      httpClient.request<{ id: number; status: string }>({
         method: 'GET',
-        path: `/test/${String(i)}`,
-        timeoutMs: 1000,
-      };
-      requests.push(client.request(req));
-    }
+        path: `/v1/resource/${String(i)}`,
+      }),
+    );
 
-    for (let i = 0; i < requestCount * 10; i++) {
-      await vi.advanceTimersByTimeAsync(50);
-    }
+    await vi.runAllTimersAsync();
 
-    const results = await Promise.all(requests);
+    const results = await Promise.all(promises);
 
     expect(results).toHaveLength(requestCount);
-    expect(mockFetch).toHaveBeenCalledTimes(requestCount);
+    expect(fetchSpy).toHaveBeenCalledTimes(requestCount);
 
-    const requestIds = new Set<number>();
-    for (const result of results) {
-      const data = (result as { data: { requestId: number } }).data;
-      expect(data.requestId).toBeGreaterThanOrEqual(0);
-      expect(data.requestId).toBeLessThan(requestCount);
-      requestIds.add(data.requestId);
+    for (let i = 0; i < requestCount; i++) {
+      expect(results[i]?.data.id).toBe(i);
+      expect(results[i]?.status).toBe(200);
     }
-    expect(requestIds.size).toBe(requestCount);
+
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('isolates retry state across concurrent failing requests', async () => {
-    const requestCount = 5;
-    let callCount = 0;
+    const attemptsPerRequest: number[] = [];
+    let callIndex = 0;
 
-    mockFetch.mockImplementation(async (_url: string, init: RequestInit) => {
-      callCount++;
-      const signal = init.signal ?? new AbortController().signal;
-      if (signal.aborted) {
-        throw new DOMException('Aborted', 'AbortError');
-      }
-      await new Promise((resolve) => setTimeout(resolve, 30));
-      if (callCount % 2 === 1) {
-        return {
+    const fetchSpy = vi.fn(async () => {
+      const currentCall = callIndex++;
+      attemptsPerRequest[currentCall] = (attemptsPerRequest[currentCall] ?? 0) + 1;
+
+      const isFirstAttempt = currentCall < 3;
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      if (isFirstAttempt) {
+        return new Response(JSON.stringify({ error: 'temp' }), {
           status: 500,
-          ok: false,
-          headers: new Headers({ 'content-type': 'application/json' }),
-          json: () => Promise.resolve({ error: 'server error' }),
-        } as Response;
+          headers: { 'content-type': 'application/json' },
+        });
       }
-      return {
+
+      return new Response(JSON.stringify({ recovered: true }), {
         status: 200,
-        ok: true,
-        headers: new Headers({ 'content-type': 'application/json' }),
-        json: () => Promise.resolve({ success: true, attempt: callCount }),
-      } as Response;
+        headers: { 'content-type': 'application/json' },
+      });
     });
 
-    const client = createFetchHttpClient(config);
-    const requests: Promise<unknown>[] = [];
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 500,
+      retry: { retries: 1, retryDelayMs: 5, retryableStatusCodes: [500] },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
+    });
 
-    for (let i = 0; i < requestCount; i++) {
-      const req: HttpRequest = {
+    const promises = Array.from({ length: 3 }, () =>
+      httpClient.request<{ recovered: boolean }>({
         method: 'GET',
-        path: `/retry/${String(i)}`,
-        timeoutMs: 1000,
-      };
-      requests.push(client.request(req));
-    }
+        path: '/v1/flaky',
+      }),
+    );
 
-    for (let i = 0; i < 50; i++) {
-      await vi.advanceTimersByTimeAsync(100);
-    }
+    await vi.runAllTimersAsync();
+    const results = await Promise.all(promises);
 
-    const results = await Promise.all(requests);
-
-    expect(results).toHaveLength(requestCount);
-    expect(mockFetch).toHaveBeenCalledTimes(requestCount * 2);
-
-    for (const result of results) {
-      const data = (result as { data: { success: boolean } }).data;
-      expect(data.success).toBe(true);
-    }
+    expect(results.every((r) => r.data.recovered)).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(6);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
