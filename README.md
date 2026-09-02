@@ -72,6 +72,36 @@ sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
 ```
 
+The root entrypoint also exposes the transport layer for custom clients and tests:
+
+```ts
+import {
+  BaseClient,
+  createFetchHttpClient,
+  HttpClient,
+  HttpHeaders,
+  HttpRequest,
+  HttpResponse,
+  RetryPolicy,
+} from '@lily-protocol/sdk';
+
+class MyClient extends BaseClient {
+  async health() {
+    return this.request<{ status: string }>({
+      method: 'GET',
+      path: '/v1/system/health',
+    });
+  }
+}
+
+const httpClient = createFetchHttpClient({
+  baseUrl: 'https://api.lilyprotocol.com',
+  authToken: process.env.LILY_AUTH_TOKEN,
+});
+
+const client = new MyClient(httpClient);
+```
+
 ## Repository Structure
 
 ```text
