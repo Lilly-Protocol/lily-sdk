@@ -51,15 +51,66 @@ npm run test
 
 ## Adding a New Client (Contract-Driven Pattern)
 
-Lily SDK uses a contract-driven architecture to keep clients consistent and testable. Follow this checklist when adding a new domain client:
+Lily SDK uses a contract-driven architecture to ensure consistency across all domain clients. Follow this five-step pattern when adding new functionality:
 
-1. **Define the Contract**: Add a `*ClientContract` interface in `src/types/contracts.ts` describing the public methods and their signatures.
-2. **Add Models**: Create request/response types in `src/models/` specific to the new domain.
-3. **Implement the Client**: Extend `BaseClient` from `src/clients/base-client.ts` and implement the contract interface. Use `this.request()` for all HTTP calls.
-4. **Register in SDK**: Export the client from `src/index.ts` and wire it into `LilySdk` in `src/sdk.ts` so it is available as `sdk.<domain>`.
-5. **Add Tests**: Write unit tests covering the new client's methods, mocking the transport layer. Ensure lint, typecheck, and test suites pass.
+### 1. Define the Contract
 
-This pattern ensures every client shares the same transport, error handling, and configuration resolution while keeping domain logic isolated.
+Add a new interface to `src/types/contracts.ts` that extends or mirrors existing client contracts:
+
+```ts
+export interface NewFeatureClientContract {
+  list(params?: ListParams): Promise<ListResponse>;
+  create(data: CreateRequest): Promise<CreateResponse>;
+}
+```
+
+### 2. Add Domain Models
+
+Create request/response types in `src/models/new-feature.ts` and export them from `src/models/index.ts`:
+
+```ts
+export interface CreateRequest { /* ... */ }
+export interface CreateResponse { /* ... */ }
+```
+
+### 3. Implement via BaseClient
+
+Create `src/clients/new-feature-client.ts` extending `BaseClient`:
+
+```ts
+import { BaseClient } from './base-client';
+import type { NewFeatureClientContract } from '../types/contracts';
+
+export class NewFeatureClient extends BaseClient implements NewFeatureClientContract {
+  async list(params?: ListParams) {
+    return this.request({ method: 'GET', path: '/new-feature', query: params });
+  }
+}
+```
+
+### 4. Register in LilySdk
+
+Update `src/sdk.ts` to compose the new client and expose it as a public property:
+
+```ts
+this.newFeature = new NewFeatureClient(this.transport);
+```
+
+Export relevant symbols from `src/index.ts`.
+
+### 5. Add Tests
+
+Write unit tests in `tests/new-feature.test.ts` covering happy paths, error cases, and contract compliance. Use stubbed fetch for deterministic results.
+
+### Checklist for New Clients
+
+- [ ] Contract defined in `src/types/contracts.ts`
+- [ ] Models added to `src/models/` and re-exported
+- [ ] Client implements contract via `BaseClient`
+- [ ] Registered in `LilySdk` constructor (`src/sdk.ts`)
+- [ ] Public exports updated in `src/index.ts`
+- [ ] Unit tests cover success, error, and edge cases
+- [ ] README or docs updated if user-facing behavior changes
 
 ## Pull Requests
 
