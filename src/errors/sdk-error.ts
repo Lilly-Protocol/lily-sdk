@@ -9,14 +9,18 @@ export interface LilyErrorOptions {
   statusCode?: number;
   details?: unknown;
   cause?: unknown;
-  request?: LilyRequestMetadata;
+  request?: {
+    method: string;
+    path: string;
+    url: string;
+  };
 }
 
 export class LilySdkError extends Error {
   public readonly code: string | undefined;
   public readonly statusCode: number | undefined;
   public readonly details: unknown;
-  public readonly request: LilyRequestMetadata | undefined;
+  public readonly request: { method: string; path: string; url: string } | undefined;
 
   public constructor(message: string, options: LilyErrorOptions = {}) {
     super(message, { cause: options.cause });
