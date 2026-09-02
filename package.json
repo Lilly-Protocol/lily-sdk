@@ -12,13 +12,13 @@
     "payments",
     "wallet"
   ],
-  "homepage": "https://github.com/lily-protocol/lily-sdk#readme",
+  "homepage": "https://github.com/Lilly-Protocol/lily-sdk#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lily-protocol/lily-sdk.git"
+    "url": "git+https://github.com/Lilly-Protocol/lily-sdk.git"
   },
   "bugs": {
-    "url": "https://github.com/lily-protocol/lily-sdk/issues"
+    "url": "https://github.com/Lilly-Protocol/lily-sdk/issues"
   },
   "license": "MIT",
   "author": "Lily Protocol",
@@ -70,16 +70,18 @@
   },
   "scripts": {
     "clean": "rm -rf dist coverage .turbo",
+    "prebuild": "bash scripts/generate-version.sh",
     "build": "tsup",
     "dev": "tsup --watch",
-    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "typecheck": "tsc --project tsconfig.json --noEmit && tsc --project tsconfig.examples.json --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "example": "tsx examples/quickstart.ts",
-    "prepublishOnly": "npm run clean && npm run build && npm run test"
+    "prepublishOnly": "npm run clean && npm run build && npm run test",
+    "docs": "typedoc --out docs/api --tsconfig tsconfig.docs.json --entryPoints src/index.ts src/config.ts src/errors.ts src/http.ts src/models.ts src/types.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.27.0",
@@ -91,6 +93,7 @@
     "prettier": "^3.5.3",
     "tsup": "^8.5.0",
     "tsx": "^4.19.4",
+    "typedoc": "^0.28.20",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.32.0",
     "vitest": "^3.2.4"
