@@ -1,39 +1,31 @@
+import { VERSION } from '../version';
 import type { LilySdkConfig, ResolvedLilySdkConfig } from './types';
 import { LilyConfigError } from '../errors/sdk-error';
+import { SDK_VERSION } from '../version';
 import type { RetryPolicy } from '../http/types';
+import { version } from '../../package.json' with { type: 'json' };
 
 const DEFAULT_TIMEOUT_MS = 10_000;
-const DEFAULT_USER_AGENT = 'lily-sdk/0.1.0';
+const DEFAULT_USER_AGENT = `lily-sdk/${version}`;
 const DEFAULT_RETRY_POLICY: RetryPolicy = {
   retries: 2,
   retryDelayMs: 250,
   retryableStatusCodes: [408, 409, 425, 429, 500, 502, 503, 504],
 };
 
-const KNOWN_CONFIG_KEYS = new Set([
-  'baseUrl',
-  'apiKey',
-  'authToken',
-  'timeoutMs',
-  'retry',
-  'defaultHeaders',
-  'userAgent',
-  'fetch',
-]);
-
 export function resolveLilySdkConfig(
   config: LilySdkConfig,
 ): ResolvedLilySdkConfig {
-  detectUnknownKeys(config);
-
   if (!config.baseUrl) {
     throw new LilyConfigError('`baseUrl` is required.');
   }
 
-  const baseUrl = safeUrl(config.baseUrl);
+  const baseUrl = safeUrl(rawBaseUrl);
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const retry = resolveRetryPolicy(config.retry);
+  const retry = Object.freeze(resolveRetryPolicy(config.retry));
   const fetchImpl = config.fetch ?? globalThis.fetch;
+  const resolvedApiKey = resolveCredential(config.apiKey, 'LILY_API_KEY');
+  const resolvedAuthToken = resolveCredential(config.authToken, 'LILY_AUTH_TOKEN');
 
   if (typeof fetchImpl !== 'function') {
     throw new LilyConfigError(
@@ -45,7 +37,10 @@ export function resolveLilySdkConfig(
     throw new LilyConfigError('`timeoutMs` must be a positive number.');
   }
 
-  return {
+  const apiKey = config.apiKey ?? process.env.LILY_API_KEY;
+  const authToken = config.authToken ?? process.env.LILY_AUTH_TOKEN;
+
+  return Object.freeze({
     baseUrl,
     timeoutMs,
     retry,
@@ -54,65 +49,32 @@ export function resolveLilySdkConfig(
     }),
     userAgent: config.userAgent ?? DEFAULT_USER_AGENT,
     fetch: fetchImpl,
-    ...(config.apiKey ? { apiKey: config.apiKey } : {}),
-    ...(config.authToken ? { authToken: config.authToken } : {}),
-  };
-}
-
-function detectUnknownKeys(config: LilySdkConfig): void {
-  const unknownKeys = Object.keys(config).filter(
-    (key) => !KNOWN_CONFIG_KEYS.has(key),
-  );
-
-  if (unknownKeys.length === 0) {
-    return;
-  }
-
-  const suggestions = unknownKeys.map((key) => {
-    const closest = findClosestKey(key);
-    return closest ? `\`${key}\` (did you mean \`${closest}\`?)` : `\`${key}\``;
+    ...(apiKey ? { apiKey } : {}),
+    ...(authToken ? { authToken } : {}),
   });
-
-  throw new LilyConfigError(
-    `Unknown LilySdkConfig key(s): ${suggestions.join(', ')}. Known keys: ${[...KNOWN_CONFIG_KEYS].map((k) => `\`${k}\``).join(', ')}.`,
-  );
 }
 
-function findClosestKey(unknown: string): string | undefined {
-  let bestMatch: string | undefined;
-  let bestScore = 0;
-
-  for (const known of KNOWN_CONFIG_KEYS) {
-    const score = similarityScore(unknown, known);
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = known;
-    }
-  }
-
-  // Only suggest if there's reasonable similarity (>0.4)
-  return bestScore > 0.4 ? bestMatch : undefined;
+function resolveCredential(
+  explicit: string | undefined,
+  envName: string,
+): string | undefined {
+  return explicit ?? process.env[envName] ?? undefined;
 }
 
-function similarityScore(a: string, b: string): number {
-  const lowerA = a.toLowerCase();
-  const lowerB = b.toLowerCase();
-
-  // Exact prefix match gets high score
-  if (lowerB.startsWith(lowerA) || lowerA.startsWith(lowerB)) {
-    return (
-      Math.min(lowerA.length, lowerB.length) /
-      Math.max(lowerA.length, lowerB.length)
-    );
-  }
-
-  // Common substring ratio
-  const commonChars = [...lowerA].filter((c) => lowerB.includes(c)).length;
-  return commonChars / Math.max(lowerA.length, lowerB.length);
+function resolveCredential(
+  explicit: string | undefined,
+  envName: string,
+): string | undefined {
+  return explicit ?? process.env[envName] ?? undefined;
 }
 
-function safeUrl(rawUrl: string): URL {
+function safeUrl(rawUrl: string | URL): URL {
   try {
+    if (rawUrl instanceof URL) {
+      return new URL(
+        rawUrl.href.endsWith('/') ? rawUrl.href : `${rawUrl.href}/`,
+      );
+    }
     return new URL(rawUrl.endsWith('/') ? rawUrl : `${rawUrl}/`);
   } catch {
     throw new LilyConfigError('`baseUrl` must be a valid absolute URL.');

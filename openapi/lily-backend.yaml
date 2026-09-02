@@ -1,0 +1,446 @@
+openapi: 3.0.3
+info:
+  title: Lily Protocol Backend API
+  version: 0.1.0
+  description: |
+    Vendored snapshot of the Lily backend OpenAPI spec for SDK codegen.
+    This file is the authoritative source for generated types in src/generated/.
+    Update this spec when the backend changes, then run `npm run codegen`.
+paths:
+  /v1/system/health:
+    get:
+      operationId: systemHealth
+      responses:
+        '200':
+          description: System health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+  /v1/system/info:
+    get:
+      operationId: systemInfo
+      responses:
+        '200':
+          description: Service information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceInfo'
+  /v1/agents:
+    get:
+      operationId: listAgents
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of agents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Agent'
+    post:
+      operationId: createAgent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAgentRequest'
+      responses:
+        '201':
+          description: Created agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+  /v1/agents/{agentId}:
+    get:
+      operationId: getAgent
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Agent details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+    patch:
+      operationId: updateAgent
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAgentRequest'
+      responses:
+        '200':
+          description: Updated agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+  /v1/wallets/provision:
+    post:
+      operationId: provisionWallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProvisionWalletRequest'
+      responses:
+        '201':
+          description: Wallet provisioning result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletProvisioningResult'
+  /v1/wallets/{walletId}:
+    get:
+      operationId: getWallet
+      parameters:
+        - name: walletId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Wallet details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+  /v1/payments/quote:
+    post:
+      operationId: paymentQuote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentQuoteRequest'
+      responses:
+        '200':
+          description: Payment quote
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentQuote'
+  /v1/payments:
+    post:
+      operationId: executePayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutePaymentRequest'
+      responses:
+        '201':
+          description: Executed payment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+  /v1/payments/{paymentId}:
+    get:
+      operationId: getPayment
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+  /v1/identity/resolve:
+    post:
+      operationId: resolveIdentity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveIdentityRequest'
+      responses:
+        '200':
+          description: Identity profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityProfile'
+  /v1/identity/verify:
+    post:
+      operationId: verifyIdentity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyIdentityRequest'
+      responses:
+        '200':
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationResult'
+  /v1/identity/{identityId}:
+    get:
+      operationId: getIdentity
+      parameters:
+        - name: identityId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Identity profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityProfile'
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, down]
+        version:
+          type: string
+        uptime:
+          type: number
+    ServiceInfo:
+      type: object
+      required: [name, version]
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        environment:
+          type: string
+    Agent:
+      type: object
+      required: [id, displayName, status]
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        status:
+          type: string
+          enum: [active, suspended, archived]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateAgentRequest:
+      type: object
+      required: [displayName]
+      properties:
+        displayName:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+    UpdateAgentRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+        status:
+          type: string
+          enum: [active, suspended, archived]
+        metadata:
+          type: object
+          additionalProperties: true
+    Wallet:
+      type: object
+      required: [id, agentId, status]
+      properties:
+        id:
+          type: string
+        agentId:
+          type: string
+        stellarAddress:
+          type: string
+        status:
+          type: string
+          enum: [provisioning, active, frozen, closed]
+        balances:
+          type: array
+          items:
+            $ref: '#/components/schemas/Balance'
+        createdAt:
+          type: string
+          format: date-time
+    Balance:
+      type: object
+      required: [asset, amount]
+      properties:
+        asset:
+          type: string
+        amount:
+          type: string
+    ProvisionWalletRequest:
+      type: object
+      required: [agentId]
+      properties:
+        agentId:
+          type: string
+        stellarAddress:
+          type: string
+    WalletProvisioningResult:
+      type: object
+      required: [id, agentId, status]
+      properties:
+        id:
+          type: string
+        agentId:
+          type: string
+        stellarAddress:
+          type: string
+        status:
+          type: string
+          enum: [provisioning, active]
+    PaymentQuote:
+      type: object
+      required: [id, amount, fee, expiresAt]
+      properties:
+        id:
+          type: string
+        amount:
+          type: string
+        fee:
+          type: string
+        currency:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+    PaymentQuoteRequest:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: string
+        currency:
+          type: string
+        destinationWalletId:
+          type: string
+    Payment:
+      type: object
+      required: [id, status, amount]
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [pending, confirmed, failed, refunded]
+        amount:
+          type: string
+        currency:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ExecutePaymentRequest:
+      type: object
+      required: [quoteId, sourceWalletId]
+      properties:
+        quoteId:
+          type: string
+        sourceWalletId:
+          type: string
+        memo:
+          type: string
+    IdentityProfile:
+      type: object
+      required: [id, agentId, displayName, status, verificationLevel]
+      properties:
+        id:
+          type: string
+        agentId:
+          type: string
+        displayName:
+          type: string
+        stellarAddress:
+          type: string
+        domain:
+          type: string
+        status:
+          type: string
+          enum: [active, suspended, archived]
+        verificationLevel:
+          type: string
+          enum: [none, basic, enhanced]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ResolveIdentityRequest:
+      type: object
+      properties:
+        agentId:
+          type: string
+        stellarAddress:
+          type: string
+        domain:
+          type: string
+    VerifyIdentityRequest:
+      type: object
+      required: [identityId, challenge, signature]
+      properties:
+        identityId:
+          type: string
+        challenge:
+          type: string
+        signature:
+          type: string
+    VerificationResult:
+      type: object
+      required: [identityId, verified]
+      properties:
+        identityId:
+          type: string
+        verified:
+          type: boolean
+        verifiedAt:
+          type: string
+          format: date-time
