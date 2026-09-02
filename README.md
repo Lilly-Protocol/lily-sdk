@@ -72,6 +72,36 @@ sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
 ```
 
+The root entrypoint also exposes the transport layer for custom clients and tests:
+
+```ts
+import {
+  BaseClient,
+  createFetchHttpClient,
+  HttpClient,
+  HttpHeaders,
+  HttpRequest,
+  HttpResponse,
+  RetryPolicy,
+} from '@lily-protocol/sdk';
+
+class MyClient extends BaseClient {
+  async health() {
+    return this.request<{ status: string }>({
+      method: 'GET',
+      path: '/v1/system/health',
+    });
+  }
+}
+
+const httpClient = createFetchHttpClient({
+  baseUrl: 'https://api.lilyprotocol.com',
+  authToken: process.env.LILY_AUTH_TOKEN,
+});
+
+const client = new MyClient(httpClient);
+```
+
 ## Repository Structure
 
 ```text
@@ -120,61 +150,20 @@ npm run example
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
-## Custom Fetch and HttpClient Injection
+## Requirements and Compatibility
 
-The SDK supports two levels of HTTP customization for testing, proxies, and non-standard runtimes.
+- **Node.js**: Version 20 or newer is required. The SDK relies on built-in `fetch`, `AbortController`, and `Headers` APIs available in Node 20+.
+- **CI-Supported Versions**: Automated tests run against Node.js 20 and 22.
+- **Global Fetch**: A standards-compliant global `fetch` implementation is required by default. If your runtime lacks native fetch (e.g., older Node versions or specialized environments), provide a custom implementation via the `fetch` config option:
 
-### Custom `fetch` via Config
+  ```ts
+  import { LilySdk } from '@lily-protocol/sdk';
+  import fetch from 'node-fetch'; // or any compatible polyfill
 
-Pass a custom `fetch` implementation in the SDK config to override the global default. This is ideal for mocking in tests or routing through a proxy.
-
-```ts
-import { LilySdk } from '@lily-protocol/sdk';
-
-const mockFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-  return new Response(JSON.stringify({ status: 'ok' }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
+  const sdk = new LilySdk({
+    baseUrl: 'https://api.lilyprotocol.com',
+    fetch: fetch as typeof globalThis.fetch,
   });
-};
+  ```
 
-const sdk = new LilySdk({
-  baseUrl: 'https://api.lilyprotocol.com',
-  fetch: mockFetch,
-});
-```
-
-### Custom `HttpClient` Implementation
-
-For advanced use cases like logging, metrics, or custom retry logic, implement the `HttpClient` interface and inject it directly into the SDK constructor.
-
-```ts
-import { LilySdk } from '@lily-protocol/sdk';
-import type { HttpClient, HttpRequest, HttpResponse } from '@lily-protocol/sdk/http';
-
-class LoggingHttpClient implements HttpClient {
-  async request<TResponse, TRequest = unknown>(
-    req: HttpRequest<TRequest>
-  ): Promise<HttpResponse<TResponse>> {
-    console.log(`[HTTP] ${req.method} ${req.path}`);
-    const response = await fetch(`${req.path}`, {
-      method: req.method,
-      headers: req.headers,
-      body: req.body ? JSON.stringify(req.body) : undefined,
-    });
-    const data = await response.json();
-    return {
-      status: response.status,
-      headers: response.headers,
-      data: data as TResponse,
-    };
-  }
-}
-
-const sdk = new LilySdk(
-  { baseUrl: 'https://api.lilyprotocol.com' },
-  new LoggingHttpClient()
-);
-```
-
-See [`HttpClient`](./src/http/types.ts), [`HttpRequest`](./src/http/types.ts), and [`HttpResponse`](./src/http/types.ts) for the full contract.
+- **Browser Usage**: The SDK can run in browsers that support the Fetch API. Note that browser environments are subject to CORS restrictions enforced by the server. Ensure the Lily backend allows requests from your origin, or use a proxy/backend-for-frontend pattern.
