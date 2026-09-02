@@ -68,8 +68,13 @@ function resolveCredential(
   return explicit ?? process.env[envName] ?? undefined;
 }
 
-function safeUrl(rawUrl: string): URL {
+function safeUrl(rawUrl: string | URL): URL {
   try {
+    if (rawUrl instanceof URL) {
+      return new URL(
+        rawUrl.href.endsWith('/') ? rawUrl.href : `${rawUrl.href}/`,
+      );
+    }
     return new URL(rawUrl.endsWith('/') ? rawUrl : `${rawUrl}/`);
   } catch {
     throw new LilyConfigError('`baseUrl` must be a valid absolute URL.');
