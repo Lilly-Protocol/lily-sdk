@@ -84,6 +84,7 @@
     "docs": "typedoc --out docs/api --tsconfig tsconfig.docs.json --entryPoints src/index.ts src/config.ts src/errors.ts src/http.ts src/models.ts src/types.ts"
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.1",
     "@eslint/js": "^9.27.0",
     "@types/node": "^24.0.1",
     "@vitest/coverage-v8": "^3.2.4",
