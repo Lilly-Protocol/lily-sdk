@@ -1,62 +1,69 @@
-import { describe, expect, it, vi } from 'vitest';
-import type { ResolvedLilySdkConfig } from '../src/config/types';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
-
-function makeConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): ResolvedLilySdkConfig {
-  return {
-    baseUrl: new URL('https://api.example.com'),
-    apiKey: undefined,
-    authToken: undefined,
-    defaultHeaders: {},
-    userAgent: 'lily-sdk/test',
-    timeoutMs: 1000,
-    fetch: overrides.fetch ?? vi.fn(),
-    retry: {
-      retries: 0,
-      retryDelayMs: 0,
-      retryableStatusCodes: [],
-    },
-    ...overrides,
-  } as ResolvedLilySdkConfig;
-}
+import { resolveLilySdkConfig } from '../src/config';
+import type { HttpRequest } from '../src/http';
 
 describe('fetch-http-client parseResponse', () => {
-  it('returns null data for 204 responses', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
-    const config = makeConfig({ fetch: fetchMock });
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('returns null data for 204 No Content responses', async () => {
+    globalThis.fetch = vi.fn(() => {
+      return Promise.resolve(new Response(null, {
+        status: 204,
+        headers: {},
+      }));
+    });
+
+    const config = resolveLilySdkConfig({ baseUrl: 'https://api.example.com', apiKey: 'test-key' });
     const client = createFetchHttpClient(config);
+    const request: HttpRequest = { method: 'DELETE', path: '/v1/resource/1' };
+    const response = await client.request(request);
 
-    const result = await client.request({ method: 'GET', path: '/test' });
-
-    expect(result.status).toBe(204);
-    expect(result.data).toBeNull();
+    expect(response.status).toBe(204);
+    expect(response.data).toBeNull();
   });
 
   it('returns raw string for text/plain responses', async () => {
-    const body = 'plain text response';
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(body, { status: 200, headers: { 'content-type': 'text/plain' } }),
-    );
-    const config = makeConfig({ fetch: fetchMock });
+    const body = 'plain text response body';
+    globalThis.fetch = vi.fn(() => {
+      return Promise.resolve(new Response(body, {
+        status: 200,
+        headers: { 'content-type': 'text/plain' },
+      }));
+    });
+
+    const config = resolveLilySdkConfig({ baseUrl: 'https://api.example.com', apiKey: 'test-key' });
     const client = createFetchHttpClient(config);
+    const request: HttpRequest = { method: 'GET', path: '/v1/text-endpoint' };
+    const response = await client.request(request);
 
-    const result = await client.request({ method: 'GET', path: '/test' });
-
-    expect(result.status).toBe(200);
-    expect(result.data).toBe(body);
+    expect(response.status).toBe(200);
+    expect(response.data).toBe(body);
   });
 
-  it('parses application/json responses to objects', async () => {
-    const data = { key: 'value', nested: { ok: true } };
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify(data), { status: 200, headers: { 'content-type': 'application/json' } }),
-    );
-    const config = makeConfig({ fetch: fetchMock });
+  it('parses application/json responses into objects', async () => {
+    const body = { id: 'abc-123', status: 'active' };
+    globalThis.fetch = vi.fn(() => {
+      return Promise.resolve(new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }));
+    });
+
+    const config = resolveLilySdkConfig({ baseUrl: 'https://api.example.com', apiKey: 'test-key' });
     const client = createFetchHttpClient(config);
+    const request: HttpRequest = { method: 'GET', path: '/v1/json-endpoint' };
+    const response = await client.request(request);
 
-    const result = await client.request({ method: 'GET', path: '/test' });
-
-    expect(result.status).toBe(200);
-    expect(result.data).toEqual(data);
+    expect(response.status).toBe(200);
+    expect(response.data).toEqual(body);
   });
 });
