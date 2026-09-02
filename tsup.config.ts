@@ -1,4 +1,5 @@
 import { defineConfig } from 'tsup';
+import pkg from './package.json' assert { type: 'json' };
 
 export default defineConfig({
   entry: [
@@ -10,6 +11,9 @@ export default defineConfig({
     'src/types.ts',
   ],
   format: ['esm', 'cjs'],
+  define: {
+    __LILY_SDK_VERSION__: JSON.stringify(pkg.version),
+  },
   dts: {
     compilerOptions: {
       exactOptionalPropertyTypes: true,
