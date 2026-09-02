@@ -1,17 +1,26 @@
-import { describe, expect, it } from 'vitest';
-import type { HttpRequest } from '../src/http/types';
-import type { HealthStatus, ServiceInfo } from '../src/models';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SystemClient } from '../src/clients/system-client';
-import { createMockHttpClient } from './helpers/mock-http-client';
+import type { HttpClient, HttpResponse } from '../src/http/types';
+import type { HealthStatus, ServiceInfo } from '../src/models';
 
-const stubHealth: HealthStatus = {
+function createMockHttpClient(responseData: unknown = {}): HttpClient {
+  return {
+    request: vi.fn().mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      data: responseData,
+    } as HttpResponse),
+  };
+}
+
+const mockHealth: HealthStatus = {
   status: 'ok',
   version: '1.0.0',
   timestamp: '2024-01-01T00:00:00Z',
-  checks: { db: 'ok', redis: 'ok' },
+  checks: { database: 'ok', redis: 'ok' },
 };
 
-const stubInfo: ServiceInfo = {
+const mockInfo: ServiceInfo = {
   name: 'lily-api',
   version: '1.0.0',
   environment: 'production',
@@ -19,37 +28,47 @@ const stubInfo: ServiceInfo = {
 };
 
 describe('SystemClient', () => {
-  it('info sends GET /v1/system/info and returns service info', async () => {
-    let captured: HttpRequest<undefined> | undefined;
-    const client = new SystemClient(
-      createMockHttpClient(async (request) => {
-        captured = request as HttpRequest<undefined>;
-        return { status: 200, data: stubInfo };
-      }),
-    );
+  let httpClient: HttpClient;
+  let client: SystemClient;
 
-    const result = await client.info();
-
-    expect(captured).toBeDefined();
-    expect(captured!.method).toBe('GET');
-    expect(captured!.path).toBe('/v1/system/info');
-    expect(result).toEqual(stubInfo);
+  beforeEach(() => {
+    httpClient = createMockHttpClient();
+    client = new SystemClient(httpClient);
   });
 
-  it('health sends GET /v1/system/health and returns health status', async () => {
-    let captured: HttpRequest<undefined> | undefined;
-    const client = new SystemClient(
-      createMockHttpClient(async (request) => {
-        captured = request as HttpRequest<undefined>;
-        return { status: 200, data: stubHealth };
-      }),
-    );
+  describe('health', () => {
+    it('sends GET /v1/system/health and returns the health status', async () => {
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
+        status: 200,
+        headers: new Headers(),
+        data: mockHealth,
+      } as HttpResponse);
 
-    const result = await client.health();
+      const result = await client.health();
 
-    expect(captured).toBeDefined();
-    expect(captured!.method).toBe('GET');
-    expect(captured!.path).toBe('/v1/system/health');
-    expect(result).toEqual(stubHealth);
+      expect(result).toEqual(mockHealth);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
+    });
+  });
+
+  describe('info', () => {
+    it('sends GET /v1/system/info and returns the service info', async () => {
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
+        status: 200,
+        headers: new Headers(),
+        data: mockInfo,
+      } as HttpResponse);
+
+      const result = await client.info();
+
+      expect(result).toEqual(mockInfo);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'GET',
+        path: '/v1/system/info',
+      });
+    });
   });
 });
