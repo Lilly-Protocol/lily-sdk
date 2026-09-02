@@ -1,7 +1,7 @@
 import type { RetryPolicy } from '../http/types';
 
 export interface LilySdkConfig {
-  baseUrl: string;
+  baseUrl?: string;
   apiKey?: string;
   authToken?: string;
   timeoutMs?: number;
