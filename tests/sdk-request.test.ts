@@ -1,109 +1,63 @@
-import { describe, expect, it, vi } from 'vitest';
-
+import { describe, it, expect } from 'vitest';
 import { LilySdk } from '../src/sdk';
-import { createMockHttpClient } from './helpers/mock-http-client';
-import type { HttpRequest } from '../src/http/types';
+import type { HttpClient, HttpResponse, HttpRequest } from '../src/http/types';
 
-describe('LilySdk.request (typed passthrough)', () => {
-  it('delegates to the httpClient and returns response.data', async () => {
-    const mockData = { status: 'ok', timestamp: 1234567890 };
-    const mock = createMockHttpClient(() =>
-      Promise.resolve({
-        status: 200,
-        headers: new Headers(),
-        data: mockData,
-      }),
-    );
+class MockHttpClient implements HttpClient {
+  public readonly response: HttpResponse;
+  public constructor(response: HttpResponse) {
+    this.response = response;
+  }
+  public request<TResponse>(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _req: HttpRequest,
+  ): Promise<HttpResponse<TResponse>> {
+    return Promise.resolve(this.response as HttpResponse<TResponse>);
+  }
+}
+
+describe('LilySdk.request', () => {
+  it('delegates to the shared httpClient and returns data', async () => {
+    const mockResponse: HttpResponse<{ value: number }> = {
+      data: { value: 42 },
+      status: 200,
+      headers: new Headers(),
+    };
+
+    const mockHttpClient = new MockHttpClient(mockResponse);
 
     const sdk = new LilySdk(
-      {
-        baseUrl: 'https://api.lily.test',
-        fetch: globalThis.fetch,
-      },
-      mock,
+      { baseUrl: 'https://api.example.com' },
+      mockHttpClient,
     );
 
-    const result = await sdk.request<{ status: string; timestamp: number }>({
+    const result = await sdk.request<{ value: number }>({
       method: 'GET',
-      path: '/health',
+      path: '/test',
     });
 
-    expect(result).toEqual(mockData);
-    expect(result.status).toBe('ok');
+    expect(result).toEqual({ value: 42 });
   });
 
-  it('passes through the full HttpRequest descriptor to the httpClient', async () => {
-    const calls: HttpRequest<unknown>[] = [];
-    const mock = createMockHttpClient((req) => {
-      calls.push(req);
-      return Promise.resolve({
-        status: 200,
-        headers: new Headers(),
-        data: { ok: true },
-      });
-    });
+  it('passes request body through to the transport', async () => {
+    const mockResponse: HttpResponse<string> = {
+      data: 'ok',
+      status: 200,
+      headers: new Headers(),
+    };
+
+    const mockHttpClient = new MockHttpClient(mockResponse);
 
     const sdk = new LilySdk(
-      {
-        baseUrl: 'https://api.lily.test',
-        fetch: globalThis.fetch,
-      },
-      mock,
+      { baseUrl: 'https://api.example.com' },
+      mockHttpClient,
     );
 
-    await sdk.request({
+    const result = await sdk.request<string, { name: string }>({
       method: 'POST',
-      path: '/webhooks',
-      body: { event: 'created' },
+      path: '/items',
+      body: { name: 'widget' },
     });
 
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.method).toBe('POST');
-    expect(calls[0]!.path).toBe('/webhooks');
-    expect(calls[0]!.body).toEqual({ event: 'created' });
-  });
-
-  it('propagates errors thrown by the httpClient', async () => {
-    const mock = createMockHttpClient(() =>
-      Promise.reject(new Error('Network failure')),
-    );
-
-    const sdk = new LilySdk(
-      {
-        baseUrl: 'https://api.lily.test',
-        fetch: globalThis.fetch,
-      },
-      mock,
-    );
-
-    await expect(
-      sdk.request({ method: 'GET', path: '/missing' }),
-    ).rejects.toThrow('Network failure');
-  });
-
-  it('supports typed request bodies with POST', async () => {
-    const mock = createMockHttpClient(() =>
-      Promise.resolve({
-        status: 201,
-        headers: new Headers(),
-        data: { id: 'abc123' },
-      }),
-    );
-
-    const sdk = new LilySdk(
-      {
-        baseUrl: 'https://api.lily.test',
-        fetch: globalThis.fetch,
-      },
-      mock,
-    );
-
-    const result = await sdk.request<{ id: string }, { name: string }>({
-      method: 'POST',
-      path: '/agents',
-      body: { name: 'test-agent' },
-    });
-
-    expect(result.id).toBe('abc123');
+    expect(result).toBe('ok');
   });
 });

@@ -6,21 +6,27 @@ import { WalletClient } from './clients/wallet-client';
 import { resolveLilySdkConfig } from './config/resolve-config';
 import type { LilySdkConfig, ResolvedLilySdkConfig } from './config/types';
 import { createFetchHttpClient } from './http/fetch-http-client';
-import type { HttpClient, HttpRequest } from './http/types';
+import type { HttpClient } from './http/types';
+import type { HttpRequest } from './http/types';
 
 export class LilySdk {
   public readonly config: ResolvedLilySdkConfig;
+  private readonly httpClient: HttpClient;
   public readonly agents: AgentClient;
   public readonly wallets: WalletClient;
   public readonly payments: PaymentClient;
   public readonly identity: IdentityClient;
   public readonly system: SystemClient;
-
   private readonly httpClient: HttpClient;
 
-  public constructor(config: LilySdkConfig, httpClient?: HttpClient) {
-    this.config = resolveLilySdkConfig(config);
-    this.httpClient = httpClient ?? createFetchHttpClient(this.config);
+  public static create(config?: Partial<LilySdkConfig>, httpClient?: HttpClient): LilySdk {
+    return new LilySdk(config, httpClient);
+  }
+
+  public constructor(config?: Partial<LilySdkConfig>, httpClient?: HttpClient) {
+    this.config = resolveLilySdkConfig((config ?? {}));
+    const resolvedHttpClient = httpClient ?? createFetchHttpClient(this.config);
+    this.httpClient = resolvedHttpClient;
 
     this.agents = new AgentClient(this.httpClient);
     this.wallets = new WalletClient(this.httpClient);
@@ -30,35 +36,186 @@ export class LilySdk {
   }
 
   /**
-   * Sends a raw HTTP request through the SDK's shared transport layer.
-   *
-   * This is a typed passthrough that delegates to the internal `HttpClient`,
-   * reusing the resolved SDK config (baseUrl, headers, auth, retry, timeout).
-   * It returns only the response `data`, consistent with `BaseClient.request`.
-   *
-   * Use this when you need to call an endpoint that does not yet have a
-   * dedicated client method, or when you need full control over the request.
-   *
-   * @typeParam TResponse - The expected response payload type.
-   * @typeParam TRequest  - The request body type (defaults to `undefined`).
-   * @param request - A full `HttpRequest` descriptor.
-   * @returns The deserialized response data.
-   *
-   * @example
-   * ```ts
-   * const sdk = new LilySdk({ baseUrl: 'https://api.lily.dev', apiKey: 'sk_...' });
-   * const health = await sdk.request<{ status: string }>({
-   *   method: 'GET',
-   *   path: '/health',
-   * });
-   * ```
+   * Sends a typed request using the SDK's shared HttpClient.
+   * Returns only the response data, mirroring BaseClient.request.
    */
   public async request<TResponse, TRequest = undefined>(
     request: HttpRequest<TRequest>,
   ): Promise<TResponse> {
-    const response = await this.httpClient.request<TResponse, TRequest>(
-      request,
-    );
+    const response = await this.httpClient.request<TResponse, TRequest>(request);
     return response.data;
   }
+
+  /**
+   * Convenience factory to create a LilySdk instance with sensible defaults from environment variables.
+   */
+  public static create(config?: Partial<LilySdkConfig>, httpClient?: HttpClient): LilySdk {
+    const baseUrl =
+      config?.baseUrl ??
+      (typeof process !== 'undefined'
+        ? process.env?.LILY_BASE_URL ?? process.env?.LILY_API_URL
+        : undefined) ??
+      'https://api.lilyprotocol.org';
+
+    const apiKey =
+      config?.apiKey ??
+      (typeof process !== 'undefined' ? process.env?.LILY_API_KEY : undefined);
+
+    const authToken =
+      config?.authToken ??
+      (typeof process !== 'undefined' ? process.env?.LILY_AUTH_TOKEN : undefined);
+
+    return new LilySdk(
+      {
+        baseUrl,
+        ...(apiKey ? { apiKey } : {}),
+        ...(authToken ? { authToken } : {}),
+        ...config,
+      },
+      httpClient,
+    );
+  }
+
+  /**
+   * Creates a LilySdk instance with zero-config defaults.
+   * Reads LILY_API_URL, LILY_API_KEY, and LILY_AUTH_TOKEN from environment.
+   * Explicit options override environment variables.
+   */
+  public static create(options?: Partial<LilySdkConfig>): LilySdk {
+    const envBaseUrl = process.env.LILY_API_URL;
+    const envApiKey = process.env.LILY_API_KEY;
+    const envAuthToken = process.env.LILY_AUTH_TOKEN;
+
+    const baseUrl = options?.baseUrl ?? envBaseUrl;
+    if (!baseUrl) {
+      throw new Error(
+        'baseUrl is required. Pass it in options or set LILY_API_URL environment variable.',
+      );
+    }
+
+    const config: LilySdkConfig = {
+      baseUrl,
+    };
+
+    const apiKey = options?.apiKey ?? envApiKey;
+    if (apiKey !== undefined) {
+      config.apiKey = apiKey;
+    }
+
+    const authToken = options?.authToken ?? envAuthToken;
+    if (authToken !== undefined) {
+      config.authToken = authToken;
+    }
+
+    if (options?.timeoutMs !== undefined) config.timeoutMs = options.timeoutMs;
+    if (options?.retry !== undefined) config.retry = options.retry;
+    if (options?.defaultHeaders !== undefined) config.defaultHeaders = options.defaultHeaders;
+    if (options?.userAgent !== undefined) config.userAgent = options.userAgent;
+    if (options?.fetch !== undefined) config.fetch = options.fetch;
+
+    return new LilySdk(config);
+  }
+
+  /**
+   * Creates a new LilySdk instance with merged configuration.
+   * Useful for multi-tenant scenarios where credentials or baseUrl differ per tenant.
+   */
+  public withConfig(overrides: Partial<LilySdkConfig>): LilySdk {
+    // Construct a fresh config object from resolved values to satisfy
+    // exactOptionalPropertyTypes. Only defined overrides replace base values.
+    const merged: LilySdkConfig = {
+      baseUrl: overrides.baseUrl ?? String(this.config.baseUrl),
+      timeoutMs: overrides.timeoutMs ?? this.config.timeoutMs,
+      retry: overrides.retry ?? this.config.retry,
+      defaultHeaders: overrides.defaultHeaders ?? Object.fromEntries(Object.entries(this.config.defaultHeaders)),
+      userAgent: overrides.userAgent ?? this.config.userAgent,
+      fetch: overrides.fetch ?? this.config.fetch,
+    };
+
+    if (overrides.apiKey !== undefined) {
+      merged.apiKey = overrides.apiKey;
+    } else if (this.config.apiKey !== undefined) {
+      merged.apiKey = this.config.apiKey;
+    }
+
+    if (overrides.authToken !== undefined) {
+      merged.authToken = overrides.authToken;
+    } else if (this.config.authToken !== undefined) {
+      merged.authToken = this.config.authToken;
+    }
+
+    return new LilySdk(merged);
+  }
+
+  /**
+   * Creates a new LilySdk instance with merged configuration.
+   * Useful for multi-tenant scenarios where credentials or baseUrl differ per tenant.
+   */
+  public withConfig(overrides: Partial<LilySdkConfig>): LilySdk {
+    const merged: LilySdkConfig = {
+      baseUrl: this.config.baseUrl.toString(),
+      ...(this.config.apiKey !== undefined && { apiKey: this.config.apiKey }),
+      ...(this.config.authToken !== undefined && { authToken: this.config.authToken }),
+      timeoutMs: this.config.timeoutMs,
+      retry: { ...this.config.retry },
+      defaultHeaders: { ...this.config.defaultHeaders },
+      userAgent: this.config.userAgent,
+      fetch: this.config.fetch,
+      ...overrides,
+    };
+    return new LilySdk(merged, this.httpClient);
+  }
+
+  /**
+   * Creates a new LilySdk instance with sensible defaults.
+   * Reads LILY_API_URL and LILY_API_KEY from environment variables if not provided.
+   * Explicit options always take precedence over environment variables.
+   */
+  public static create(options?: Partial<LilySdkConfig>): LilySdk {
+    const baseUrl = options?.baseUrl ?? process.env.LILY_API_URL;
+    const apiKey = options?.apiKey ?? process.env.LILY_API_KEY;
+
+    if (!baseUrl) {
+      throw new Error(
+        'baseUrl is required. Provide it in options or set the LILY_API_URL environment variable.',
+      );
+    }
+
+    return new LilySdk({
+      ...options,
+      baseUrl,
+      ...(apiKey ? { apiKey } : {}),
+    });
+  }
+
+  /**
+   * Creates a LilySdk instance with sensible defaults from environment variables.
+   * Explicit options always win over env vars.
+   *
+   * Env vars read:
+   * - LILY_API_URL (default: https://api.lilyprotocol.com)
+   * - LILY_API_KEY
+   * - LILY_AUTH_TOKEN
+   */
+  public static create(
+    options?: Partial<LilySdkConfig>,
+    httpClient?: HttpClient,
+  ): LilySdk {
+    const baseUrl =
+      options?.baseUrl ??
+      process.env.LILY_API_URL ??
+      'https://api.lilyprotocol.com';
+    const apiKey = options?.apiKey ?? process.env.LILY_API_KEY;
+    const authToken = options?.authToken ?? process.env.LILY_AUTH_TOKEN;
+
+    const config: LilySdkConfig = {
+      baseUrl,
+      ...(apiKey ? { apiKey } : {}),
+      ...(authToken ? { authToken } : {}),
+      ...options,
+    };
+
+    return new LilySdk(config, httpClient);
+  }
 }
+
