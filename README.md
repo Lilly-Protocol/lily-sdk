@@ -54,6 +54,51 @@ console.log(health.status);
 console.log(wallet.wallet.address);
 ```
 
+## Configuration
+
+The SDK accepts a `LilySdkConfig` object. All fields except `baseUrl` are optional and have sensible defaults.
+
+| Field | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `baseUrl` | `string` | *required* | Absolute URL for the Lily Protocol API (e.g. `https://api.lilyprotocol.com`). |
+| `apiKey` | `string` | `undefined` | API key sent as `x-api-key` header when provided. |
+| `authToken` | `string` | `undefined` | Bearer token sent as `Authorization` header when provided. |
+| `timeoutMs` | `number` | `10000` | Request timeout in milliseconds. Must be positive. Can be overridden per-request via `HttpRequest.timeoutMs`. |
+| `retry` | `Partial<RetryPolicy>` | `{ retries: 2, retryDelayMs: 250, retryableStatusCodes: [408,409,425,429,500,502,503,504] }` | Retry behaviour for failed requests. See below. |
+| `defaultHeaders` | `Record<string,string>` | `{}` | Extra headers merged into every request. |
+| `userAgent` | `string` | `lily-sdk/0.1.0` | Value of the `User-Agent` header. |
+| `fetch` | `typeof fetch` | `globalThis.fetch` | Custom fetch implementation for unsupported runtimes. |
+
+### Retry semantics
+
+- Retries only apply to **safe/idempotent** methods: `GET`, `PUT`, and `DELETE`. Requests using `POST` or `PATCH` fail immediately on error.
+- Eligible status codes default to `[408, 409, 425, 429, 500, 502, 503, 504]` and can be customised via `retry.retryableStatusCodes`.
+- Transport-level errors (network failures, DNS errors) are retried under the same method constraint.
+- The delay between attempts grows linearly: `retryDelayMs × attemptNumber` (e.g. 250 ms, then 500 ms).
+- Timeouts (`AbortError`) are wrapped as `LilyTransportError` with code `TIMEOUT` and are not retried beyond the transport policy.
+
+### Example
+
+```ts
+const sdk = new LilySdk({
+  baseUrl: 'https://api.lilyprotocol.com',
+  authToken: process.env.LILY_AUTH_TOKEN,
+  timeoutMs: 15_000,
+  retry: { retries: 3, retryDelayMs: 500 },
+  defaultHeaders: { 'x-request-source': 'billing-service' },
+});
+```
+
+Per-request overrides work the same way:
+
+```ts
+await sdk.wallets.provision(
+  { agentId: 'agent_123', network: 'stellar-testnet' },
+  { timeoutMs: 5_000 }, // overrides the global timeout for this call only
+);
+```
+
+
 ## Public API Overview
 
 ```ts
@@ -70,6 +115,36 @@ sdk.payments.quote({
 });
 sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
+```
+
+The root entrypoint also exposes the transport layer for custom clients and tests:
+
+```ts
+import {
+  BaseClient,
+  createFetchHttpClient,
+  HttpClient,
+  HttpHeaders,
+  HttpRequest,
+  HttpResponse,
+  RetryPolicy,
+} from '@lily-protocol/sdk';
+
+class MyClient extends BaseClient {
+  async health() {
+    return this.request<{ status: string }>({
+      method: 'GET',
+      path: '/v1/system/health',
+    });
+  }
+}
+
+const httpClient = createFetchHttpClient({
+  baseUrl: 'https://api.lilyprotocol.com',
+  authToken: process.env.LILY_AUTH_TOKEN,
+});
+
+const client = new MyClient(httpClient);
 ```
 
 ## Repository Structure
@@ -109,54 +184,9 @@ npm run example
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
 - The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.
 
-## Error Handling
+## Changelog
 
-The SDK exports a typed error hierarchy rooted at `LilySdkError`. Every error carries optional `code`, `statusCode`, `details`, and `cause` fields for programmatic handling.
-
-| Error Class | When It Is Thrown | Key Fields |
-|---|---|---|
-| `LilySdkError` | Base class for all SDK errors. Catch this as a fallback. | `code`, `cause` |
-| `LilyConfigError` | Invalid or missing configuration at construction time. | `code`, `details` |
-| `LilyTransportError` | Network failure, DNS error, timeout, or aborted request. | `code` (e.g. `TIMEOUT`, `NETWORK`), `cause` |
-| `LilyValidationError` | Request payload failed client-side validation before sending. | `code`, `details` |
-| `LilyAuthenticationError` | API returned `401` or `403`. | `statusCode`, `code`, `details` |
-| `LilyApiError` | API returned any other non-2xx status (`400`, `404`, `500`, etc.). | `statusCode`, `code`, `details` |
-
-### Catching Errors
-
-Use `instanceof` to distinguish error types. Always check `statusCode` on API errors and `code` on transport errors.
-
-```ts
-import {
-  LilyApiError,
-  LilyAuthenticationError,
-  LilyTransportError,
-} from 'lily-sdk';
-
-try {
-  const wallet = await sdk.wallets.get('wal_abc123');
-} catch (err) {
-  if (err instanceof LilyAuthenticationError) {
-    // 401/403 — refresh token or re-authenticate
-    console.error('Auth failed:', err.statusCode, err.details);
-  } else if (err instanceof LilyApiError) {
-    // Business logic error from the API
-    console.error(`API ${err.statusCode}: [${err.code}] ${err.message}`);
-  } else if (err instanceof LilyTransportError) {
-    // Network-level failure; retries may have been exhausted
-    console.error('Transport:', err.code, err.cause);
-  } else {
-    throw err; // Unexpected error — rethrow
-  }
-}
-```
-
-### Error Fields Reference
-
-- **`code`** (`string | undefined`): Machine-readable error identifier. Transport errors use codes like `TIMEOUT`, `NETWORK`, `ABORTED`. API errors mirror the backend error code when available.
-- **`statusCode`** (`number | undefined`): HTTP status code for `LilyApiError` and `LilyAuthenticationError`. Undefined for transport and config errors.
-- **`details`** (`unknown`): Structured payload from the API response body or validation context. Shape depends on the endpoint.
-- **`cause`** (`unknown`): Original error that triggered this one (e.g., the underlying `fetch` error for transport failures). Useful for logging and debugging.
+See [CHANGELOG.md](./CHANGELOG.md) for a full list of changes. The changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and is updated with every release.
 
 ## Roadmap Themes
 
@@ -168,3 +198,21 @@ try {
 ## Contributing
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
+
+## Requirements and Compatibility
+
+- **Node.js**: Version 20 or newer is required. The SDK relies on built-in `fetch`, `AbortController`, and `Headers` APIs available in Node 20+.
+- **CI-Supported Versions**: Automated tests run against Node.js 20 and 22.
+- **Global Fetch**: A standards-compliant global `fetch` implementation is required by default. If your runtime lacks native fetch (e.g., older Node versions or specialized environments), provide a custom implementation via the `fetch` config option:
+
+  ```ts
+  import { LilySdk } from '@lily-protocol/sdk';
+  import fetch from 'node-fetch'; // or any compatible polyfill
+
+  const sdk = new LilySdk({
+    baseUrl: 'https://api.lilyprotocol.com',
+    fetch: fetch as typeof globalThis.fetch,
+  });
+  ```
+
+- **Browser Usage**: The SDK can run in browsers that support the Fetch API. Note that browser environments are subject to CORS restrictions enforced by the server. Ensure the Lily backend allows requests from your origin, or use a proxy/backend-for-frontend pattern.
