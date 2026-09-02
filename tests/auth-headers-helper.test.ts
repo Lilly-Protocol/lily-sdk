@@ -1,40 +1,43 @@
-import { describe, expect, it } from 'vitest';
-
-import { resolveLilySdkConfig } from '../src/config/resolve-config';
+import { describe, it, expect } from 'vitest';
 import { resolveAuthHeaders } from '../src/http/auth-headers';
+import { resolveLilySdkConfig } from '../src/config/resolve-config';
 
 describe('resolveAuthHeaders', () => {
-  const base = {
-    baseUrl: 'https://api.lily.test',
-    timeoutMs: 2_000,
-    retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
-    defaultHeaders: {},
-    userAgent: 'lily-sdk/test',
-  };
-
-  it('returns only x-api-key when only apiKey is set', () => {
-    const config = resolveLilySdkConfig({ ...base, apiKey: 'k1' });
+  it('returns only x-api-key when only apiKey is configured', () => {
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.example.com',
+      apiKey: 'test-key',
+    });
     const headers = resolveAuthHeaders(config);
-    expect(headers).toEqual({ 'x-api-key': 'k1' });
+    expect(headers).toEqual({ 'x-api-key': 'test-key' });
   });
 
-  it('returns only authorization bearer when only authToken is set', () => {
-    const config = resolveLilySdkConfig({ ...base, authToken: 't1' });
+  it('returns only authorization when only authToken is configured', () => {
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.example.com',
+      authToken: 'test-token',
+    });
     const headers = resolveAuthHeaders(config);
-    expect(headers).toEqual({ authorization: 'Bearer t1' });
+    expect(headers).toEqual({ authorization: 'Bearer test-token' });
   });
 
-  it('returns both headers when both credentials are set', () => {
-    const config = resolveLilySdkConfig({ ...base, apiKey: 'k1', authToken: 't1' });
+  it('returns both headers when apiKey and authToken are configured', () => {
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.example.com',
+      apiKey: 'test-key',
+      authToken: 'test-token',
+    });
     const headers = resolveAuthHeaders(config);
     expect(headers).toEqual({
-      'x-api-key': 'k1',
-      authorization: 'Bearer t1',
+      'x-api-key': 'test-key',
+      authorization: 'Bearer test-token',
     });
   });
 
-  it('returns empty object when no credentials are set', () => {
-    const config = resolveLilySdkConfig({ ...base });
+  it('returns empty object when no credentials are configured', () => {
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.example.com',
+    });
     const headers = resolveAuthHeaders(config);
     expect(headers).toEqual({});
   });

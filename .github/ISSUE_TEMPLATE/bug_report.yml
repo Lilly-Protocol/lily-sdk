@@ -1,7 +1,7 @@
 name: Bug report
 description: Report an SDK bug or regression
-title: "[Bug]: "
-labels: ["bug"]
+title: '[Bug]: '
+labels: ['bug']
 body:
   - type: textarea
     id: summary
