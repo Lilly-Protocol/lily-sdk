@@ -1,81 +1,74 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ResolvedLilySdkConfig } from '../src/config/types';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
-
-interface AuthConfig {
-  apiKey?: string;
-  authToken?: string;
-}
-
-const matrix: { name: string; config: AuthConfig; expectedHeaders: Record<string, string | undefined> }[] = [
-  {
-    name: 'apiKey only',
-    config: { apiKey: 'test-key' },
-    expectedHeaders: { 'x-api-key': 'test-key', authorization: undefined },
-  },
-  {
-    name: 'authToken only',
-    config: { authToken: 'test-token' },
-    expectedHeaders: { 'x-api-key': undefined, authorization: 'Bearer test-token' },
-  },
-  {
-    name: 'both credentials',
-    config: { apiKey: 'test-key', authToken: 'test-token' },
-    expectedHeaders: { 'x-api-key': 'test-key', authorization: 'Bearer test-token' },
-  },
-  {
-    name: 'neither credential',
-    config: {},
-    expectedHeaders: { 'x-api-key': undefined, authorization: undefined },
-  },
-];
+import { resolveLilySdkConfig } from '../src/config/resolve-config';
 
 describe('auth header matrix', () => {
-  it.each(matrix)('sends correct headers for $name', async ({ config, expectedHeaders }) => {
-    const fetchSpy = vi.fn(() =>
-      Promise.resolve(
-        new Response(JSON.stringify({ status: 'ok' }), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        }),
-      ),
-    );
+  const baseConfig = {
+    baseUrl: 'https://api.lily.test',
+    timeoutMs: 2_000,
+    retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
+    defaultHeaders: {},
+    userAgent: 'lily-sdk/test',
+  };
 
-    const baseConfig = {
-      baseUrl: new URL('https://api.lily.test/'),
-      timeoutMs: 2_000,
-      retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
-      defaultHeaders: {},
-      userAgent: 'lily-sdk/test',
-      fetch: fetchSpy,
-    };
+  it('sends only x-api-key when only apiKey is configured', async () => {
+    const fetchSpy = vi.fn(() => Promise.resolve(new Response('{}', { status: 200 })));
+    const config = resolveLilySdkConfig({ ...baseConfig, apiKey: 'test-key', fetch: fetchSpy });
+    const client = createFetchHttpClient(config);
 
-    const sdkConfig = {
-      ...baseConfig,
-      ...(config.apiKey !== undefined ? { apiKey: config.apiKey } : {}),
-      ...(config.authToken !== undefined ? { authToken: config.authToken } : {}),
-    } as ResolvedLilySdkConfig;
+    await client.request({ method: 'GET', path: '/test' });
 
-    const httpClient = createFetchHttpClient(sdkConfig);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const calls = fetchSpy.mock.calls as unknown as [RequestInfo | URL, RequestInit | undefined][];
+    const init = calls[0]?.[1];
+    const headers = new Headers(init?.headers);
+    expect(headers.get('x-api-key')).toBe('test-key');
+    expect(headers.has('authorization')).toBe(false);
+  });
 
-    await httpClient.request({ method: 'GET', path: '/v1/system/health' });
+  it('sends only authorization bearer when only authToken is configured', async () => {
+    const fetchSpy = vi.fn(() => Promise.resolve(new Response('{}', { status: 200 })));
+    const config = resolveLilySdkConfig({ ...baseConfig, authToken: 'test-token', fetch: fetchSpy });
+    const client = createFetchHttpClient(config);
 
-    expect(fetchSpy).toHaveBeenCalledOnce();
-    const callArgs = fetchSpy.mock.calls[0] as unknown as [unknown, RequestInit | undefined];
-    const init = callArgs[1];
-    const headers = (init?.headers ?? {}) as Record<string, string | undefined>;
+    await client.request({ method: 'GET', path: '/test' });
 
-    if (expectedHeaders['x-api-key'] === undefined) {
-      expect(headers['x-api-key']).toBeUndefined();
-    } else {
-      expect(headers['x-api-key']).toBe(expectedHeaders['x-api-key']);
-    }
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const calls = fetchSpy.mock.calls as unknown as [RequestInfo | URL, RequestInit | undefined][];
+    const init = calls[0]?.[1];
+    const headers = new Headers(init?.headers);
+    expect(headers.get('authorization')).toBe('Bearer test-token');
+    expect(headers.has('x-api-key')).toBe(false);
+  });
 
-    if (expectedHeaders.authorization === undefined) {
-      expect(headers.authorization).toBeUndefined();
-    } else {
-      expect(headers.authorization).toBe(expectedHeaders.authorization);
-    }
+  it('sends both headers when both credentials are configured', async () => {
+    const fetchSpy = vi.fn(() => Promise.resolve(new Response('{}', { status: 200 })));
+    const config = resolveLilySdkConfig({ ...baseConfig, apiKey: 'test-key', authToken: 'test-token', fetch: fetchSpy });
+    const client = createFetchHttpClient(config);
+
+    await client.request({ method: 'GET', path: '/test' });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const calls = fetchSpy.mock.calls as unknown as [RequestInfo | URL, RequestInit | undefined][];
+    const init = calls[0]?.[1];
+    const headers = new Headers(init?.headers);
+    expect(headers.get('x-api-key')).toBe('test-key');
+    expect(headers.get('authorization')).toBe('Bearer test-token');
+  });
+
+  it('sends neither auth header when no credentials are configured', async () => {
+    const fetchSpy = vi.fn(() => Promise.resolve(new Response('{}', { status: 200 })));
+    const config = resolveLilySdkConfig({ ...baseConfig, fetch: fetchSpy });
+    const client = createFetchHttpClient(config);
+
+    await client.request({ method: 'GET', path: '/test' });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const calls = fetchSpy.mock.calls as unknown as [RequestInfo | URL, RequestInit | undefined][];
+    const init = calls[0]?.[1];
+    const headers = new Headers(init?.headers);
+    expect(headers.has('x-api-key')).toBe(false);
+    expect(headers.has('authorization')).toBe(false);
   });
 });
