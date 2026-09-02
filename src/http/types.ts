@@ -12,7 +12,10 @@ export interface HttpRequest<TBody = unknown> {
   method: HttpMethod;
   path: string;
   headers?: HttpHeaders;
-  query?: Record<string, string | number | boolean | undefined>;
+  query?: Record<
+    string,
+    string | number | boolean | (string | number)[] | undefined
+  >;
   body?: TBody;
   timeoutMs?: number;
   signal?: AbortSignal;
