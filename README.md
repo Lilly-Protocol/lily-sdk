@@ -54,6 +54,51 @@ console.log(health.status);
 console.log(wallet.wallet.address);
 ```
 
+## Configuration
+
+The SDK accepts a `LilySdkConfig` object. All fields except `baseUrl` are optional and have sensible defaults.
+
+| Field | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `baseUrl` | `string` | *required* | Absolute URL for the Lily Protocol API (e.g. `https://api.lilyprotocol.com`). |
+| `apiKey` | `string` | `undefined` | API key sent as `x-api-key` header when provided. |
+| `authToken` | `string` | `undefined` | Bearer token sent as `Authorization` header when provided. |
+| `timeoutMs` | `number` | `10000` | Request timeout in milliseconds. Must be positive. Can be overridden per-request via `HttpRequest.timeoutMs`. |
+| `retry` | `Partial<RetryPolicy>` | `{ retries: 2, retryDelayMs: 250, retryableStatusCodes: [408,409,425,429,500,502,503,504] }` | Retry behaviour for failed requests. See below. |
+| `defaultHeaders` | `Record<string,string>` | `{}` | Extra headers merged into every request. |
+| `userAgent` | `string` | `lily-sdk/0.1.0` | Value of the `User-Agent` header. |
+| `fetch` | `typeof fetch` | `globalThis.fetch` | Custom fetch implementation for unsupported runtimes. |
+
+### Retry semantics
+
+- Retries only apply to **safe/idempotent** methods: `GET`, `PUT`, and `DELETE`. Requests using `POST` or `PATCH` fail immediately on error.
+- Eligible status codes default to `[408, 409, 425, 429, 500, 502, 503, 504]` and can be customised via `retry.retryableStatusCodes`.
+- Transport-level errors (network failures, DNS errors) are retried under the same method constraint.
+- The delay between attempts grows linearly: `retryDelayMs × attemptNumber` (e.g. 250 ms, then 500 ms).
+- Timeouts (`AbortError`) are wrapped as `LilyTransportError` with code `TIMEOUT` and are not retried beyond the transport policy.
+
+### Example
+
+```ts
+const sdk = new LilySdk({
+  baseUrl: 'https://api.lilyprotocol.com',
+  authToken: process.env.LILY_AUTH_TOKEN,
+  timeoutMs: 15_000,
+  retry: { retries: 3, retryDelayMs: 500 },
+  defaultHeaders: { 'x-request-source': 'billing-service' },
+});
+```
+
+Per-request overrides work the same way:
+
+```ts
+await sdk.wallets.provision(
+  { agentId: 'agent_123', network: 'stellar-testnet' },
+  { timeoutMs: 5_000 }, // overrides the global timeout for this call only
+);
+```
+
+
 ## Public API Overview
 
 ```ts
@@ -70,6 +115,36 @@ sdk.payments.quote({
 });
 sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
+```
+
+The root entrypoint also exposes the transport layer for custom clients and tests:
+
+```ts
+import {
+  BaseClient,
+  createFetchHttpClient,
+  HttpClient,
+  HttpHeaders,
+  HttpRequest,
+  HttpResponse,
+  RetryPolicy,
+} from '@lily-protocol/sdk';
+
+class MyClient extends BaseClient {
+  async health() {
+    return this.request<{ status: string }>({
+      method: 'GET',
+      path: '/v1/system/health',
+    });
+  }
+}
+
+const httpClient = createFetchHttpClient({
+  baseUrl: 'https://api.lilyprotocol.com',
+  authToken: process.env.LILY_AUTH_TOKEN,
+});
+
+const client = new MyClient(httpClient);
 ```
 
 ## Repository Structure
@@ -109,23 +184,9 @@ npm run example
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
 - The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.
 
-## API Reference
+## Changelog
 
-Full API documentation is generated from the public TypeScript types using [TypeDoc](https://typedoc.org/).
-
-- **Online:** Published via GitHub Pages at `https://lilly-protocol.github.io/lily-sdk/` (once CI is configured)
-- **Local:** Run `npm run docs` to generate HTML into `docs/api/`
-
-The generated reference covers all five subpath entrypoints:
-
-| Entrypoint | Contents |
-|---|---|
-| `lily-sdk` | `LilySdk`, client classes, error hierarchy |
-| `lily-sdk/config` | `LilySdkConfig`, `resolveLilySdkConfig` |
-| `lily-sdk/errors` | All error classes and `LilyErrorOptions` |
-| `lily-sdk/http` | `HttpClient`, `createFetchHttpClient`, `BaseClient` |
-| `lily-sdk/models` | Request/response models (`MoneyAmount`, `PaymentStatus`, etc.) |
-| `lily-sdk/types` | Shared type aliases and interfaces |
+See [CHANGELOG.md](./CHANGELOG.md) for a full list of changes. The changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and is updated with every release.
 
 ## Roadmap Themes
 
@@ -137,3 +198,21 @@ The generated reference covers all five subpath entrypoints:
 ## Contributing
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
+
+## Requirements and Compatibility
+
+- **Node.js**: Version 20 or newer is required. The SDK relies on built-in `fetch`, `AbortController`, and `Headers` APIs available in Node 20+.
+- **CI-Supported Versions**: Automated tests run against Node.js 20 and 22.
+- **Global Fetch**: A standards-compliant global `fetch` implementation is required by default. If your runtime lacks native fetch (e.g., older Node versions or specialized environments), provide a custom implementation via the `fetch` config option:
+
+  ```ts
+  import { LilySdk } from '@lily-protocol/sdk';
+  import fetch from 'node-fetch'; // or any compatible polyfill
+
+  const sdk = new LilySdk({
+    baseUrl: 'https://api.lilyprotocol.com',
+    fetch: fetch as typeof globalThis.fetch,
+  });
+  ```
+
+- **Browser Usage**: The SDK can run in browsers that support the Fetch API. Note that browser environments are subject to CORS restrictions enforced by the server. Ensure the Lily backend allows requests from your origin, or use a proxy/backend-for-frontend pattern.
