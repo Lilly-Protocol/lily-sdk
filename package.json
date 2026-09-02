@@ -107,7 +107,7 @@
     "typecheck": "tsc --project tsconfig.json --noEmit && tsc --project tsconfig.examples.json --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format:check": "prettier --check . examples/",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "example": "tsx examples/quickstart.ts",
