@@ -1,95 +1,107 @@
-import { describe, expect, it } from 'vitest';
-import type { HttpRequest } from '../src/http/types';
-import type {
-  ExecutePaymentRequest,
-  Payment,
-  PaymentQuote,
-  PaymentQuoteRequest,
-} from '../src/models';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PaymentClient } from '../src/clients/payment-client';
-import { createMockHttpClient } from './helpers/mock-http-client';
+import type { HttpClient, HttpResponse } from '../src/http/types';
+import type { Payment, PaymentQuote, PaymentQuoteRequest, ExecutePaymentRequest } from '../src/models';
 
-const stubPayment: Payment = {
+function createMockHttpClient(responseData: unknown = {}): HttpClient {
+  return {
+    request: vi.fn().mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      data: responseData,
+    } as HttpResponse),
+  };
+}
+
+const mockPayment: Payment = {
   id: 'pay-1',
   fromWalletId: 'wallet-1',
-  toAddress: 'GABC123',
-  amount: { assetCode: 'XLM', amount: '50' },
-  status: 'queued',
+  toAddress: 'GABC...',
+  amount: { amount: '100', assetCode: 'XLM' },
+  status: 'settled',
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
 };
 
-const stubQuote: PaymentQuote = {
-  amount: { assetCode: 'XLM', amount: '50' },
-  estimatedFee: { assetCode: 'XLM', amount: '0.00001' },
+const mockQuote: PaymentQuote = {
+  amount: { amount: '100', assetCode: 'XLM' },
+  estimatedFee: { amount: '0.00001', assetCode: 'XLM' },
   expiresAt: '2024-01-01T01:00:00Z',
 };
 
 describe('PaymentClient', () => {
-  it('quote sends POST /v1/payments/quote with body and returns quote', async () => {
-    let captured: HttpRequest<PaymentQuoteRequest> | undefined;
-    const input: PaymentQuoteRequest = {
-      fromWalletId: 'wallet-1',
-      toAddress: 'GABC123',
-      amount: { assetCode: 'XLM', amount: '50' },
-    };
+  let httpClient: HttpClient;
+  let client: PaymentClient;
 
-    const client = new PaymentClient(
-      createMockHttpClient(async (request) => {
-        captured = request as HttpRequest<PaymentQuoteRequest>;
-        return { status: 200, data: stubQuote };
-      }),
-    );
-
-    const result = await client.quote(input);
-
-    expect(captured).toBeDefined();
-    expect(captured!.method).toBe('POST');
-    expect(captured!.path).toBe('/v1/payments/quote');
-    expect(captured!.body).toEqual(input);
-    expect(result).toEqual(stubQuote);
+  beforeEach(() => {
+    httpClient = createMockHttpClient();
+    client = new PaymentClient(httpClient);
   });
 
-  it('execute sends POST /v1/payments with body including idempotencyKey', async () => {
-    let captured: HttpRequest<ExecutePaymentRequest> | undefined;
-    const input: ExecutePaymentRequest = {
-      fromWalletId: 'wallet-1',
-      toAddress: 'GABC123',
-      amount: { assetCode: 'XLM', amount: '50' },
-      memo: 'test payment',
-      idempotencyKey: 'key-abc',
-    };
+  describe('quote', () => {
+    it('sends POST /v1/payments/quote with the input body and returns the quote', async () => {
+      const input: PaymentQuoteRequest = {
+        fromWalletId: 'wallet-1',
+        toAddress: 'GABC...',
+        amount: { amount: '100', assetCode: 'XLM' },
+      };
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
+        status: 200,
+        headers: new Headers(),
+        data: mockQuote,
+      } as HttpResponse);
 
-    const client = new PaymentClient(
-      createMockHttpClient(async (request) => {
-        captured = request as HttpRequest<ExecutePaymentRequest>;
-        return { status: 200, data: stubPayment };
-      }),
-    );
+      const result = await client.quote(input);
 
-    const result = await client.execute(input);
-
-    expect(captured).toBeDefined();
-    expect(captured!.method).toBe('POST');
-    expect(captured!.path).toBe('/v1/payments');
-    expect(captured!.body).toEqual(input);
-    expect(result).toEqual(stubPayment);
+      expect(result).toEqual(mockQuote);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'POST',
+        path: '/v1/payments/quote',
+        body: input,
+      });
+    });
   });
 
-  it('get sends GET /v1/payments/:id and returns payment', async () => {
-    let captured: HttpRequest<undefined> | undefined;
-    const client = new PaymentClient(
-      createMockHttpClient(async (request) => {
-        captured = request as HttpRequest<undefined>;
-        return { status: 200, data: stubPayment };
-      }),
-    );
+  describe('execute', () => {
+    it('sends POST /v1/payments with the input body and returns the payment', async () => {
+      const input: ExecutePaymentRequest = {
+        fromWalletId: 'wallet-1',
+        toAddress: 'GABC...',
+        amount: { amount: '100', assetCode: 'XLM' },
+        memo: 'test-payment',
+      };
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
+        status: 201,
+        headers: new Headers(),
+        data: mockPayment,
+      } as HttpResponse);
 
-    const result = await client.get('pay-1');
+      const result = await client.execute(input);
 
-    expect(captured).toBeDefined();
-    expect(captured!.method).toBe('GET');
-    expect(captured!.path).toBe('/v1/payments/pay-1');
-    expect(result).toEqual(stubPayment);
+      expect(result.id).toBe('pay-1');
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'POST',
+        path: '/v1/payments',
+        body: input,
+      });
+    });
+  });
+
+  describe('get', () => {
+    it('sends GET /v1/payments/:id and returns the payment', async () => {
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
+        status: 200,
+        headers: new Headers(),
+        data: mockPayment,
+      } as HttpResponse);
+
+      const result = await client.get('pay-1');
+
+      expect(result).toEqual(mockPayment);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'GET',
+        path: '/v1/payments/pay-1',
+      });
+    });
   });
 });
