@@ -4,46 +4,50 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.x     | :white_check_mark: |
+| 0.1.x   | :white_check_mark: |
 
 ## Reporting a Vulnerability
 
-**Please do not report security vulnerabilities through public GitHub issues.**
+**Please do NOT report security vulnerabilities through public GitHub issues.**
 
-If you believe you have found a security vulnerability in the Lily SDK, please report it via [GitHub Security Advisories](https://github.com/Lilly-Protocol/lily-sdk/security/advisories/new).
+If you discover a security vulnerability in this project, please report it using one of the following methods:
+
+- **GitHub Security Advisories**: Use the "Report a vulnerability" button on the [Security tab](https://github.com/Lilly-Protocol/lily-sdk/security/advisories/new) of this repository.
+- **Email**: Send details to security@lilyprotocol.com (encrypted with our PGP key if possible).
 
 ### What to Include
 
 - Description of the vulnerability
-- Steps to reproduce (if applicable)
+- Steps to reproduce or proof-of-concept
 - Potential impact assessment
-- Suggested fix (optional)
+- Suggested fix (if any)
 
 ### Response Timeline
 
-- **Acknowledgement**: Within 48 hours of receipt
-- **Initial Assessment**: Within 5 business days
-- **Resolution Target**: Critical issues within 30 days; others as prioritized
+- **Acknowledgment**: We will acknowledge receipt within 48 hours.
+- **Initial Assessment**: A preliminary assessment will be provided within 5 business days.
+- **Resolution Target**: Critical vulnerabilities will be patched within 30 days; lower-severity issues may take longer depending on complexity.
 
-### Safe Disclosure
+### Safe Harbor
 
-- Do not publicly disclose the vulnerability until we have had a reasonable opportunity to address it
-- We will coordinate public disclosure timing with reporters when appropriate
-- Credit will be given to reporters unless anonymity is requested
+We consider security research conducted in accordance with this policy to be:
+
+- Authorized and lawful
+- Helpful to the overall security of the ecosystem
+- Conducted in good faith
+
+We will not pursue legal action against researchers who follow this policy and act responsibly.
+
+## Disclosure Policy
+
+We follow coordinated disclosure. Please allow us reasonable time to address the issue before any public disclosure. We will credit reporters in release notes unless anonymity is requested.
 
 ## Scope
 
 This policy applies to:
 
-- The `lily-sdk` npm package source code
-- Official examples and documentation in this repository
+- The `@lily-protocol/sdk` npm package
+- Source code in this repository
+- Official documentation and examples
 
-Out of scope:
-
-- Third-party dependencies (report to their respective maintainers)
-- Issues in applications built with the SDK (not the SDK itself)
-- Social engineering or physical attacks
-
-## Contact
-
-For non-security questions, please use [GitHub Issues](https://github.com/Lilly-Protocol/lily-sdk/issues).
+Out of scope: third-party dependencies (report to their maintainers), social engineering attacks, and denial-of-service testing against production systems.
