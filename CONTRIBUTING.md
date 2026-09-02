@@ -13,7 +13,7 @@ Thanks for contributing to Lily SDK. This repository is intended to be approacha
 ```bash
 git clone https://github.com/lily-protocol/lily-sdk.git
 cd lily-sdk
-npm install
+npm ci
 npm run lint
 npm run typecheck
 npm run test
