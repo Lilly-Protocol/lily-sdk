@@ -18,9 +18,13 @@ export class LilySdk {
   public readonly identity: IdentityClient;
   public readonly system: SystemClient;
 
-  public constructor(config: LilySdkConfig, httpClient?: HttpClient) {
-    this.config = resolveLilySdkConfig(config);
-    this.httpClient = httpClient ?? createFetchHttpClient(this.config);
+  public static create(config?: Partial<LilySdkConfig>, httpClient?: HttpClient): LilySdk {
+    return new LilySdk(config, httpClient);
+  }
+
+  public constructor(config?: Partial<LilySdkConfig>, httpClient?: HttpClient) {
+    this.config = resolveLilySdkConfig((config ?? {}));
+    const resolvedHttpClient = httpClient ?? createFetchHttpClient(this.config);
 
     this.agents = new AgentClient(this.httpClient);
     this.wallets = new WalletClient(this.httpClient);
@@ -39,4 +43,35 @@ export class LilySdk {
     const response = await this.httpClient.request<TResponse, TRequest>(request);
     return response.data;
   }
+
+  /**
+   * Convenience factory to create a LilySdk instance with sensible defaults from environment variables.
+   */
+  public static create(config?: Partial<LilySdkConfig>, httpClient?: HttpClient): LilySdk {
+    const baseUrl =
+      config?.baseUrl ??
+      (typeof process !== 'undefined'
+        ? process.env?.LILY_BASE_URL ?? process.env?.LILY_API_URL
+        : undefined) ??
+      'https://api.lilyprotocol.org';
+
+    const apiKey =
+      config?.apiKey ??
+      (typeof process !== 'undefined' ? process.env?.LILY_API_KEY : undefined);
+
+    const authToken =
+      config?.authToken ??
+      (typeof process !== 'undefined' ? process.env?.LILY_AUTH_TOKEN : undefined);
+
+    return new LilySdk(
+      {
+        baseUrl,
+        ...(apiKey ? { apiKey } : {}),
+        ...(authToken ? { authToken } : {}),
+        ...config,
+      },
+      httpClient,
+    );
+  }
 }
+

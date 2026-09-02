@@ -15,6 +15,7 @@ export interface HttpRequest<TBody = unknown> {
   query?: Record<string, string | number | boolean | undefined>;
   body?: TBody;
   timeoutMs?: number;
+  signal?: AbortSignal;
 }
 
 export interface HttpResponse<TData = unknown> {
@@ -24,5 +25,7 @@ export interface HttpResponse<TData = unknown> {
 }
 
 export interface HttpClient {
-  request<TResponse, TRequest = unknown>(request: HttpRequest<TRequest>): Promise<HttpResponse<TResponse>>;
+  request<TResponse, TRequest = unknown>(
+    request: HttpRequest<TRequest>,
+  ): Promise<HttpResponse<TResponse>>;
 }
