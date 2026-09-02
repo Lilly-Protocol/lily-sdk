@@ -7,6 +7,7 @@ Please see [SECURITY.md](SECURITY.md) for vulnerability reporting and security p
 [![CI](https://github.com/lily-protocol/lily-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/lily-protocol/lily-sdk/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/typed-TypeScript-3178C6.svg)](https://www.typescriptlang.org/)
+[![Security Policy](https://img.shields.io/badge/security-policy-blue.svg)](./SECURITY.md)
 
 TypeScript-first SDK for integrating Lily Protocol's autonomous agent finance infrastructure into Node.js applications.
 
@@ -236,6 +237,10 @@ See [CHANGELOG.md](./CHANGELOG.md) for a full list of changes. The changelog fol
 - Pagination helpers and richer idempotency ergonomics
 - Webhook verification, observability hooks, and advanced auth flows
 - More complete Stellar asset and payment orchestration coverage
+
+## Security
+
+Please read [SECURITY.md](./SECURITY.md) for supported versions and how to report a vulnerability privately via GitHub Security Advisories. Do not file public issues for security-sensitive reports.
 
 ## Contributing
 
