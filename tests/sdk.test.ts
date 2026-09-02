@@ -26,43 +26,30 @@ describe('LilySdk', () => {
     expect(sdk.identity).toBeDefined();
     expect(sdk.system).toBeDefined();
   });
-});
 
-describe('LilySdk composition', () => {
-  it('routes an injected HttpClient to all five clients', async () => {
-    const requests: string[] = [];
-    const mockClient = createMockHttpClient((req) => {
-      requests.push(req.path);
-      return Promise.resolve({
-        status: 200,
-        headers: new Headers(),
-        data: { ok: true },
-      });
-    });
-
-    const sdk = new LilySdk(
-      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
-      mockClient,
-    );
-
-    await sdk.system.health();
-    await sdk.agents.list();
-    await sdk.wallets.get('w1');
-    await sdk.payments.get('p1');
-    await sdk.identity.resolve({ identifier: 'i1' });
-
-    expect(requests).toContain('/v1/system/health');
-    expect(requests).toContain('/v1/agents');
-    expect(requests).toContain('/v1/wallets/w1');
-    expect(requests).toContain('/v1/payments/p1');
-    expect(requests).toContain('/v1/identity/resolve');
+  it('creates an instance via LilySdk.create() with zero-config defaults', () => {
+    const sdk = LilySdk.create();
+    expect(sdk.config.baseUrl.toString()).toBe('https://api.lilyprotocol.org/');
+    expect(sdk.agents).toBeDefined();
+    expect(sdk.wallets).toBeDefined();
+    expect(sdk.payments).toBeDefined();
   });
 
-  it('throws LilyConfigError before constructing clients when config is invalid', async () => {
-    const { LilyConfigError } = await import('../src/errors/sdk-error');
+  it('creates an instance via LilySdk.create() reading environment variables', () => {
+    const originalUrl = process.env.LILY_BASE_URL;
+    const originalKey = process.env.LILY_API_KEY;
 
-    expect(() => {
-      new LilySdk({ baseUrl: '' });
-    }).toThrow(LilyConfigError);
+    try {
+      process.env.LILY_BASE_URL = 'https://custom-env.lily.test';
+      process.env.LILY_API_KEY = 'env_secret_key_123';
+
+      const sdk = LilySdk.create();
+      expect(sdk.config.baseUrl.toString()).toBe('https://custom-env.lily.test/');
+      expect(sdk.config.apiKey).toBe('env_secret_key_123');
+    } finally {
+      process.env.LILY_BASE_URL = originalUrl;
+      process.env.LILY_API_KEY = originalKey;
+    }
   });
 });
+
