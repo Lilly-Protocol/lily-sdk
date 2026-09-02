@@ -164,6 +164,30 @@ export function buildUrl(
   return url;
 }
 
+function normalizeHeaders(init?: HeadersInit): Record<string, string> {
+  const result: Record<string, string> = {};
+
+  if (!init) {
+    return result;
+  }
+
+  if (init instanceof Headers) {
+    init.forEach((value, key) => {
+      result[key] = value;
+    });
+    return result;
+  }
+
+  if (Array.isArray(init)) {
+    for (const [key, value] of init) {
+      result[key] = value;
+    }
+    return result;
+  }
+
+  return { ...init };
+}
+
 function buildHeaders(
   config: ResolvedLilySdkConfig,
   requestHeaders?: HttpHeaders,

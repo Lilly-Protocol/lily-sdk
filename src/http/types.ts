@@ -1,6 +1,6 @@
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-export type HttpHeaders = Record<string, string>;
+export type HttpHeaders = HeadersInit;
 
 export interface RetryPolicy {
   retries: number;
