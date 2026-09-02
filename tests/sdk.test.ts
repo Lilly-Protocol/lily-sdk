@@ -71,5 +71,14 @@ describe('LilySdk composition', () => {
       process.env.LILY_API_KEY = originalKey;
     }
   });
+
+  it('exposes a default HttpClient when none is injected', () => {
+    const sdk = new LilySdk({
+      baseUrl: 'https://api.lily.test',
+      fetch: globalThis.fetch,
+    });
+
+    expect(typeof sdk.http.request).toBe('function');
+  });
 });
 

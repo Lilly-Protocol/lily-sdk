@@ -149,6 +149,12 @@ sdk.payments.quote({
 });
 sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
+
+// Low-level escape hatch: the active HttpClient (injected or default)
+await sdk.http.request({
+  method: 'GET',
+  path: '/v1/system/health',
+});
 ```
 
 The root entrypoint also exposes the transport layer for custom clients and tests:
@@ -223,7 +229,7 @@ npm run example
 
 ## Design Notes
 
-- `LilySdk` composes a shared transport with focused domain clients instead of exposing a single massive client surface.
+- `LilySdk` composes a shared transport with focused domain clients instead of exposing a single massive client surface. The resolved `HttpClient` is also available as `sdk.http` for one-off raw requests that must reuse the SDK's transport and config.
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
 - The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.
 
