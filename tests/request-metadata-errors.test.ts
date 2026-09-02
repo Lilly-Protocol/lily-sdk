@@ -1,101 +1,100 @@
-import { describe, it, expect, vi } from 'vitest';
-import { createFetchHttpClient } from '../src/http/fetch-http-client.js';
-import type { ResolvedLilySdkConfig } from '../src/config/types.js';
-import {
-  LilyApiError,
-  LilyAuthenticationError,
-  LilyTransportError,
-} from '../src/errors/sdk-error.js';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createFetchHttpClient } from '../src/http/fetch-http-client';
+import { resolveLilySdkConfig } from '../src/config/resolve-config';
+import { LilyApiError, LilyAuthenticationError, LilyTransportError } from '../src/errors/sdk-error';
 
-function makeConfig(fetchImpl: typeof fetch): ResolvedLilySdkConfig {
-  return {
-    baseUrl: new URL('https://api.example.com/'),
-    timeoutMs: 1000,
-    retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
-    defaultHeaders: Object.freeze({}),
-    userAgent: 'test-agent',
-    fetch: fetchImpl,
-  };
-}
+describe('transport error request metadata', () => {
+  const config = resolveLilySdkConfig({ baseUrl: 'https://api.example.com' });
+  let fetchMock: ReturnType<typeof vi.fn>;
 
-describe('transport errors include request metadata', () => {
-  it('attaches method, path, and url to LilyApiError', async () => {
-    const mockFetch = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ error: 'bad' }), {
-        status: 400,
-        headers: { 'content-type': 'application/json' },
-      }),
-    );
-    const client = createFetchHttpClient(makeConfig(mockFetch));
-
-    try {
-      await client.request({ method: 'POST', path: '/v1/payments' });
-      expect.unreachable('should have thrown');
-    } catch (err) {
-      expect(err).toBeInstanceOf(LilyApiError);
-      const apiErr = err as LilyApiError;
-      expect(apiErr.request).toEqual({
-        method: 'POST',
-        path: '/v1/payments',
-        url: 'https://api.example.com/v1/payments',
-      });
-    }
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    (config as any).fetch = fetchMock;
   });
 
-  it('attaches metadata to LilyAuthenticationError on 401', async () => {
-    const mockFetch = vi.fn().mockResolvedValue(
-      new Response('', { status: 401 }),
-    );
-    const client = createFetchHttpClient(makeConfig(mockFetch));
+  it('attaches request info to authentication errors', async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 }));
+    const client = createFetchHttpClient(config);
 
     try {
-      await client.request({ method: 'GET', path: '/v1/agents' });
-      expect.unreachable('should have thrown');
+      await client.request({ method: 'POST', path: '/payments', body: {} });
+      expect.fail('should have thrown');
     } catch (err) {
       expect(err).toBeInstanceOf(LilyAuthenticationError);
-      const authErr = err as LilyAuthenticationError;
-      expect(authErr.request?.method).toBe('GET');
-      expect(authErr.request?.path).toBe('/v1/agents');
-      expect(authErr.request?.url).toBe('https://api.example.com/v1/agents');
+      const e = err as LilyAuthenticationError;
+      expect(e.request).toEqual({
+        method: 'POST',
+        path: '/payments',
+        url: 'https://api.example.com/payments',
+      });
     }
   });
 
-  it('attaches metadata to LilyTransportError on timeout', async () => {
-    const mockFetch = vi.fn().mockImplementation(() => {
-      return new Promise<Response>((_, reject) => {
-        const err = new Error('aborted');
-        err.name = 'AbortError';
-        reject(err);
+  it('attaches request info to api errors', async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: 'bad request' }), { status: 400 }));
+    const client = createFetchHttpClient(config);
+
+    try {
+      await client.request({ method: 'GET', path: '/agents', query: { limit: 10 } });
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(LilyApiError);
+      const e = err as LilyApiError;
+      expect(e.request).toEqual({
+        method: 'GET',
+        path: '/agents',
+        url: 'https://api.example.com/agents?limit=10',
+      });
+    }
+  });
+
+  it('attaches request info to timeout errors', async () => {
+    fetchMock.mockImplementation(async (_url: string, init: RequestInit) => {
+      return new Promise((_, reject) => {
+        const timer = setTimeout(() => {
+          reject(new DOMException('The operation was aborted.', 'AbortError'));
+        }, 100);
+        init?.signal?.addEventListener('abort', () => {
+          clearTimeout(timer);
+          reject(new DOMException('The operation was aborted.', 'AbortError'));
+        });
       });
     });
-    const client = createFetchHttpClient(makeConfig(mockFetch));
 
+    const client = createFetchHttpClient({ ...config, timeoutMs: 20 });
+    const promise = client.request({ method: 'DELETE', path: '/wallets/w1' });
+    
+    await expect(promise).rejects.toBeInstanceOf(LilyTransportError);
+    
     try {
-      await client.request({ method: 'DELETE', path: '/v1/wallets/w1' });
-      expect.unreachable('should have thrown');
+      await promise;
     } catch (err) {
-      expect(err).toBeInstanceOf(LilyTransportError);
-      const tErr = err as LilyTransportError;
-      expect(tErr.code).toBe('TIMEOUT');
-      expect(tErr.request?.method).toBe('DELETE');
-      expect(tErr.request?.path).toBe('/v1/wallets/w1');
+      const e = err as LilyTransportError;
+      expect(e.code).toBe('TIMEOUT');
+      expect(e.request).toEqual({
+        method: 'DELETE',
+        path: '/wallets/w1',
+        url: 'https://api.example.com/wallets/w1',
+      });
     }
   });
 
-  it('attaches metadata to LilyTransportError on network failure', async () => {
-    const mockFetch = vi.fn().mockRejectedValue(new TypeError('fetch failed'));
-    const client = createFetchHttpClient(makeConfig(mockFetch));
+  it('attaches request info to network errors', async () => {
+    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+    const client = createFetchHttpClient({ ...config, retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] } });
 
     try {
-      await client.request({ method: 'PUT', path: '/v1/identity' });
-      expect.unreachable('should have thrown');
+      await client.request({ method: 'PUT', path: '/identity/profile' });
+      expect.fail('should have thrown');
     } catch (err) {
       expect(err).toBeInstanceOf(LilyTransportError);
-      const tErr = err as LilyTransportError;
-      expect(tErr.code).toBe('TRANSPORT_ERROR');
-      expect(tErr.request?.method).toBe('PUT');
-      expect(tErr.request?.path).toBe('/v1/identity');
-      expect(tErr.request?.url).toContain('/v1/identity');
+      const e = err as LilyTransportError;
+      expect(e.code).toBe('TRANSPORT_ERROR');
+      expect(e.request).toEqual({
+        method: 'PUT',
+        path: '/identity/profile',
+        url: 'https://api.example.com/identity/profile',
+      });
     }
   });
 });

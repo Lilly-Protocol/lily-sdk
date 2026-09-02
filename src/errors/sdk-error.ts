@@ -1,3 +1,9 @@
+export interface LilyRequestMetadata {
+  method: string;
+  path: string;
+  url: string;
+}
+
 export interface LilyErrorOptions {
   code?: string;
   statusCode?: number;
@@ -28,6 +34,5 @@ export class LilySdkError extends Error {
 
 export class LilyConfigError extends LilySdkError {}
 export class LilyTransportError extends LilySdkError {}
-export class LilyValidationError extends LilySdkError {}
 export class LilyAuthenticationError extends LilySdkError {}
 export class LilyApiError extends LilySdkError {}
