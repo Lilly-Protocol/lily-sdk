@@ -100,6 +100,10 @@ function resolveRetryPolicy(policy?: Partial<RetryPolicy>): RetryPolicy {
     );
   }
 
+  if (!Array.isArray(retryableStatusCodes)) {
+    throw new LilyConfigError('`retry.retryableStatusCodes` must be an array of HTTP status codes.');
+  }
+
   return {
     retries,
     retryDelayMs,
