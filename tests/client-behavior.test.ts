@@ -1,11 +1,41 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { LilyAuthenticationError } from '../src/errors/sdk-error';
-import { createFetchHttpClient } from '../src/http/fetch-http-client';
-import { LilySdk } from '../src/sdk';
+import {
+  BaseClient,
+  LilyAuthenticationError,
+  LilySdk,
+  createFetchHttpClient,
+} from '../src/index';
 import { createMockHttpClient } from './helpers/mock-http-client';
 
 describe('client behavior', () => {
+  it('exposes transport primitives from the root entrypoint', () => {
+    expect(createFetchHttpClient).toBeInstanceOf(Function);
+    expect(BaseClient).toBeInstanceOf(Function);
+  });
+
+  it('allows subclassing BaseClient with a custom HTTP client', async () => {
+    const requestSpy = vi.fn(() =>
+      Promise.resolve({
+        status: 200,
+        headers: new Headers(),
+        data: { ok: true },
+      }),
+    );
+
+    class TestClient extends BaseClient {
+      async probe() {
+        return this.request<{ ok: boolean }>({ method: 'GET', path: '/probe' });
+      }
+    }
+
+    const client = new TestClient(createMockHttpClient(requestSpy));
+    const result = await client.probe();
+
+    expect(requestSpy).toHaveBeenCalledWith({ method: 'GET', path: '/probe' });
+    expect(result.ok).toBe(true);
+  });
+
   it('calls system health endpoint through the system client', async () => {
     const requestSpy = vi.fn(() =>
       Promise.resolve({
