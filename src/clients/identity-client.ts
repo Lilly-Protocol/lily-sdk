@@ -26,4 +26,11 @@ export class IdentityClient
       body: input,
     });
   }
+
+  public get(identityId: string): Promise<IdentityProfile> {
+    return this.request({
+      method: 'GET',
+      path: `/v1/identity/${encodeURIComponent(identityId)}`,
+    });
+  }
 }
