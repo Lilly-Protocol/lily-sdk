@@ -72,6 +72,36 @@ sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
 ```
 
+The root entrypoint also exposes the transport layer for custom clients and tests:
+
+```ts
+import {
+  BaseClient,
+  createFetchHttpClient,
+  HttpClient,
+  HttpHeaders,
+  HttpRequest,
+  HttpResponse,
+  RetryPolicy,
+} from '@lily-protocol/sdk';
+
+class MyClient extends BaseClient {
+  async health() {
+    return this.request<{ status: string }>({
+      method: 'GET',
+      path: '/v1/system/health',
+    });
+  }
+}
+
+const httpClient = createFetchHttpClient({
+  baseUrl: 'https://api.lilyprotocol.com',
+  authToken: process.env.LILY_AUTH_TOKEN,
+});
+
+const client = new MyClient(httpClient);
+```
+
 ## Repository Structure
 
 ```text
@@ -120,39 +150,20 @@ npm run example
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
-## Response Parsing and Status Handling
+## Requirements and Compatibility
 
-The SDK's HTTP layer automatically parses responses based on content type and status code. Understanding this behavior is essential for correctly handling API responses.
+- **Node.js**: Version 20 or newer is required. The SDK relies on built-in `fetch`, `AbortController`, and `Headers` APIs available in Node 20+.
+- **CI-Supported Versions**: Automated tests run against Node.js 20 and 22.
+- **Global Fetch**: A standards-compliant global `fetch` implementation is required by default. If your runtime lacks native fetch (e.g., older Node versions or specialized environments), provide a custom implementation via the `fetch` config option:
 
-### Automatic Parsing Rules
+  ```ts
+  import { LilySdk } from '@lily-protocol/sdk';
+  import fetch from 'node-fetch'; // or any compatible polyfill
 
-- **204 No Content**: Returns `null` as the response data (common for DELETE operations)
-- **application/json**: Automatically parsed into a JavaScript object
-- **Other content types**: Returned as raw text strings
+  const sdk = new LilySdk({
+    baseUrl: 'https://api.lilyprotocol.com',
+    fetch: fetch as typeof globalThis.fetch,
+  });
+  ```
 
-### Checking Status Before Using Data
-
-Always verify the response status before accessing the data payload, especially for operations that may return non-JSON error pages or empty responses.
-
-```ts
-import { LilySdk } from '@lily-protocol/sdk';
-
-const sdk = new LilySdk({ baseUrl: 'https://api.lilyprotocol.com' });
-
-// Safe response handling pattern
-const response = await sdk.wallets.delete({ walletId: 'wallet_123' });
-
-if (response.status === 204) {
-  console.log('Wallet deleted successfully');
-  // response.data will be null for 204 responses
-} else if (response.status >= 200 && response.status < 300) {
-  // For JSON responses, data is already parsed
-  console.log('Operation result:', response.data);
-} else {
-  // Error responses may be HTML or plain text
-  console.error(`Request failed with status ${response.status}`);
-  console.error('Response body:', response.data);
-}
-```
-
-This pattern ensures your code handles all response types gracefully, whether the API returns structured JSON, empty responses, or error pages in unexpected formats.
+- **Browser Usage**: The SDK can run in browsers that support the Fetch API. Note that browser environments are subject to CORS restrictions enforced by the server. Ensure the Lily backend allows requests from your origin, or use a proxy/backend-for-frontend pattern.
