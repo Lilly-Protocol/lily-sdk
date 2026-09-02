@@ -35,3 +35,24 @@ describe('resolveLilySdkConfig', () => {
     ).toThrow('`timeoutMs` must be a positive number.');
   });
 });
+
+
+  it('throws when retry.retries is not an integer', () => {
+    expect(() =>
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+        retry: { retries: 1.5 },
+      }),
+    ).toThrow(LilyConfigError);
+  });
+
+  it('throws when retry.retryDelayMs is negative', () => {
+    expect(() =>
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+        retry: { retryDelayMs: -100 },
+      }),
+    ).toThrow(LilyConfigError);
+  });

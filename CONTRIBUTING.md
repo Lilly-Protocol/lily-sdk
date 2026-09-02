@@ -49,6 +49,69 @@ npm run test
 - Improved examples and integration recipes
 - Release automation and npm publishing hardening
 
+## Adding a New Client (Contract-Driven Pattern)
+
+Lily SDK uses a contract-driven architecture to ensure consistency across all domain clients. Follow this five-step pattern when adding new functionality:
+
+### 1. Define the Contract
+
+Add a new interface to `src/types/contracts.ts` that extends or mirrors existing client contracts:
+
+```ts
+export interface NewFeatureClientContract {
+  list(params?: ListParams): Promise<ListResponse>;
+  create(data: CreateRequest): Promise<CreateResponse>;
+}
+```
+
+### 2. Add Domain Models
+
+Create request/response types in `src/models/new-feature.ts` and export them from `src/models/index.ts`:
+
+```ts
+export interface CreateRequest { /* ... */ }
+export interface CreateResponse { /* ... */ }
+```
+
+### 3. Implement via BaseClient
+
+Create `src/clients/new-feature-client.ts` extending `BaseClient`:
+
+```ts
+import { BaseClient } from './base-client';
+import type { NewFeatureClientContract } from '../types/contracts';
+
+export class NewFeatureClient extends BaseClient implements NewFeatureClientContract {
+  async list(params?: ListParams) {
+    return this.request({ method: 'GET', path: '/new-feature', query: params });
+  }
+}
+```
+
+### 4. Register in LilySdk
+
+Update `src/sdk.ts` to compose the new client and expose it as a public property:
+
+```ts
+this.newFeature = new NewFeatureClient(this.transport);
+```
+
+Export relevant symbols from `src/index.ts`.
+
+### 5. Add Tests
+
+Write unit tests in `tests/new-feature.test.ts` covering happy paths, error cases, and contract compliance. Use stubbed fetch for deterministic results.
+
+### Checklist for New Clients
+
+- [ ] Contract defined in `src/types/contracts.ts`
+- [ ] Models added to `src/models/` and re-exported
+- [ ] Client implements contract via `BaseClient`
+- [ ] Registered in `LilySdk` constructor (`src/sdk.ts`)
+- [ ] Public exports updated in `src/index.ts`
+- [ ] Unit tests cover success, error, and edge cases
+- [ ] README or docs updated if user-facing behavior changes
+
 ## Pull Requests
 
 - Keep PR descriptions clear and outcome-focused.

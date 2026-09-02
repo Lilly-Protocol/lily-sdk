@@ -1,73 +1,74 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import type { HttpClient, HttpRequest, HttpResponse } from '../src/http';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SystemClient } from '../src/clients/system-client';
+import type { HttpClient, HttpResponse } from '../src/http/types';
 import type { HealthStatus, ServiceInfo } from '../src/models';
 
+function createMockHttpClient(responseData: unknown = {}): HttpClient {
+  return {
+    request: vi.fn().mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      data: responseData,
+    } as HttpResponse),
+  };
+}
+
+const mockHealth: HealthStatus = {
+  status: 'ok',
+  version: '1.0.0',
+  timestamp: '2024-01-01T00:00:00Z',
+  checks: { database: 'ok', redis: 'ok' },
+};
+
+const mockInfo: ServiceInfo = {
+  name: 'lily-api',
+  version: '1.0.0',
+  environment: 'production',
+  docsUrl: 'https://docs.lily.dev',
+};
+
 describe('SystemClient', () => {
-  let mockHttpClient: HttpClient;
+  let httpClient: HttpClient;
   let client: SystemClient;
-  let lastRequest: HttpRequest | undefined;
 
   beforeEach(() => {
-    lastRequest = undefined;
-    mockHttpClient = {
-      request: ((req: HttpRequest): Promise<HttpResponse> => {
-        lastRequest = req;
-        if (req.path === '/v1/system/health') {
-          const body: HealthStatus = {
-            status: 'ok',
-            version: '1.0.0',
-            timestamp: '2024-01-01T00:00:00Z',
-            checks: { db: 'ok' },
-          };
-          return Promise.resolve({
-            status: 200,
-            headers: new Headers({ 'content-type': 'application/json' }),
-            data: body,
-          });
-        }
-        if (req.path === '/v1/system/info') {
-          const body: ServiceInfo = {
-            name: 'lily-api',
-            version: '1.2.3',
-            environment: 'production',
-          };
-          return Promise.resolve({
-            status: 200,
-            headers: new Headers({ 'content-type': 'application/json' }),
-            data: body,
-          });
-        }
-        return Promise.reject(new Error(`Unexpected path: ${req.path}`));
-      }) as unknown as HttpClient['request'],
-    };
-    client = new SystemClient(mockHttpClient);
+    httpClient = createMockHttpClient();
+    client = new SystemClient(httpClient);
   });
 
-  it('info() sends GET /v1/system/info and returns ServiceInfo', async () => {
-    const result = await client.info();
-    expect(lastRequest).toBeDefined();
-    if (!lastRequest) throw new Error('Expected request to be captured');
-    expect(lastRequest.method).toBe('GET');
-    expect(lastRequest.path).toBe('/v1/system/info');
-    expect(result).toEqual({
-      name: 'lily-api',
-      version: '1.2.3',
-      environment: 'production',
+  describe('health', () => {
+    it('sends GET /v1/system/health and returns the health status', async () => {
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
+        status: 200,
+        headers: new Headers(),
+        data: mockHealth,
+      } as HttpResponse);
+
+      const result = await client.health();
+
+      expect(result).toEqual(mockHealth);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
     });
   });
 
-  it('health() sends GET /v1/system/health and returns HealthStatus with checks', async () => {
-    const result = await client.health();
-    expect(lastRequest).toBeDefined();
-    if (!lastRequest) throw new Error('Expected request to be captured');
-    expect(lastRequest.method).toBe('GET');
-    expect(lastRequest.path).toBe('/v1/system/health');
-    expect(result).toEqual({
-      status: 'ok',
-      version: '1.0.0',
-      timestamp: '2024-01-01T00:00:00Z',
-      checks: { db: 'ok' },
+  describe('info', () => {
+    it('sends GET /v1/system/info and returns the service info', async () => {
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
+        status: 200,
+        headers: new Headers(),
+        data: mockInfo,
+      } as HttpResponse);
+
+      const result = await client.info();
+
+      expect(result).toEqual(mockInfo);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'GET',
+        path: '/v1/system/info',
+      });
     });
   });
 });
