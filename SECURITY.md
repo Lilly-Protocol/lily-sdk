@@ -1,45 +1,53 @@
 # Security Policy
 
-Lily SDK talks to payment execution, wallet provisioning, and identity APIs.
-Please report vulnerabilities privately so they can be fixed before public
-disclosure.
+## Supported Versions
 
-## Supported versions
+| Version | Supported          |
+| ------- | ------------------ |
+| 0.1.x   | :white_check_mark: |
 
-| Version | Supported |
-| ------- | --------- |
-| `main` (unreleased) | Yes |
-| Published npm releases of `@lily-protocol/sdk` | Yes, until a patched release is published |
-| Forks and unmodified vendored copies | No |
+## Reporting a Vulnerability
 
-## Reporting a vulnerability
+**Please do NOT report security vulnerabilities through public GitHub issues.**
 
-Use GitHub Security Advisories for this repository:
+If you discover a security vulnerability in this project, please report it using one of the following methods:
 
-https://github.com/Lilly-Protocol/lily-sdk/security/advisories/new
+- **GitHub Security Advisories**: Use the "Report a vulnerability" button on the [Security tab](https://github.com/Lilly-Protocol/lily-sdk/security/advisories/new) of this repository.
+- **Email**: Send details to security@lilyprotocol.com (encrypted with our PGP key if possible).
 
-Do **not** open a public GitHub issue, pull request, or discussion for a
-security-sensitive report.
+### What to Include
 
-Include:
+- Description of the vulnerability
+- Steps to reproduce or proof-of-concept
+- Potential impact assessment
+- Suggested fix (if any)
 
-- Affected package version or commit
-- Impact (funds, auth tokens, identity, availability)
-- Reproduction steps or a proof of concept
-- Any suggested fix you already have
+### Response Timeline
 
-## Response
+- **Acknowledgment**: We will acknowledge receipt within 48 hours.
+- **Initial Assessment**: A preliminary assessment will be provided within 5 business days.
+- **Resolution Target**: Critical vulnerabilities will be patched within 30 days; lower-severity issues may take longer depending on complexity.
 
-- Acknowledgement: within 3 business days
-- Initial triage / severity: within 7 days of acknowledgement
-- Fix or mitigation plan: as soon as a patch can be verified, coordinated with the reporter before public disclosure
+### Safe Harbor
 
-Please give us a reasonable window to ship a fix before you disclose the issue publicly.
+We consider security research conducted in accordance with this policy to be:
 
-Enabling GitHub Private Vulnerability Reporting / Security Advisories on the repository is a maintainer action (acceptance criterion for operators). This file is the contributor-facing policy and reporting channel.
+- Authorized and lawful
+- Helpful to the overall security of the ecosystem
+- Conducted in good faith
 
-## Safe disclosure guidance
+We will not pursue legal action against researchers who follow this policy and act responsibly.
 
-- Do not test against production wallets, live funds, or third-party personal data.
-- Do not include secrets, private keys, or customer payloads in the report beyond what is required to reproduce.
-- Prefer a local or sandbox reproduction.
+## Disclosure Policy
+
+We follow coordinated disclosure. Please allow us reasonable time to address the issue before any public disclosure. We will credit reporters in release notes unless anonymity is requested.
+
+## Scope
+
+This policy applies to:
+
+- The `@lily-protocol/sdk` npm package
+- Source code in this repository
+- Official documentation and examples
+
+Out of scope: third-party dependencies (report to their maintainers), social engineering attacks, and denial-of-service testing against production systems.
