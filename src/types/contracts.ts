@@ -39,6 +39,7 @@ export interface PaymentClientContract {
 export interface IdentityClientContract {
   resolve(input: ResolveIdentityRequest): Promise<IdentityProfile>;
   verify(input: VerifyIdentityRequest): Promise<VerificationResult>;
+  get(identityId: string): Promise<IdentityProfile>;
 }
 
 export interface SystemClientContract {
