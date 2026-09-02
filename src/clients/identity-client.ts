@@ -7,7 +7,10 @@ import type {
 import type { IdentityClientContract } from '../types/contracts';
 import { BaseClient } from './base-client';
 
-export class IdentityClient extends BaseClient implements IdentityClientContract {
+export class IdentityClient
+  extends BaseClient
+  implements IdentityClientContract
+{
   public resolve(input: ResolveIdentityRequest): Promise<IdentityProfile> {
     return this.request({
       method: 'POST',
@@ -21,6 +24,13 @@ export class IdentityClient extends BaseClient implements IdentityClientContract
       method: 'POST',
       path: '/v1/identity/verify',
       body: input,
+    });
+  }
+
+  public get(identityId: string): Promise<IdentityProfile> {
+    return this.request({
+      method: 'GET',
+      path: `/v1/identity/${encodeURIComponent(identityId)}`,
     });
   }
 }
