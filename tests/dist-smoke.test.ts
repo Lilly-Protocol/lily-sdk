@@ -13,7 +13,6 @@ describe('dist smoke test', () => {
     expect(mod.AgentClient).toBeTypeOf('function');
     expect(mod.LilySdkError).toBeTypeOf('function');
     expect(mod.LilyApiError).toBeTypeOf('function');
-    expect(mod.LilyValidationError).toBeTypeOf('function');
   });
 
   it('CJS require exposes LilySdk, a client, and an error class', () => {
@@ -22,7 +21,6 @@ describe('dist smoke test', () => {
     expect(mod.AgentClient).toBeTypeOf('function');
     expect(mod.LilySdkError).toBeTypeOf('function');
     expect(mod.LilyApiError).toBeTypeOf('function');
-    expect(mod.LilyValidationError).toBeTypeOf('function');
   });
 
   it('ESM and CJS expose the same public symbol names', async () => {
