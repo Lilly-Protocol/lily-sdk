@@ -1,14 +1,18 @@
 import { LilyValidationError } from './errors/sdk-error';
 import type { MoneyAmount } from './models/common';
-import type { ResolveIdentityRequest } from './models/identity';
 import type {
   ExecutePaymentRequest,
   PaymentQuoteRequest,
 } from './models/payment';
+import type { ResolveIdentityRequest } from './models/identity';
 
 const NON_EMPTY_STRING_PATTERN = /\S/;
 const DECIMAL_AMOUNT_PATTERN = /^\d+(\.\d+)?$/;
 const STELLAR_ASSET_CODE_PATTERN = /^[A-Za-z0-9]{1,12}$/;
+const MAX_STELLAR_FRACTIONAL_DIGITS = 7;
+const MAX_MEMO_TEXT_LENGTH = 28;
+const MEMO_HEX_PATTERN = /^(?:[0-9a-fA-F]{2})*$/;
+const MAX_MEMO_HEX_LENGTH = 64;
 
 export function validateNonEmptyString(
   value: unknown,
@@ -47,6 +51,16 @@ export function validateMoneyAmount(
     );
   }
 
+  const dotIndex = amount.amount.indexOf('.');
+  if (dotIndex !== -1) {
+    const fractionalDigits = amount.amount.length - dotIndex - 1;
+    if (fractionalDigits > MAX_STELLAR_FRACTIONAL_DIGITS) {
+      throw new LilyValidationError(
+        `${context}: \`amount\` must have at most ${MAX_STELLAR_FRACTIONAL_DIGITS} fractional digits (Stellar limit). Got ${fractionalDigits}.`,
+      );
+    }
+  }
+
   if (amount.assetIssuer !== undefined) {
     if (
       typeof amount.assetIssuer !== 'string' ||
@@ -56,6 +70,34 @@ export function validateMoneyAmount(
         `${context}: \`assetIssuer\` must be a non-empty string when provided.`,
       );
     }
+  }
+}
+
+export function validateMemo(memo: unknown, context: string): void {
+  if (memo === undefined || memo === null) {
+    return;
+  }
+
+  if (typeof memo !== 'string') {
+    throw new LilyValidationError(
+      `${context}: \`memo\` must be a string when provided.`,
+    );
+  }
+
+  if (MEMO_HEX_PATTERN.test(memo) && memo.length > 0) {
+    if (memo.length > MAX_MEMO_HEX_LENGTH) {
+      throw new LilyValidationError(
+        `${context}: \`memo\` hex string must be at most ${MAX_MEMO_HEX_LENGTH} characters. Got ${memo.length}.`,
+      );
+    }
+    return;
+  }
+
+  const memoBytes = new TextEncoder().encode(memo).length;
+  if (memoBytes > MAX_MEMO_TEXT_LENGTH) {
+    throw new LilyValidationError(
+      `${context}: \`memo\` text must be at most ${MAX_MEMO_TEXT_LENGTH} bytes (Stellar limit). Got ${memoBytes}.`,
+    );
   }
 }
 
@@ -102,6 +144,7 @@ export function validateExecutePaymentRequest(
   validateNonEmptyString(request.fromWalletId, 'fromWalletId');
   validateNonEmptyString(request.toAddress, 'toAddress');
   validateMoneyAmount(request.amount, 'ExecutePaymentRequest');
+  validateMemo(request.memo, 'ExecutePaymentRequest');
 }
 
 export function validatePaymentQuoteRequest(
