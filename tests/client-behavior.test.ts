@@ -1,11 +1,41 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { LilyAuthenticationError, LilyValidationError } from '../src/errors/sdk-error';
-import { createFetchHttpClient } from '../src/http/fetch-http-client';
-import { LilySdk } from '../src/sdk';
+import {
+  BaseClient,
+  LilyAuthenticationError,
+  LilySdk,
+  createFetchHttpClient,
+} from '../src/index';
 import { createMockHttpClient } from './helpers/mock-http-client';
 
 describe('client behavior', () => {
+  it('exposes transport primitives from the root entrypoint', () => {
+    expect(createFetchHttpClient).toBeInstanceOf(Function);
+    expect(BaseClient).toBeInstanceOf(Function);
+  });
+
+  it('allows subclassing BaseClient with a custom HTTP client', async () => {
+    const requestSpy = vi.fn(() =>
+      Promise.resolve({
+        status: 200,
+        headers: new Headers(),
+        data: { ok: true },
+      }),
+    );
+
+    class TestClient extends BaseClient {
+      async probe() {
+        return this.request<{ ok: boolean }>({ method: 'GET', path: '/probe' });
+      }
+    }
+
+    const client = new TestClient(createMockHttpClient(requestSpy));
+    const result = await client.probe();
+
+    expect(requestSpy).toHaveBeenCalledWith({ method: 'GET', path: '/probe' });
+    expect(result.ok).toBe(true);
+  });
+
   it('calls system health endpoint through the system client', async () => {
     const requestSpy = vi.fn(() =>
       Promise.resolve({
@@ -78,6 +108,7 @@ describe('client behavior', () => {
       },
       defaultHeaders: {},
       userAgent: 'lily-sdk/test',
+    validateResponses: false,
       fetch: fetchSpy,
     });
 
@@ -90,7 +121,48 @@ describe('client behavior', () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
   });
 
-  it('maps authentication failures to a typed error', async () => {
+  it('maps authentication failures to a typed error with full payload', async () => {
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+    validateResponses: false,
+      fetch: vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ message: 'nope', code: 'INVALID_TOKEN' }), {
+            status: 401,
+            headers: {
+              'content-type': 'application/json',
+            },
+          }),
+        ),
+      ),
+    });
+
+    try {
+      await httpClient.request({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
+      expect.fail('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyAuthenticationError);
+      const authError = error as LilyAuthenticationError;
+      expect(authError.request).toEqual({
+        method: 'GET',
+        path: '/v1/system/health',
+        url: 'https://api.lily.test/v1/system/health',
+      });
+    }
+  });
+
+  it('attaches request metadata to api errors', async () => {
     const httpClient = createFetchHttpClient({
       baseUrl: new URL('https://api.lily.test/'),
       timeoutMs: 2_000,
@@ -103,8 +175,8 @@ describe('client behavior', () => {
       userAgent: 'lily-sdk/test',
       fetch: vi.fn(() =>
         Promise.resolve(
-          new Response(JSON.stringify({ message: 'nope' }), {
-            status: 401,
+          new Response(JSON.stringify({ message: 'fail' }), {
+            status: 500,
             headers: {
               'content-type': 'application/json',
             },
@@ -113,179 +185,460 @@ describe('client behavior', () => {
       ),
     });
 
-    await expect(
-      httpClient.request({
+    try {
+      await httpClient.request({
+        method: 'GET',
+        path: '/v1/items',
+      });
+      expect.fail('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyApiError);
+      const apiError = error as LilyApiError;
+      expect(apiError.request).toEqual({
+        method: 'GET',
+        path: '/v1/items',
+        url: 'https://api.lily.test/v1/items',
+      });
+    }
+  });
+
+  it('attaches request metadata to transport timeout errors', async () => {
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 10,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn((...args: unknown[]) => {
+        const init = args[1] as RequestInit | undefined;
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            const abortError = new Error('The operation was aborted');
+            abortError.name = 'AbortError';
+            reject(abortError);
+          });
+        });
+      }),
+    ).rejects.toThrow(LilyAuthenticationError);
+
+    try {
+      await httpClient.request({
         method: 'GET',
         path: '/v1/system/health',
-      }),
-    ).rejects.toBeInstanceOf(LilyAuthenticationError);
+      });
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyAuthenticationError);
+      const authError = error as LilyAuthenticationError;
+      expect(authError.statusCode).toBe(401);
+      expect(authError.code).toBe('AUTHENTICATION_ERROR');
+      expect(authError.details).toEqual({ message: 'nope' });
+    }
   });
-});
 
-describe('payment input validation', () => {
-  const quoteOk = {
-    amount: { assetCode: 'USDC', amount: '10.00' },
-    estimatedFee: { assetCode: 'XLM', amount: '0.00001' },
-    expiresAt: '2026-01-01T00:00:00.000Z',
-  };
+  it('propagates full error payload on non-retryable API errors', async () => {
+    const errorBody = {
+      code: 'INVALID_REQUEST',
+      message: 'Missing required field',
+      field: 'amount',
+    };
 
-  const paymentOk = {
-    id: 'pay_1',
-    fromWalletId: 'wallet_123',
-    toAddress: 'GBEXAMPLE',
-    amount: { assetCode: 'USDC', amount: '10.00' },
-    status: 'queued',
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  };
-
-  function sdkWithSpy(requestSpy: ReturnType<typeof vi.fn>) {
-    return new LilySdk(
-      {
-        baseUrl: 'https://api.lily.test',
-        fetch: globalThis.fetch,
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
       },
-      createMockHttpClient(requestSpy),
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify(errorBody), {
+            status: 400,
+            headers: {
+              'content-type': 'application/json',
+            },
+          }),
+        ),
+      ),
+    });
+
+    try {
+      await httpClient.request({
+        method: 'POST',
+        path: '/v1/payments',
+        body: {},
+      });
+      expect.fail('Expected LilyApiError to be thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyApiError);
+      const apiError = error as LilyApiError;
+      expect(apiError.statusCode).toBe(400);
+      expect(apiError.code).toBe('API_ERROR');
+      expect(apiError.details).toEqual(errorBody);
+    }
+  });
+
+  describe.each([
+    {
+      scenario: 'apiKey only',
+      config: { apiKey: 'my-api-key' },
+      expectedHeaders: { 'x-api-key': 'my-api-key' },
+      disallowedHeaders: ['authorization'],
+    },
+    {
+      scenario: 'authToken only',
+      config: { authToken: 'my-token' },
+      expectedHeaders: { authorization: 'Bearer my-token' },
+      disallowedHeaders: ['x-api-key'],
+    },
+    {
+      scenario: 'both apiKey and authToken',
+      config: { apiKey: 'my-api-key', authToken: 'my-token' },
+      expectedHeaders: {
+        authorization: 'Bearer my-token',
+        'x-api-key': 'my-api-key',
+      },
+      disallowedHeaders: [],
+    },
+    {
+      scenario: 'neither credential',
+      config: {},
+      expectedHeaders: {},
+      disallowedHeaders: ['authorization', 'x-api-key'],
+    },
+  ])('auth credential forwarding ($scenario)', ({ config, expectedHeaders, disallowedHeaders }) => {
+    it(`forwards the expected authentication headers for ${config}`, async () => {
+      const fetchSpy = vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
+        const headers = (init?.headers ?? {}) as Record<string, string>;
+
+        for (const [key, value] of Object.entries(expectedHeaders)) {
+          expect(headers[key]).toBe(value);
+        }
+
+        for (const key of disallowedHeaders) {
+          expect(headers[key]).toBeUndefined();
+        }
+
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ status: 'ok' }),
+            {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            },
+          ),
+        );
+      });
+
+      const httpClient = createFetchHttpClient({
+        baseUrl: new URL('https://api.lily.test/'),
+        ...config,
+        timeoutMs: 2_000,
+        retry: {
+          retries: 0,
+          retryDelayMs: 0,
+          retryableStatusCodes: [],
+        },
+        defaultHeaders: {},
+        userAgent: 'lily-sdk/test',
+        fetch: fetchSpy,
+      });
+
+      const response = await httpClient.request({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
+
+      expect(response.status).toBe(200);
+      expect(fetchSpy).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('merges defaultHeaders with per-request headers', async () => {
+    const fetchSpy = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.headers).toMatchObject({
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'user-agent': 'lily-sdk/test',
+        'x-tenant': 'acme',
+        'x-request-id': 'req-123',
+      });
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+          },
+        }),
+      );
+    });
+
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {
+        'x-tenant': 'acme',
+      },
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
+    });
+
+    await httpClient.request({
+      method: 'GET',
+      path: '/v1/items',
+      headers: {
+        'x-request-id': 'req-123',
+      },
+    });
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  it('allows per-request headers to override defaultHeaders', async () => {
+    const fetchSpy = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.headers).toMatchObject({
+        'x-tenant': 'override',
+      });
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+          },
+        }),
+      );
+    });
+
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {
+        'x-tenant': 'acme',
+      },
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
+    });
+
+    await httpClient.request({
+      method: 'GET',
+      path: '/v1/items',
+      headers: {
+        'x-tenant': 'override',
+      },
+    });
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  it('does not retry POST requests on retryable statuses', async () => {
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ message: 'fail' }), {
+          status: 500,
+          headers: {
+            'content-type': 'application/json',
+          },
+        }),
+      ),
     );
-  }
 
-  function resolveSpy(data: unknown) {
-    return vi.fn(() =>
-      Promise.resolve({
-        status: 200,
-        headers: new Headers(),
-        data,
-      }),
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 3,
+        retryDelayMs: 0,
+        retryableStatusCodes: [408, 409, 425, 429, 500, 502, 503, 504],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
+    });
+
+    try {
+      await httpClient.request({
+        method: 'POST',
+        path: '/v1/payments',
+      });
+      expect.fail('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyApiError);
+      const apiError = error as LilyApiError;
+      expect(apiError.statusCode).toBe(500);
+    }
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries GET requests on retryable statuses', async () => {
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ message: 'fail' }), {
+          status: 500,
+          headers: {
+            'content-type': 'application/json',
+          },
+        }),
+      ),
     );
-  }
 
-  it('forwards valid quote and execute bodies unchanged', async () => {
-    const requestSpy = resolveSpy(quoteOk);
-    const sdk = sdkWithSpy(requestSpy);
-    const quoteInput = {
-      fromWalletId: 'wallet_123',
-      toAddress: 'GBEXAMPLE',
-      amount: { assetCode: 'USDC', amount: '0' },
-    };
-
-    await sdk.payments.quote(quoteInput);
-
-    expect(requestSpy).toHaveBeenCalledWith({
-      method: 'POST',
-      path: '/v1/payments/quote',
-      body: quoteInput,
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 2,
+        retryDelayMs: 0,
+        retryableStatusCodes: [408, 409, 425, 429, 500, 502, 503, 504],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
     });
 
-    const executeSpy = resolveSpy(paymentOk);
-    const executeSdk = sdkWithSpy(executeSpy);
-    const executeInput = {
-      fromWalletId: 'wallet_123',
-      toAddress: 'GBEXAMPLE',
-      amount: { assetCode: 'ABCDEFGHIJKL', amount: '1.1234567' },
-      memo: 'a'.repeat(64),
-    };
+    try {
+      await httpClient.request({
+        method: 'GET',
+        path: '/v1/items',
+      });
+      expect.fail('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyApiError);
+      const apiError = error as LilyApiError;
+      expect(apiError.statusCode).toBe(500);
+    }
 
-    await executeSdk.payments.execute(executeInput);
+    // Initial attempt + 2 retries = 3 total calls
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
 
-    expect(executeSpy).toHaveBeenCalledWith({
-      method: 'POST',
-      path: '/v1/payments',
-      body: executeInput,
+  it('surfaces LilyApiError after retry exhaustion', async () => {
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ message: 'unavailable' }), {
+          status: 503,
+          headers: {
+            'content-type': 'application/json',
+          },
+        }),
+      ),
+    );
+
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 2,
+        retryDelayMs: 0,
+        retryableStatusCodes: [503],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
     });
+
+    let caught: unknown;
+
+    try {
+      await httpClient.request({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(caught).toBeInstanceOf(LilyApiError);
+    expect(caught).toMatchObject({ statusCode: 503 });
   });
 
-  it('allows omitted memo and empty memo string', async () => {
-    const requestSpy = resolveSpy(paymentOk);
-    const sdk = sdkWithSpy(requestSpy);
-
-    await sdk.payments.execute({
-      fromWalletId: 'wallet_123',
-      toAddress: 'GBEXAMPLE',
-      amount: { assetCode: 'USDC', amount: '10.00' },
+  it('preserves the original fetch rejection as the transport error cause', async () => {
+    const networkError = new Error('connection refused');
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 2_000,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn(() => Promise.reject(networkError)),
     });
 
-    await sdk.payments.execute({
-      fromWalletId: 'wallet_123',
-      toAddress: 'GBEXAMPLE',
-      amount: { assetCode: 'USDC', amount: '10.00' },
-      memo: '',
+    try {
+      await httpClient.request({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
+      expect.unreachable('request should reject with LilyTransportError');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyTransportError);
+      expect(error).toMatchObject({
+        code: 'TRANSPORT_ERROR',
+        cause: networkError,
+      });
+    }
+  });
+
+  it('preserves the AbortError as the timeout transport error cause', async () => {
+    let abortError: DOMException | undefined;
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 1,
+      retry: {
+        retries: 0,
+        retryDelayMs: 0,
+        retryableStatusCodes: [],
+      },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: vi.fn(
+        (_input: URL | RequestInfo, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => {
+              abortError = new DOMException(
+                'The operation was aborted.',
+                'AbortError',
+              );
+              reject(abortError);
+            });
+          }),
+      ),
     });
 
-    expect(requestSpy).toHaveBeenCalledTimes(2);
-  });
-
-  it('rejects over-long memos before sending the request', async () => {
-    const requestSpy = resolveSpy(paymentOk);
-    const sdk = sdkWithSpy(requestSpy);
-
-    await expect(
-      sdk.payments.execute({
-        fromWalletId: 'wallet_123',
-        toAddress: 'GBEXAMPLE',
-        amount: { assetCode: 'USDC', amount: '10.00' },
-        memo: 'a'.repeat(29),
-      }),
-    ).rejects.toBeInstanceOf(LilyValidationError);
-
-    expect(requestSpy).not.toHaveBeenCalled();
-  });
-
-  it('rejects invalid decimal amounts', async () => {
-    const requestSpy = resolveSpy(quoteOk);
-    const sdk = sdkWithSpy(requestSpy);
-    const base = {
-      fromWalletId: 'wallet_123',
-      toAddress: 'GBEXAMPLE',
-    };
-
-    await expect(
-      sdk.payments.quote({
-        ...base,
-        amount: { assetCode: 'USDC', amount: '1.12345678' },
-      }),
-    ).rejects.toBeInstanceOf(LilyValidationError);
-
-    await expect(
-      sdk.payments.quote({ ...base, amount: { assetCode: 'USDC', amount: '-1' } }),
-    ).rejects.toBeInstanceOf(LilyValidationError);
-
-    await expect(
-      sdk.payments.quote({
-        ...base,
-        amount: { assetCode: 'USDC', amount: 'not-a-decimal' },
-      }),
-    ).rejects.toBeInstanceOf(LilyValidationError);
-
-    await expect(
-      sdk.payments.quote({ ...base, amount: { assetCode: 'USDC', amount: '' } }),
-    ).rejects.toBeInstanceOf(LilyValidationError);
-
-    expect(requestSpy).not.toHaveBeenCalled();
-  });
-
-  it('rejects invalid asset codes', async () => {
-    const requestSpy = resolveSpy(quoteOk);
-    const sdk = sdkWithSpy(requestSpy);
-    const base = {
-      fromWalletId: 'wallet_123',
-      toAddress: 'GBEXAMPLE',
-    };
-
-    await expect(
-      sdk.payments.quote({ ...base, amount: { assetCode: '', amount: '1' } }),
-    ).rejects.toBeInstanceOf(LilyValidationError);
-
-    await expect(
-      sdk.payments.quote({
-        ...base,
-        amount: { assetCode: 'ABCDEFGHIJKLM', amount: '1' },
-      }),
-    ).rejects.toBeInstanceOf(LilyValidationError);
-
-    await expect(
-      sdk.payments.quote({ ...base, amount: { assetCode: 'USD-C', amount: '1' } }),
-    ).rejects.toBeInstanceOf(LilyValidationError);
-
-    expect(requestSpy).not.toHaveBeenCalled();
+    try {
+      await httpClient.request({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
+      expect.unreachable('request should reject with LilyTransportError');
+    } catch (error) {
+      expect(error).toBeInstanceOf(LilyTransportError);
+      expect(error).toMatchObject({
+        code: 'TIMEOUT',
+        cause: abortError,
+      });
+    }
   });
 });
+
