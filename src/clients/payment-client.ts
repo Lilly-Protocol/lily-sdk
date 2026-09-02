@@ -6,10 +6,15 @@ import type {
   PaymentQuoteRequest,
 } from '../models';
 import type { PaymentClientContract } from '../types/contracts';
+import {
+  validateExecutePaymentRequest,
+  validatePaymentQuoteRequest,
+} from '../validation/payment';
 import { BaseClient } from './base-client';
 
 export class PaymentClient extends BaseClient implements PaymentClientContract {
-  public quote(input: PaymentQuoteRequest): Promise<PaymentQuote> {
+  public async quote(input: PaymentQuoteRequest): Promise<PaymentQuote> {
+    validatePaymentQuoteRequest(input);
     return this.request({
       method: 'POST',
       path: '/v1/payments/quote',
@@ -17,7 +22,8 @@ export class PaymentClient extends BaseClient implements PaymentClientContract {
     });
   }
 
-  public execute(input: ExecutePaymentRequest): Promise<Payment> {
+  public async execute(input: ExecutePaymentRequest): Promise<Payment> {
+    validateExecutePaymentRequest(input);
     return this.request({
       method: 'POST',
       path: '/v1/payments',
