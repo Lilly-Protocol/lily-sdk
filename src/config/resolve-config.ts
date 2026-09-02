@@ -1,9 +1,10 @@
 import type { LilySdkConfig, ResolvedLilySdkConfig } from './types';
 import { LilyConfigError } from '../errors/sdk-error';
 import type { RetryPolicy } from '../http/types';
+import { version } from '../../package.json' with { type: 'json' };
 
 const DEFAULT_TIMEOUT_MS = 10_000;
-const DEFAULT_USER_AGENT = 'lily-sdk/0.1.0';
+const DEFAULT_USER_AGENT = `lily-sdk/${version}`;
 const DEFAULT_RETRY_POLICY: RetryPolicy = {
   retries: 2,
   retryDelayMs: 250,
