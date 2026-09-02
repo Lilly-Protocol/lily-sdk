@@ -24,6 +24,7 @@ export function createFetchHttpClient(
       const timeoutMs = request.timeoutMs ?? config.timeoutMs;
 
       let attempt = 0;
+      let externalAbortHandler: (() => void) | undefined;
 
       for (;;) {
         const controller = new AbortController();
@@ -34,7 +35,8 @@ export function createFetchHttpClient(
               cause: request.signal.reason ?? new Error('Aborted'),
             });
           }
-          request.signal.addEventListener('abort', () => controller.abort(request.signal!.reason), { once: true });
+          externalAbortHandler = () => controller.abort(request.signal!.reason);
+          request.signal.addEventListener('abort', externalAbortHandler, { once: true });
         }
         const timeout = setTimeout(() => {
           controller.abort();
@@ -50,12 +52,6 @@ export function createFetchHttpClient(
         if (body !== undefined) {
           requestInit.body = body;
         }
-
-        const requestMetadata = {
-          method: request.method,
-          path: request.path,
-          url: url.toString(),
-        };
 
         try {
           const response = await config.fetch(url, requestInit);
@@ -76,16 +72,16 @@ export function createFetchHttpClient(
             };
           }
 
-         if (response.status === 401 || response.status === 403) {
-           throw new LilyAuthenticationError('Authentication failed for Lily Protocol API.', {
-             code: 'AUTHENTICATION_ERROR',
-             statusCode: response.status,
-             details: data,
-             request: { method: request.method, path: request.path, url: url.toString() },
-           });
-         }
+          if (response.status === 401 || response.status === 403) {
+            throw new LilyAuthenticationError('Authentication failed for Lily Protocol API.', {
+              code: 'AUTHENTICATION_ERROR',
+              statusCode: response.status,
+              details: data,
+              request: { method: request.method, path: request.path, url: url.toString() },
+            });
+          }
 
-         if (shouldRetry(response.status, attempt, config.retry.retries, request.method)) {
+          if (shouldRetry(response.status, attempt, config.retry.retries, request.method)) {
             clearTimeout(timeout);
             if (externalAbortHandler && request.signal) {
               request.signal.removeEventListener('abort', externalAbortHandler);
@@ -95,14 +91,17 @@ export function createFetchHttpClient(
             continue;
           }
 
-         throw new LilyApiError('Lily Protocol API request failed.', {
-           code: 'API_ERROR',
-           statusCode: response.status,
-           details: data,
-           request: { method: request.method, path: request.path, url: url.toString() },
-         });
-       } catch (error) {
-         clearTimeout(timeout);
+          throw new LilyApiError('Lily Protocol API request failed.', {
+            code: 'API_ERROR',
+            statusCode: response.status,
+            details: data,
+            request: { method: request.method, path: request.path, url: url.toString() },
+          });
+        } catch (error) {
+          clearTimeout(timeout);
+          if (externalAbortHandler && request.signal) {
+            request.signal.removeEventListener('abort', externalAbortHandler);
+          }
 
           if (
             error instanceof LilyApiError ||
@@ -111,27 +110,27 @@ export function createFetchHttpClient(
             throw error;
           }
 
-         if (error instanceof Error && error.name === 'AbortError') {
-           throw new LilyTransportError('Request timed out while calling Lily Protocol API.', {
-             code: 'TIMEOUT',
-             cause: error,
-             request: { method: request.method, path: request.path, url: url.toString() },
-           });
-         }
+          if (error instanceof Error && error.name === 'AbortError') {
+            throw new LilyTransportError('Request timed out while calling Lily Protocol API.', {
+              code: 'TIMEOUT',
+              cause: error,
+              request: { method: request.method, path: request.path, url: url.toString() },
+            });
+          }
 
-         if (attempt < config.retry.retries && isRetryableTransportError(error, request.method)) {
+          if (attempt < config.retry.retries && isRetryableTransportError(error, request.method)) {
             attempt += 1;
             await sleep(config.retry.retryDelayMs * attempt);
             continue;
           }
 
-         throw new LilyTransportError('Network error while calling Lily Protocol API.', {
-           code: 'TRANSPORT_ERROR',
-           cause: error,
-           request: { method: request.method, path: request.path, url: url.toString() },
-         });
-       }
-     }
+          throw new LilyTransportError('Network error while calling Lily Protocol API.', {
+            code: 'TRANSPORT_ERROR',
+            cause: error,
+            request: { method: request.method, path: request.path, url: url.toString() },
+          });
+        }
+      }
     },
   };
 }
@@ -230,22 +229,19 @@ function shouldRetry(
   maxRetries: number,
   method: string,
 ): boolean {
-  const isSafeOrIdempotent =
-    method === 'GET' || method === 'PUT' || method === 'DELETE';
-
   return (
-    isSafeOrIdempotent &&
+    isRetryableMethod(method) &&
     attempt < maxRetries &&
     [408, 409, 425, 429, 500, 502, 503, 504].includes(statusCode)
   );
 }
 
 function isRetryableTransportError(error: unknown, method: string): boolean {
-  const isSafeOrIdempotent =
-    method === 'GET' || method === 'PUT' || method === 'DELETE';
-
-function isRetryableTransportError(error: unknown, method: string): boolean {
   return isRetryableMethod(method) && error instanceof Error;
+}
+
+function isRetryableMethod(method: string): boolean {
+  return method === 'GET' || method === 'PUT' || method === 'DELETE';
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -253,4 +249,3 @@ async function sleep(ms: number): Promise<void> {
     setTimeout(resolve, ms);
   });
 }
-import { resolveAuthHeaders } from './auth-headers';
