@@ -35,7 +35,7 @@ async function main() {
 
     if (requestUrl.endsWith('/v1/wallets/provision')) {
       const rawBody = typeof init?.body === 'string' ? init.body : '{}';
-      const body = JSON.parse(rawBody) as { agentId: string; network: string };
+      const body = JSON.parse(rawBody) as { agentId: string; network: 'stellar-testnet' | 'stellar-mainnet' };
 
       return Promise.resolve(
         new Response(
