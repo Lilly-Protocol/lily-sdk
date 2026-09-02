@@ -640,5 +640,67 @@ describe('client behavior', () => {
       });
     }
   });
+
+  describe('baseUrl path prefixes', () => {
+    async function requestedHref(
+      baseUrl: string,
+      path: string,
+      query?: Record<string, string | number | boolean | undefined>,
+    ): Promise<string> {
+      const fetchSpy = vi.fn((_input: URL | RequestInfo) =>
+        Promise.resolve(
+          new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: {
+              'content-type': 'application/json',
+            },
+          }),
+        ),
+      );
+
+      const httpClient = createFetchHttpClient(
+        resolveLilySdkConfig({
+          baseUrl,
+          fetch: fetchSpy,
+        }),
+      );
+
+      await httpClient.request({
+        method: 'GET',
+        path,
+        ...(query === undefined ? {} : { query }),
+      });
+
+      expect(fetchSpy).toHaveBeenCalledOnce();
+      return String(fetchSpy.mock.calls[0]?.[0]);
+    }
+
+    it('keeps a path prefix when baseUrl has no trailing slash', async () => {
+      await expect(
+        requestedHref('https://host/lily/api', '/v1/system/health'),
+      ).resolves.toBe('https://host/lily/api/v1/system/health');
+    });
+
+    it('keeps a path prefix when baseUrl already has a trailing slash', async () => {
+      await expect(
+        requestedHref('https://host/lily/api/', '/v1/system/health'),
+      ).resolves.toBe('https://host/lily/api/v1/system/health');
+    });
+
+    it('joins request paths onto a host-root baseUrl', async () => {
+      await expect(
+        requestedHref('https://api.lily.test', '/v1/system/health'),
+      ).resolves.toBe('https://api.lily.test/v1/system/health');
+    });
+
+    it('appends query parameters onto a path-prefixed URL', async () => {
+      await expect(
+        requestedHref('https://host/lily/api', '/v1/agents', {
+          limit: 10,
+          status: 'active',
+        }),
+      ).resolves.toBe('https://host/lily/api/v1/agents?limit=10&status=active');
+    });
+  });
 });
 
