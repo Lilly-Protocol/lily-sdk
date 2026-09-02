@@ -1,0 +1,112 @@
+<!DOCTYPE html><html class="default" lang="en" data-base="./"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>@lily-protocol/sdk</title><meta name="description" content="Documentation for @lily-protocol/sdk"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="assets/style.css"/><link rel="stylesheet" href="assets/highlight.css"/><script defer src="assets/main.js"></script><script async src="assets/icons.js" id="tsd-icons-script"></script><script async src="assets/search.js" id="tsd-search-script"></script><script async src="assets/navigation.js" id="tsd-nav-script"></script><script async src="assets/hierarchy.js" id="tsd-hierarchy-script"></script></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => window.app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar">
+<div class="tsd-toolbar-contents container"><a href="index.html" class="title">@lily-protocol/sdk</a>
+<div id="tsd-toolbar-links"></div><button id="tsd-search-trigger" class="tsd-widget" aria-label="Search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-search"></use></svg></button><dialog id="tsd-search" aria-label="Search"><input role="combobox" id="tsd-search-input" aria-controls="tsd-search-results" aria-autocomplete="list" aria-expanded="true" autocapitalize="off" autocomplete="off" placeholder="Search the docs" maxLength="100"/>
+<ul role="listbox" id="tsd-search-results"></ul>
+<div id="tsd-search-status" aria-live="polite" aria-atomic="true">
+<div>Preparing search index...</div></div></dialog><a href="#" class="tsd-widget menu" id="tsd-toolbar-menu-trigger" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-menu"></use></svg></a></div></header>
+<div class="container container-main">
+<div class="col-content">
+<div class="tsd-page-title">
+<h1>@lily-protocol/sdk</h1></div>
+<div class="tsd-panel tsd-typography"><h1 id="lily-sdk" class="tsd-anchor-link">Lily SDK<a href="#lily-sdk" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h1>
+<p><a href="https://github.com/lily-protocol/lily-sdk/actions/workflows/ci.yml"><img src="https://github.com/lily-protocol/lily-sdk/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+<a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License: MIT"></a>
+<a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/typed-TypeScript-3178C6.svg" alt="TypeScript"></a></p>
+<p>TypeScript-first SDK for integrating Lily Protocol's autonomous agent finance infrastructure into Node.js applications.</p>
+<p>The SDK is designed for backend and service-to-service integrations that need typed access to AgentLily wallets, agent identity, autonomous payments, and Lily backend APIs on Stellar.</p>
+<h2 id="status" class="tsd-anchor-link">Status<a href="#status" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>This repository is production-oriented foundation work. The public API, tooling, and contributor workflow are in place, while several domain methods still use intentionally conservative request models so the SDK can evolve alongside the backend without breaking contributors every week.</p>
+<h2 id="features" class="tsd-anchor-link">Features<a href="#features" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ul>
+<li>Typed SDK constructor with strict configuration validation</li>
+<li>Modular clients for agents, wallets, payments, identity, and system health</li>
+<li>Reusable HTTP transport abstraction with auth header handling, timeouts, and retry scaffolding</li>
+<li>ESM and CommonJS builds with emitted declaration files</li>
+<li>Vitest test suite, ESLint, Prettier, and GitHub Actions CI</li>
+<li>Contributor-ready project docs, issue templates, and example script</li>
+</ul>
+<h2 id="installation" class="tsd-anchor-link">Installation<a href="#installation" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code class="bash"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">install</span><span class="hl-1"> </span><span class="hl-2">@lily-protocol/sdk</span>
+</code><button type="button">Copy</button></pre>
+
+<p>For local development in this repository:</p>
+<pre><code class="bash"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">install</span>
+</code><button type="button">Copy</button></pre>
+
+<h2 id="quick-start" class="tsd-anchor-link">Quick Start<a href="#quick-start" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code class="ts"><span class="hl-3">import</span><span class="hl-1"> { </span><span class="hl-4">LilySdk</span><span class="hl-1"> } </span><span class="hl-3">from</span><span class="hl-1"> </span><span class="hl-2">&#39;@lily-protocol/sdk&#39;</span><span class="hl-1">;</span><br/><br/><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">sdk</span><span class="hl-1"> = </span><span class="hl-5">new</span><span class="hl-1"> </span><span class="hl-0">LilySdk</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-4">baseUrl:</span><span class="hl-1"> </span><span class="hl-2">&#39;https://api.lilyprotocol.com&#39;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">authToken:</span><span class="hl-1"> </span><span class="hl-4">process</span><span class="hl-1">.</span><span class="hl-4">env</span><span class="hl-1">.</span><span class="hl-6">LILY_AUTH_TOKEN</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">apiKey:</span><span class="hl-1"> </span><span class="hl-4">process</span><span class="hl-1">.</span><span class="hl-4">env</span><span class="hl-1">.</span><span class="hl-6">LILY_API_KEY</span><span class="hl-1">,</span><br/><span class="hl-1">});</span><br/><br/><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">health</span><span class="hl-1"> = </span><span class="hl-3">await</span><span class="hl-1"> </span><span class="hl-4">sdk</span><span class="hl-1">.</span><span class="hl-4">system</span><span class="hl-1">.</span><span class="hl-0">health</span><span class="hl-1">();</span><br/><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">wallet</span><span class="hl-1"> = </span><span class="hl-3">await</span><span class="hl-1"> </span><span class="hl-4">sdk</span><span class="hl-1">.</span><span class="hl-4">wallets</span><span class="hl-1">.</span><span class="hl-0">provision</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-4">agentId:</span><span class="hl-1"> </span><span class="hl-2">&#39;agent_123&#39;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">network:</span><span class="hl-1"> </span><span class="hl-2">&#39;stellar-testnet&#39;</span><span class="hl-1">,</span><br/><span class="hl-1">});</span><br/><br/><span class="hl-4">console</span><span class="hl-1">.</span><span class="hl-0">log</span><span class="hl-1">(</span><span class="hl-4">health</span><span class="hl-1">.</span><span class="hl-4">status</span><span class="hl-1">);</span><br/><span class="hl-4">console</span><span class="hl-1">.</span><span class="hl-0">log</span><span class="hl-1">(</span><span class="hl-4">wallet</span><span class="hl-1">.</span><span class="hl-4">wallet</span><span class="hl-1">.</span><span class="hl-4">address</span><span class="hl-1">);</span>
+</code><button type="button">Copy</button></pre>
+
+<h2 id="public-api-overview" class="tsd-anchor-link">Public API Overview<a href="#public-api-overview" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code class="ts"><span class="hl-3">import</span><span class="hl-1"> { </span><span class="hl-4">LilySdk</span><span class="hl-1"> } </span><span class="hl-3">from</span><span class="hl-1"> </span><span class="hl-2">&#39;@lily-protocol/sdk&#39;</span><span class="hl-1">;</span><br/><br/><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">sdk</span><span class="hl-1"> = </span><span class="hl-5">new</span><span class="hl-1"> </span><span class="hl-0">LilySdk</span><span class="hl-1">({ </span><span class="hl-4">baseUrl:</span><span class="hl-1"> </span><span class="hl-2">&#39;https://api.lilyprotocol.com&#39;</span><span class="hl-1"> });</span><br/><br/><span class="hl-4">sdk</span><span class="hl-1">.</span><span class="hl-4">agents</span><span class="hl-1">.</span><span class="hl-0">list</span><span class="hl-1">();</span><br/><span class="hl-4">sdk</span><span class="hl-1">.</span><span class="hl-4">wallets</span><span class="hl-1">.</span><span class="hl-0">provision</span><span class="hl-1">({ </span><span class="hl-4">agentId:</span><span class="hl-1"> </span><span class="hl-2">&#39;agent_123&#39;</span><span class="hl-1">, </span><span class="hl-4">network:</span><span class="hl-1"> </span><span class="hl-2">&#39;stellar-testnet&#39;</span><span class="hl-1"> });</span><br/><span class="hl-4">sdk</span><span class="hl-1">.</span><span class="hl-4">payments</span><span class="hl-1">.</span><span class="hl-0">quote</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-4">fromWalletId:</span><span class="hl-1"> </span><span class="hl-2">&#39;wallet_123&#39;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">toAddress:</span><span class="hl-1"> </span><span class="hl-2">&#39;GB...&#39;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">amount:</span><span class="hl-1"> { </span><span class="hl-4">assetCode:</span><span class="hl-1"> </span><span class="hl-2">&#39;USDC&#39;</span><span class="hl-1">, </span><span class="hl-4">amount:</span><span class="hl-1"> </span><span class="hl-2">&#39;10.00&#39;</span><span class="hl-1"> },</span><br/><span class="hl-1">});</span><br/><span class="hl-4">sdk</span><span class="hl-1">.</span><span class="hl-4">identity</span><span class="hl-1">.</span><span class="hl-0">resolve</span><span class="hl-1">({ </span><span class="hl-4">agentId:</span><span class="hl-1"> </span><span class="hl-2">&#39;agent_123&#39;</span><span class="hl-1"> });</span><br/><span class="hl-4">sdk</span><span class="hl-1">.</span><span class="hl-4">system</span><span class="hl-1">.</span><span class="hl-0">health</span><span class="hl-1">();</span>
+</code><button type="button">Copy</button></pre>
+
+<h2 id="repository-structure" class="tsd-anchor-link">Repository Structure<a href="#repository-structure" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code class="text">src/
+  clients/       domain-oriented SDK modules
+  config/        SDK configuration types and resolution
+  errors/        typed SDK error hierarchy
+  http/          transport abstraction and fetch implementation
+  models/        public request/response and domain model types
+  types/         client contracts and shared public contracts
+tests/           unit tests and test helpers
+examples/        runnable local examples
+.github/         CI and contributor workflow templates
+</code><button type="button">Copy</button></pre>
+
+<h2 id="development" class="tsd-anchor-link">Development<a href="#development" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code class="bash"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">install</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">lint</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">typecheck</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">test</span><br/><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">build</span>
+</code><button type="button">Copy</button></pre>
+
+<p>Run the example:</p>
+<pre><code class="bash"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">example</span>
+</code><button type="button">Copy</button></pre>
+
+<h2 id="design-notes" class="tsd-anchor-link">Design Notes<a href="#design-notes" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ul>
+<li><code>LilySdk</code> composes a shared transport with focused domain clients instead of exposing a single massive client surface.</li>
+<li>Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.</li>
+<li>The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.</li>
+</ul>
+<h2 id="roadmap-themes" class="tsd-anchor-link">Roadmap Themes<a href="#roadmap-themes" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ul>
+<li>Real backend endpoint alignment and response model hardening</li>
+<li>Pagination helpers and richer idempotency ergonomics</li>
+<li>Webhook verification, observability hooks, and advanced auth flows</li>
+<li>More complete Stellar asset and payment orchestration coverage</li>
+</ul>
+<h2 id="contributing" class="tsd-anchor-link">Contributing<a href="#contributing" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Please read <a href="media/CONTRIBUTING.md">CONTRIBUTING.md</a> before opening a pull request.</p>
+</div></div>
+<div class="col-sidebar">
+<div class="page-menu">
+<div class="tsd-navigation settings">
+<details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg>
+<h3>Settings</h3></summary>
+<div class="tsd-accordion-details">
+<div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span>
+<ul id="tsd-filter-options">
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-protected" name="protected"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Protected</span></label></li>
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li>
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-external" name="external"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>External</span></label></li></ul></div>
+<div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div>
+<details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg>
+<h3>On This Page</h3></summary>
+<div class="tsd-accordion-details"><a href="#lily-sdk"><span>Lily <wbr/>SDK</span></a>
+<ul>
+<li><a href="#status"><span>Status</span></a></li>
+<li><a href="#features"><span>Features</span></a></li>
+<li><a href="#installation"><span>Installation</span></a></li>
+<li><a href="#quick-start"><span>Quick <wbr/>Start</span></a></li>
+<li><a href="#public-api-overview"><span>Public <wbr/>API <wbr/>Overview</span></a></li>
+<li><a href="#repository-structure"><span>Repository <wbr/>Structure</span></a></li>
+<li><a href="#development"><span>Development</span></a></li>
+<li><a href="#design-notes"><span>Design <wbr/>Notes</span></a></li>
+<li><a href="#roadmap-themes"><span>Roadmap <wbr/>Themes</span></a></li>
+<li><a href="#contributing"><span>Contributing</span></a></li></ul></div></details></div>
+<div class="site-menu">
+<nav class="tsd-navigation"><a href="modules.html">@lily-protocol/sdk</a>
+<ul class="tsd-small-nested-navigation" id="tsd-nav-container">
+<li>Loading...</li></ul></nav></div></div></div><footer>
+<p class="tsd-generator">Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></footer>
+<div class="overlay"></div></body></html>
