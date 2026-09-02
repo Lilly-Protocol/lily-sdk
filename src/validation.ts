@@ -84,7 +84,6 @@ export function validateMemo(memo: unknown, context: string): void {
     );
   }
 
-  // Check if it's a valid hex-encoded memo (even-length hex string)
   if (MEMO_HEX_PATTERN.test(memo) && memo.length > 0) {
     if (memo.length > MAX_MEMO_HEX_LENGTH) {
       throw new LilyValidationError(
@@ -94,7 +93,6 @@ export function validateMemo(memo: unknown, context: string): void {
     return;
   }
 
-  // Text memo: check byte length
   const memoBytes = new TextEncoder().encode(memo).length;
   if (memoBytes > MAX_MEMO_TEXT_LENGTH) {
     throw new LilyValidationError(
