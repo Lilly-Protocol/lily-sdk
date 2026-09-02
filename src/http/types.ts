@@ -9,13 +9,13 @@ export interface RetryPolicy {
 }
 
 export interface HttpRequest<TBody = unknown> {
- method: HttpMethod;
- path: string;
- headers?: HttpHeaders;
- query?: Record<string, string | number | boolean | undefined>;
- body?: TBody;
- timeoutMs?: number;
- signal?: AbortSignal;
+  method: HttpMethod;
+  path: string;
+  headers?: HttpHeaders;
+  query?: Record<string, string | number | boolean | undefined>;
+  body?: TBody;
+  timeoutMs?: number;
+  signal?: AbortSignal;
 }
 
 export interface HttpResponse<TData = unknown> {
