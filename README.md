@@ -25,6 +25,17 @@ This repository is production-oriented foundation work. The public API, tooling,
 - Vitest test suite, ESLint, Prettier, and GitHub Actions CI
 - Contributor-ready project docs, issue templates, and example script
 
+## Browser Support
+
+The SDK ships a browser-compatible ESM build at `dist/browser/`. Bundlers that support the `browser` export condition (webpack, Vite, Rollup, esbuild) will automatically resolve to this build.
+
+```js
+// Browser bundlers resolve to dist/browser/index.js via the exports map
+import { LilySdk } from '@lily-protocol/sdk';
+```
+
+The browser build targets ES2022 and uses the native `fetch` API. Node.js-specific APIs are not included.
+
 ## Installation
 
 ```bash
