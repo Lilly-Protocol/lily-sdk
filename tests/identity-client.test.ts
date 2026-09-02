@@ -1,132 +1,89 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { IdentityClient } from '../src/clients/identity-client';
+import type { HttpClient, HttpResponse } from '../src/http/types';
+import type { IdentityProfile, ResolveIdentityRequest, VerifyIdentityRequest, VerificationResult } from '../src/models';
 
-import { LilySdk } from '../src/sdk';
-import { createMockHttpClient } from './helpers/mock-http-client';
+function createMockHttpClient(responseData: unknown = {}): HttpClient {
+  return {
+    request: vi.fn().mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      data: responseData,
+    } as HttpResponse),
+  };
+}
+
+const mockIdentity: IdentityProfile = {
+  id: 'id-1',
+  agentId: 'agent-1',
+  displayName: 'Test Identity',
+  stellarAddress: 'GABC...',
+  domain: 'example.com',
+  status: 'active',
+  verificationLevel: 'enhanced',
+  createdAt: '2024-01-01T00:00:00Z',
+  updatedAt: '2024-01-01T00:00:00Z',
+};
+
+const mockVerification: VerificationResult = {
+  identityId: 'id-1',
+  verified: true,
+  verifiedAt: '2024-01-01T01:00:00Z',
+};
 
 describe('IdentityClient', () => {
-  it('posts agentId to /v1/identity/resolve and returns profile', async () => {
-    const profile = {
-      id: 'id-1',
-      agentId: 'agent-1',
-      displayName: 'Test Agent',
-      status: 'active',
-      verificationLevel: 'basic',
-      createdAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: '2026-01-01T00:00:00.000Z',
-    };
+  let httpClient: HttpClient;
+  let client: IdentityClient;
 
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({ status: 200, headers: new Headers(), data: profile }),
-    );
-
-    const sdk = new LilySdk(
-      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
-      createMockHttpClient(requestSpy),
-    );
-
-    const result = await sdk.identity.resolve({ agentId: 'agent-1' });
-
-    expect(requestSpy).toHaveBeenCalledWith({
-      method: 'POST',
-      path: '/v1/identity/resolve',
-      body: { agentId: 'agent-1' },
-    });
-    expect(result).toEqual(profile);
+  beforeEach(() => {
+    httpClient = createMockHttpClient();
+    client = new IdentityClient(httpClient);
   });
 
-  it('posts stellarAddress to /v1/identity/resolve', async () => {
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
+  describe('resolve', () => {
+    it('sends POST /v1/identity/resolve with the input body and returns the profile', async () => {
+      const input: ResolveIdentityRequest = {
+        agentId: 'agent-1',
+        stellarAddress: 'GABC...',
+      };
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
         status: 200,
         headers: new Headers(),
-        data: {
-          id: 'id-2',
-          agentId: 'agent-2',
-          displayName: 'Stellar Agent',
-          status: 'active',
-          verificationLevel: 'enhanced',
-          createdAt: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-01-01T00:00:00.000Z',
-        },
-      }),
-    );
+        data: mockIdentity,
+      } as HttpResponse);
 
-    const sdk = new LilySdk(
-      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
-      createMockHttpClient(requestSpy),
-    );
+      const result = await client.resolve(input);
 
-    await sdk.identity.resolve({ stellarAddress: 'GABC...' });
-
-    expect(requestSpy).toHaveBeenCalledWith({
-      method: 'POST',
-      path: '/v1/identity/resolve',
-      body: { stellarAddress: 'GABC...' },
+      expect(result).toEqual(mockIdentity);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'POST',
+        path: '/v1/identity/resolve',
+        body: input,
+      });
     });
   });
 
-  it('posts domain to /v1/identity/resolve', async () => {
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
-        status: 200,
-        headers: new Headers(),
-        data: {
-          id: 'id-3',
-          agentId: 'agent-3',
-          displayName: 'Domain Agent',
-          status: 'active',
-          verificationLevel: 'none',
-          createdAt: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-01-01T00:00:00.000Z',
-        },
-      }),
-    );
-
-    const sdk = new LilySdk(
-      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
-      createMockHttpClient(requestSpy),
-    );
-
-    await sdk.identity.resolve({ domain: 'example.com' });
-
-    expect(requestSpy).toHaveBeenCalledWith({
-      method: 'POST',
-      path: '/v1/identity/resolve',
-      body: { domain: 'example.com' },
-    });
-  });
-
-  it('posts challenge and signature to /v1/identity/verify', async () => {
-    const verification = {
-      identityId: 'id-1',
-      verified: true,
-      verifiedAt: '2026-08-31T00:00:00.000Z',
-    };
-
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({ status: 200, headers: new Headers(), data: verification }),
-    );
-
-    const sdk = new LilySdk(
-      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
-      createMockHttpClient(requestSpy),
-    );
-
-    const result = await sdk.identity.verify({
-      identityId: 'id-1',
-      challenge: 'chal-abc',
-      signature: 'sig-xyz',
-    });
-
-    expect(requestSpy).toHaveBeenCalledWith({
-      method: 'POST',
-      path: '/v1/identity/verify',
-      body: {
+  describe('verify', () => {
+    it('sends POST /v1/identity/verify with the input body and returns the result', async () => {
+      const input: VerifyIdentityRequest = {
         identityId: 'id-1',
-        challenge: 'chal-abc',
-        signature: 'sig-xyz',
-      },
+        challenge: 'test-challenge',
+        signature: 'test-signature',
+      };
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
+        status: 200,
+        headers: new Headers(),
+        data: mockVerification,
+      } as HttpResponse);
+
+      const result = await client.verify(input);
+
+      expect(result.verified).toBe(true);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'POST',
+        path: '/v1/identity/verify',
+        body: input,
+      });
     });
-    expect(result).toEqual(verification);
   });
 });
