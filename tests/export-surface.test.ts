@@ -1,45 +1,31 @@
 import { describe, it, expect } from 'vitest';
-import * as SDK from '../src/index';
+import * as sdk from '../src/index';
 
 describe('export surface', () => {
   it('exports LilySdk class', () => {
-    expect(SDK.LilySdk).toBeDefined();
-    expect(typeof SDK.LilySdk).toBe('function');
+    expect(sdk.LilySdk).toBeDefined();
+    expect(typeof sdk.LilySdk).toBe('function');
   });
 
   it('exports resolveLilySdkConfig function', () => {
-    expect(SDK.resolveLilySdkConfig).toBeDefined();
-    expect(typeof SDK.resolveLilySdkConfig).toBe('function');
+    expect(sdk.resolveLilySdkConfig).toBeDefined();
+    expect(typeof sdk.resolveLilySdkConfig).toBe('function');
   });
 
   it('exports all error classes', () => {
-    const errors = [
-      'LilySdkError',
-      'LilyConfigError',
-      'LilyApiError',
-      'LilyAuthenticationError',
-      'LilyTransportError',
-      'LilyValidationError',
-    ] as const;
-
-    for (const name of errors) {
-      expect(SDK[name]).toBeDefined();
-      expect(typeof SDK[name]).toBe('function');
-    }
+    expect(sdk.LilySdkError).toBeDefined();
+    expect(sdk.LilyConfigError).toBeDefined();
+    expect(sdk.LilyApiError).toBeDefined();
+    expect(sdk.LilyAuthenticationError).toBeDefined();
+    expect(sdk.LilyTransportError).toBeDefined();
+    expect(sdk.LilyValidationError).toBeDefined();
   });
 
   it('exports all client classes', () => {
-    const clients = [
-      'AgentClient',
-      'IdentityClient',
-      'PaymentClient',
-      'SystemClient',
-      'WalletClient',
-    ] as const;
-
-    for (const name of clients) {
-      expect(SDK[name]).toBeDefined();
-      expect(typeof SDK[name]).toBe('function');
-    }
+    expect(sdk.AgentClient).toBeDefined();
+    expect(sdk.IdentityClient).toBeDefined();
+    expect(sdk.PaymentClient).toBeDefined();
+    expect(sdk.SystemClient).toBeDefined();
+    expect(sdk.WalletClient).toBeDefined();
   });
 });
