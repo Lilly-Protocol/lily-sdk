@@ -8,6 +8,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       matrix:
         node-version: [20, 22, 24]
@@ -52,6 +55,14 @@ jobs:
           files: ./coverage/coverage-final.json
           fail_ci_if_error: false
         if: matrix.node-version == '20'
+
+      - name: Upload coverage to Codecov
+        if: matrix.node-version == 22
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage/coverage-final.json
+          fail_ci_if_error: true
+          use_oidc: true
 
       - name: Build
         run: npm run build
