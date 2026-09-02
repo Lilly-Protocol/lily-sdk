@@ -72,6 +72,36 @@ sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
 ```
 
+The root entrypoint also exposes the transport layer for custom clients and tests:
+
+```ts
+import {
+  BaseClient,
+  createFetchHttpClient,
+  HttpClient,
+  HttpHeaders,
+  HttpRequest,
+  HttpResponse,
+  RetryPolicy,
+} from '@lily-protocol/sdk';
+
+class MyClient extends BaseClient {
+  async health() {
+    return this.request<{ status: string }>({
+      method: 'GET',
+      path: '/v1/system/health',
+    });
+  }
+}
+
+const httpClient = createFetchHttpClient({
+  baseUrl: 'https://api.lilyprotocol.com',
+  authToken: process.env.LILY_AUTH_TOKEN,
+});
+
+const client = new MyClient(httpClient);
+```
+
 ## Repository Structure
 
 ```text
@@ -120,20 +150,20 @@ npm run example
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
-## Subpath Imports
+## Requirements and Compatibility
 
-The SDK exposes stable subpath exports for targeted imports:
+- **Node.js**: Version 20 or newer is required. The SDK relies on built-in `fetch`, `AbortController`, and `Headers` APIs available in Node 20+.
+- **CI-Supported Versions**: Automated tests run against Node.js 20 and 22.
+- **Global Fetch**: A standards-compliant global `fetch` implementation is required by default. If your runtime lacks native fetch (e.g., older Node versions or specialized environments), provide a custom implementation via the `fetch` config option:
 
-- `@lily-protocol/sdk/config` — Configuration types and resolution (`LilySdkConfig`, `ResolvedLilySdkConfig`, `resolveLilySdkConfig`)
-- `@lily-protocol/sdk/errors` — Typed error hierarchy (`LilyApiError`, `LilyAuthenticationError`, `LilyConfigError`, `LilySdkError`, `LilyTransportError`, `LilyValidationError`)
-- `@lily-protocol/sdk/http` — HTTP transport abstraction (`createFetchHttpClient`, `HttpClient`, `HttpRequest`, `HttpResponse`, `RetryPolicy`)
-- `@lily-protocol/sdk/models` — Domain models and request/response types (re-exports all public models)
-- `@lily-protocol/sdk/types` — Client contracts (`AgentClientContract`, `IdentityClientContract`, `PaymentClientContract`, `SystemClientContract`, `WalletClientContract`)
+  ```ts
+  import { LilySdk } from '@lily-protocol/sdk';
+  import fetch from 'node-fetch'; // or any compatible polyfill
 
-Example:
+  const sdk = new LilySdk({
+    baseUrl: 'https://api.lilyprotocol.com',
+    fetch: fetch as typeof globalThis.fetch,
+  });
+  ```
 
-```ts
-import { LilyApiError, LilyAuthenticationError } from '@lily-protocol/sdk/errors';
-import { createFetchHttpClient } from '@lily-protocol/sdk/http';
-import type { AgentClientContract } from '@lily-protocol/sdk/types';
-```
+- **Browser Usage**: The SDK can run in browsers that support the Fetch API. Note that browser environments are subject to CORS restrictions enforced by the server. Ensure the Lily backend allows requests from your origin, or use a proxy/backend-for-frontend pattern.
