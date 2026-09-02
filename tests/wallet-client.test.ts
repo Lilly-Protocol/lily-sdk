@@ -1,27 +1,22 @@
-import { describe, it, expect } from 'vitest';
-import { WalletClient } from '../src/clients/wallet-client.js';
-import type { HttpClient, HttpResponse } from '../src/http/types.js';
-import type { ProvisionWalletRequest, WalletProvisioningResult, Wallet } from '../src/models/wallet.js';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { WalletClient } from '../src/clients/wallet-client';
+import type { HttpClient, HttpResponse } from '../src/http/types';
+import type { Wallet, ProvisionWalletRequest, WalletProvisioningResult } from '../src/models';
 
-function createMockHttpClient(responses: Record<string, unknown>): HttpClient {
+function createMockHttpClient(responseData: unknown = {}): HttpClient {
   return {
-    request: <TResponse>(input: { method: string; path: string }): Promise<HttpResponse<TResponse>> => {
-      const key = `${input.method} ${input.path}`;
-      const data = responses[key];
-      if (!data) throw new Error(`No mock for ${key}`);
-      return Promise.resolve({
-        status: 200,
-        headers: new Headers({ 'content-type': 'application/json' }),
-        data: data as TResponse,
-      });
-    },
+    request: vi.fn().mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      data: responseData,
+    } as HttpResponse),
   };
 }
 
 const mockWallet: Wallet = {
-  id: 'w1',
-  agentId: 'a1',
-  address: 'GABC',
+  id: 'wallet-1',
+  agentId: 'agent-1',
+  address: 'GABC...',
   network: 'stellar-testnet',
   status: 'active',
   balances: [],
@@ -30,30 +25,58 @@ const mockWallet: Wallet = {
 };
 
 describe('WalletClient', () => {
-  it('provision sends correct request and returns result', async () => {
-    const expected: WalletProvisioningResult = {
-      wallet: mockWallet,
-      recoveryHint: 'hint-123',
-    };
-    const http = createMockHttpClient({ 'POST /v1/wallets/provision': expected });
-    const client = new WalletClient(http);
+  let httpClient: HttpClient;
+  let client: WalletClient;
 
-    const input: ProvisionWalletRequest = {
-      agentId: 'a1',
-      network: 'stellar-testnet',
-      fundingAsset: { assetCode: 'XLM', amount: '100' },
-    };
-
-    const result = await client.provision(input);
-    expect(result).toEqual(expected);
+  beforeEach(() => {
+    httpClient = createMockHttpClient();
+    client = new WalletClient(httpClient);
   });
 
-  it('get sends correct request and returns wallet', async () => {
-    const expected: Wallet = { ...mockWallet, network: 'stellar-mainnet', address: 'GDEF' };
-    const http = createMockHttpClient({ 'GET /v1/wallets/w1': expected });
-    const client = new WalletClient(http);
+  describe('provision', () => {
+    it('sends POST /v1/wallets/provision with the input body and returns result', async () => {
+      const input: ProvisionWalletRequest = {
+        agentId: 'agent-1',
+        network: 'stellar-testnet',
+        fundingAsset: { assetCode: 'XLM', amount: '100' },
+      };
+      const result: WalletProvisioningResult = {
+        wallet: mockWallet,
+        recoveryHint: 'some-hint',
+      };
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
+        status: 201,
+        headers: new Headers(),
+        data: result,
+      } as HttpResponse);
 
-    const result = await client.get('w1');
-    expect(result).toEqual(expected);
+      const response = await client.provision(input);
+
+      expect(response.wallet.id).toBe('wallet-1');
+      expect(response.recoveryHint).toBe('some-hint');
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'POST',
+        path: '/v1/wallets/provision',
+        body: input,
+      });
+    });
+  });
+
+  describe('get', () => {
+    it('sends GET /v1/wallets/:id and returns the wallet', async () => {
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
+        status: 200,
+        headers: new Headers(),
+        data: mockWallet,
+      } as HttpResponse);
+
+      const result = await client.get('wallet-1');
+
+      expect(result).toEqual(mockWallet);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'GET',
+        path: '/v1/wallets/wallet-1',
+      });
+    });
   });
 });
