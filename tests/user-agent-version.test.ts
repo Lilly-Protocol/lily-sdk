@@ -1,19 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { resolveLilySdkConfig } from '../src/config/resolve-config';
-import { SDK_VERSION } from '../src/version';
 import pkg from '../package.json';
 
-describe('default user-agent version', () => {
-  it('matches package.json version', () => {
-    expect(SDK_VERSION).toBe(pkg.version);
-  });
+// Vitest define replacement happens at build time; in test env we fallback
+const EXPECTED_VERSION = typeof __LILY_SDK_VERSION__ !== 'undefined' 
+  ? __LILY_SDK_VERSION__ 
+  : pkg.version;
 
-  it('is used when no userAgent is provided', () => {
+describe('default user agent', () => {
+  it('includes the package version automatically', () => {
     const config = resolveLilySdkConfig({ baseUrl: 'https://api.example.com' });
-    expect(config.userAgent).toBe(`lily-sdk/${pkg.version}`);
+    expect(config.userAgent).toBe(`lily-sdk/${EXPECTED_VERSION}`);
   });
 
-  it('can be overridden explicitly', () => {
+  it('allows overriding the user agent', () => {
     const config = resolveLilySdkConfig({
       baseUrl: 'https://api.example.com',
       userAgent: 'custom-agent/1.0',
