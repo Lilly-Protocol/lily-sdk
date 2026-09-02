@@ -1,103 +1,107 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PaymentClient } from '../src/clients/payment-client';
-import { createMockHttpClient } from './helpers/mock-http-client';
-import type { HttpRequest } from '../src/http/types';
+import type { HttpClient, HttpResponse } from '../src/http/types';
+import type { Payment, PaymentQuote, PaymentQuoteRequest, ExecutePaymentRequest } from '../src/models';
+
+function createMockHttpClient(responseData: unknown = {}): HttpClient {
+  return {
+    request: vi.fn().mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      data: responseData,
+    } as HttpResponse),
+  };
+}
+
+const mockPayment: Payment = {
+  id: 'pay-1',
+  fromWalletId: 'wallet-1',
+  toAddress: 'GABC...',
+  amount: { amount: '100', assetCode: 'XLM' },
+  status: 'settled',
+  createdAt: '2024-01-01T00:00:00Z',
+  updatedAt: '2024-01-01T00:00:00Z',
+};
+
+const mockQuote: PaymentQuote = {
+  amount: { amount: '100', assetCode: 'XLM' },
+  estimatedFee: { amount: '0.00001', assetCode: 'XLM' },
+  expiresAt: '2024-01-01T01:00:00Z',
+};
 
 describe('PaymentClient', () => {
-  it('quote posts to /v1/payments/quote with correct body', async () => {
-    let captured: HttpRequest | undefined;
-    const client = new PaymentClient(
-      createMockHttpClient((req) => {
-        captured = req;
-        return Promise.resolve({
-          status: 200,
-          headers: new Headers({ 'content-type': 'application/json' }),
-          data: {
-            amount: { assetCode: 'USD', amount: '100' },
-            estimatedFee: { assetCode: 'USD', amount: '1' },
-            expiresAt: '2026-09-01T00:00:00Z',
-          },
-        });
-      }),
-    );
+  let httpClient: HttpClient;
+  let client: PaymentClient;
 
-    await client.quote({
-      fromWalletId: 'w1',
-      toAddress: 'addr1',
-      amount: { assetCode: 'USD', amount: '100' },
-    });
+  beforeEach(() => {
+    httpClient = createMockHttpClient();
+    client = new PaymentClient(httpClient);
+  });
 
-    expect(captured?.method).toBe('POST');
-    expect(captured?.path).toBe('/v1/payments/quote');
-    expect(captured?.body).toEqual({
-      fromWalletId: 'w1',
-      toAddress: 'addr1',
-      amount: { assetCode: 'USD', amount: '100' },
+  describe('quote', () => {
+    it('sends POST /v1/payments/quote with the input body and returns the quote', async () => {
+      const input: PaymentQuoteRequest = {
+        fromWalletId: 'wallet-1',
+        toAddress: 'GABC...',
+        amount: { amount: '100', assetCode: 'XLM' },
+      };
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
+        status: 200,
+        headers: new Headers(),
+        data: mockQuote,
+      } as HttpResponse);
+
+      const result = await client.quote(input);
+
+      expect(result).toEqual(mockQuote);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'POST',
+        path: '/v1/payments/quote',
+        body: input,
+      });
     });
   });
 
-  it('execute posts to /v1/payments with idempotencyKey', async () => {
-    let captured: HttpRequest | undefined;
-    const client = new PaymentClient(
-      createMockHttpClient((req) => {
-        captured = req;
-        return Promise.resolve({
-          status: 200,
-          headers: new Headers({ 'content-type': 'application/json' }),
-          data: {
-            id: 'p1',
-            fromWalletId: 'w1',
-            toAddress: 'addr1',
-            amount: { assetCode: 'USD', amount: '100' },
-            status: 'queued',
-            createdAt: '2026-08-31T00:00:00Z',
-            updatedAt: '2026-08-31T00:00:00Z',
-          },
-        });
-      }),
-    );
+  describe('execute', () => {
+    it('sends POST /v1/payments with the input body and returns the payment', async () => {
+      const input: ExecutePaymentRequest = {
+        fromWalletId: 'wallet-1',
+        toAddress: 'GABC...',
+        amount: { amount: '100', assetCode: 'XLM' },
+        memo: 'test-payment',
+      };
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
+        status: 201,
+        headers: new Headers(),
+        data: mockPayment,
+      } as HttpResponse);
 
-    await client.execute({
-      fromWalletId: 'w1',
-      toAddress: 'addr1',
-      amount: { assetCode: 'USD', amount: '100' },
-      idempotencyKey: 'key-1',
-    });
+      const result = await client.execute(input);
 
-    expect(captured?.method).toBe('POST');
-    expect(captured?.path).toBe('/v1/payments');
-    expect(captured?.body).toEqual({
-      fromWalletId: 'w1',
-      toAddress: 'addr1',
-      amount: { assetCode: 'USD', amount: '100' },
-      idempotencyKey: 'key-1',
+      expect(result.id).toBe('pay-1');
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'POST',
+        path: '/v1/payments',
+        body: input,
+      });
     });
   });
 
-  it('get reads /v1/payments/:id', async () => {
-    let captured: HttpRequest | undefined;
-    const client = new PaymentClient(
-      createMockHttpClient((req) => {
-        captured = req;
-        return Promise.resolve({
-          status: 200,
-          headers: new Headers({ 'content-type': 'application/json' }),
-          data: {
-            id: 'p1',
-            fromWalletId: 'w1',
-            toAddress: 'addr1',
-            amount: { assetCode: 'USD', amount: '100' },
-            status: 'settled',
-            createdAt: '2026-08-31T00:00:00Z',
-            updatedAt: '2026-08-31T00:00:00Z',
-          },
-        });
-      }),
-    );
+  describe('get', () => {
+    it('sends GET /v1/payments/:id and returns the payment', async () => {
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
+        status: 200,
+        headers: new Headers(),
+        data: mockPayment,
+      } as HttpResponse);
 
-    await client.get('p1');
+      const result = await client.get('pay-1');
 
-    expect(captured?.method).toBe('GET');
-    expect(captured?.path).toBe('/v1/payments/p1');
+      expect(result).toEqual(mockPayment);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'GET',
+        path: '/v1/payments/pay-1',
+      });
+    });
   });
 });
