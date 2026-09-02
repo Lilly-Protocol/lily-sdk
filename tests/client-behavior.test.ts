@@ -108,6 +108,7 @@ describe('client behavior', () => {
       },
       defaultHeaders: {},
       userAgent: 'lily-sdk/test',
+    validateResponses: false,
       fetch: fetchSpy,
     });
 
@@ -131,6 +132,7 @@ describe('client behavior', () => {
       },
       defaultHeaders: {},
       userAgent: 'lily-sdk/test',
+    validateResponses: false,
       fetch: vi.fn(() =>
         Promise.resolve(
           new Response(JSON.stringify({ message: 'nope', code: 'INVALID_TOKEN' }), {
