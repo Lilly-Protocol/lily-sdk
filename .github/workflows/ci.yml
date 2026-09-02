@@ -36,3 +36,38 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Verify npm pack contents
+        run: |
+          PACK_CONTENTS=$(npm pack --dry-run --json)
+          echo "$PACK_CONTENTS" | jq -e '.[0].files | map(.path) | sort' > /tmp/pack-files.json
+          
+          # Expected files: package.json, README.md, LICENSE, and dist/**
+          # Fail if src/, tests/, coverage/, .env, or other dev artifacts are present
+          UNEXPECTED=$(jq -r '.[] | select(
+            test("^package\\.json$") or
+            test("^README\\.md$") or
+            test("^LICENSE$") or
+            test("^dist/")
+          | not)' /tmp/pack-files.json)
+          
+          if [ -n "$UNEXPECTED" ]; then
+            echo "::error::Unexpected files in npm tarball:"
+            echo "$UNEXPECTED"
+            exit 1
+          fi
+          
+          # Verify essential files are present
+          ESSENTIAL_MISSING=$(echo '["package.json","README.md","LICENSE"]' | jq -r '.[]' | while read f; do
+            if ! jq -e ".[] | select(. == \"$f\")" /tmp/pack-files.json > /dev/null 2>&1; then
+              echo "$f"
+            fi
+          done)
+          
+          if [ -n "$ESSENTIAL_MISSING" ]; then
+            echo "::error::Missing essential files in npm tarball:"
+            echo "$ESSENTIAL_MISSING"
+            exit 1
+          fi
+          
+          echo "✅ npm pack contents verified successfully"

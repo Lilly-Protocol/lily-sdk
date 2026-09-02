@@ -6,7 +6,9 @@ export abstract class BaseClient {
   protected async request<TResponse, TRequest = undefined>(
     request: HttpRequest<TRequest>,
   ): Promise<TResponse> {
-    const response = await this.httpClient.request<TResponse, TRequest>(request);
+    const response = await this.httpClient.request<TResponse, TRequest>(
+      request,
+    );
     return response.data;
   }
 }
