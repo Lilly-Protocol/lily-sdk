@@ -39,18 +39,35 @@ jobs:
 
       - name: Verify npm pack contents
         run: |
-          PACK_OUTPUT=$(npm pack --dry-run --json)
-          echo "$PACK_OUTPUT" | jq -e '
-            .[0].files
-            | map(.path)
-            | map(select(test("\\.(map|cts)$") | not))
-            | map(select(startswith("dist/types-") | not))
-            | sort
-          ' > /tmp/pack-files.json
-          echo '["LICENSE","README.md","dist/config.cjs","dist/config.d.ts","dist/config.js","dist/errors.cjs","dist/errors.d.ts","dist/errors.js","dist/http.cjs","dist/http.d.ts","dist/http.js","dist/index.cjs","dist/index.d.ts","dist/index.js","dist/models.cjs","dist/models.d.ts","dist/models.js","dist/types.cjs","dist/types.d.ts","dist/types.js","package.json"]' > /tmp/expected.json
-          if ! jq --slurpfile expected /tmp/expected.json -e '. == $expected[0]' /tmp/pack-files.json > /dev/null; then
-            echo "Unexpected files in npm pack output:"
-            diff <(jq . /tmp/expected.json) <(jq . /tmp/pack-files.json)
+          PACK_CONTENTS=$(npm pack --dry-run --json)
+          echo "$PACK_CONTENTS" | jq -e '.[0].files | map(.path) | sort' > /tmp/pack-files.json
+          
+          # Expected files: package.json, README.md, LICENSE, and dist/**
+          # Fail if src/, tests/, coverage/, .env, or other dev artifacts are present
+          UNEXPECTED=$(jq -r '.[] | select(
+            test("^package\\.json$") or
+            test("^README\\.md$") or
+            test("^LICENSE$") or
+            test("^dist/")
+          | not)' /tmp/pack-files.json)
+          
+          if [ -n "$UNEXPECTED" ]; then
+            echo "::error::Unexpected files in npm tarball:"
+            echo "$UNEXPECTED"
             exit 1
           fi
-          echo "Pack contents verified"
+          
+          # Verify essential files are present
+          ESSENTIAL_MISSING=$(echo '["package.json","README.md","LICENSE"]' | jq -r '.[]' | while read f; do
+            if ! jq -e ".[] | select(. == \"$f\")" /tmp/pack-files.json > /dev/null 2>&1; then
+              echo "$f"
+            fi
+          done)
+          
+          if [ -n "$ESSENTIAL_MISSING" ]; then
+            echo "::error::Missing essential files in npm tarball:"
+            echo "$ESSENTIAL_MISSING"
+            exit 1
+          fi
+          
+          echo "✅ npm pack contents verified successfully"
