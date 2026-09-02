@@ -1,75 +1,74 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SystemClient } from '../src/clients/system-client';
+import type { HttpClient, HttpResponse } from '../src/http/types';
+import type { HealthStatus, ServiceInfo } from '../src/models';
 
-import { LilySdk } from '../src/sdk';
-import { createMockHttpClient } from './helpers/mock-http-client';
+function createMockHttpClient(responseData: unknown = {}): HttpClient {
+  return {
+    request: vi.fn().mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      data: responseData,
+    } as HttpResponse),
+  };
+}
+
+const mockHealth: HealthStatus = {
+  status: 'ok',
+  version: '1.0.0',
+  timestamp: '2024-01-01T00:00:00Z',
+  checks: { database: 'ok', redis: 'ok' },
+};
+
+const mockInfo: ServiceInfo = {
+  name: 'lily-api',
+  version: '1.0.0',
+  environment: 'production',
+  docsUrl: 'https://docs.lily.dev',
+};
 
 describe('SystemClient', () => {
-  it('calls GET /v1/system/info and returns ServiceInfo data', async () => {
-    const infoData = {
-      name: 'lily-api',
-      version: '0.1.0',
-      environment: 'test',
-    };
+  let httpClient: HttpClient;
+  let client: SystemClient;
 
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
-        status: 200,
-        headers: new Headers(),
-        data: infoData,
-      }),
-    );
-
-    const sdk = new LilySdk(
-      {
-        baseUrl: 'https://api.lily.test',
-        fetch: globalThis.fetch,
-      },
-      createMockHttpClient(requestSpy),
-    );
-
-    const info = await sdk.system.info();
-
-    expect(requestSpy).toHaveBeenCalledWith({
-      method: 'GET',
-      path: '/v1/system/info',
-    });
-    expect(info).toEqual(infoData);
+  beforeEach(() => {
+    httpClient = createMockHttpClient();
+    client = new SystemClient(httpClient);
   });
 
-  it('maps health response to HealthStatus with checks', async () => {
-    const healthData = {
-      status: 'ok',
-      version: '0.1.0',
-      timestamp: '2026-08-31T00:00:00.000Z',
-      checks: {
-        api: 'ok',
-        db: 'ok',
-      },
-    };
-
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
+  describe('health', () => {
+    it('sends GET /v1/system/health and returns the health status', async () => {
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
         status: 200,
         headers: new Headers(),
-        data: healthData,
-      }),
-    );
+        data: mockHealth,
+      } as HttpResponse);
 
-    const sdk = new LilySdk(
-      {
-        baseUrl: 'https://api.lily.test',
-        fetch: globalThis.fetch,
-      },
-      createMockHttpClient(requestSpy),
-    );
+      const result = await client.health();
 
-    const health = await sdk.system.health();
-
-    expect(requestSpy).toHaveBeenCalledWith({
-      method: 'GET',
-      path: '/v1/system/health',
+      expect(result).toEqual(mockHealth);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'GET',
+        path: '/v1/system/health',
+      });
     });
-    expect(health).toEqual(healthData);
-    expect(health.checks).toEqual({ api: 'ok', db: 'ok' });
+  });
+
+  describe('info', () => {
+    it('sends GET /v1/system/info and returns the service info', async () => {
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
+        status: 200,
+        headers: new Headers(),
+        data: mockInfo,
+      } as HttpResponse);
+
+      const result = await client.info();
+
+      expect(result).toEqual(mockInfo);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'GET',
+        path: '/v1/system/info',
+      });
+    });
   });
 });
