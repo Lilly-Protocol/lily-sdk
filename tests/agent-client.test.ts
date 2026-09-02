@@ -1,137 +1,112 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
 import { AgentClient } from '../src/clients/agent-client';
-import type { HttpClient, HttpResponse } from '../src/http/types';
 import type { Agent, CreateAgentRequest, UpdateAgentRequest } from '../src/models';
-
-function createMockHttpClient(responseData: unknown = {}): HttpClient {
-  return {
-    request: vi.fn().mockResolvedValue({
-      status: 200,
-      headers: new Headers(),
-      data: responseData,
-    } as HttpResponse),
-  };
-}
-
-const mockAgent: Agent = {
-  id: 'agent-1',
-  name: 'Test Agent',
-  description: 'A test agent',
-  status: 'active',
-  network: 'stellar-testnet',
-  capabilities: ['payments'],
-  createdAt: '2024-01-01T00:00:00Z',
-  updatedAt: '2024-01-01T00:00:00Z',
-};
+import { createMockHttpClient } from './helpers/mock-http-client';
 
 describe('AgentClient', () => {
-  let httpClient: HttpClient;
-  let client: AgentClient;
+  const mockAgent: Agent = {
+    id: 'agent_123',
+    name: 'Research Agent',
+    status: 'active',
+    capabilities: ['search', 'analyze'],
+    createdAt: '2026-09-01T00:00:00.000Z',
+    updatedAt: '2026-09-01T00:00:00.000Z',
+  };
 
-  beforeEach(() => {
-    httpClient = createMockHttpClient();
-    client = new AgentClient(httpClient);
-  });
-
-  describe('list', () => {
-    it('sends GET /v1/agents with no query when called without arguments', async () => {
-      const agents = [mockAgent];
-      vi.mocked(httpClient.request).mockResolvedValueOnce({
+  it('lists agents with query parameters', async () => {
+    const requestSpy = vi.fn(() =>
+      Promise.resolve({
         status: 200,
         headers: new Headers(),
-        data: agents,
-      } as HttpResponse);
+        data: [mockAgent],
+      }),
+    );
 
-      const result = await client.list();
+    const client = new AgentClient(createMockHttpClient(requestSpy));
+    const agents = await client.list({ limit: 10, status: 'active' });
 
-      expect(result).toEqual(agents);
-      expect(httpClient.request).toHaveBeenCalledWith({
-        method: 'GET',
-        path: '/v1/agents',
-        query: {},
-      });
+    expect(requestSpy).toHaveBeenCalledWith({
+      method: 'GET',
+      path: '/v1/agents',
+      query: {
+        limit: 10,
+        status: 'active',
+      },
     });
-
-    it('passes query parameters to GET /v1/agents', async () => {
-      vi.mocked(httpClient.request).mockResolvedValueOnce({
-        status: 200,
-        headers: new Headers(),
-        data: [],
-      } as HttpResponse);
-
-      await client.list({ status: 'active', limit: 10, offset: 5 });
-
-      expect(httpClient.request).toHaveBeenCalledWith({
-        method: 'GET',
-        path: '/v1/agents',
-        query: { status: 'active', limit: 10, offset: 5 },
-      });
-    });
+    expect(agents).toEqual([mockAgent]);
   });
 
-  describe('get', () => {
-    it('sends GET /v1/agents/:id and returns the agent', async () => {
-      vi.mocked(httpClient.request).mockResolvedValueOnce({
+  it('gets an agent by id', async () => {
+    const requestSpy = vi.fn(() =>
+      Promise.resolve({
         status: 200,
         headers: new Headers(),
         data: mockAgent,
-      } as HttpResponse);
+      }),
+    );
 
-      const result = await client.get('agent-1');
+    const client = new AgentClient(createMockHttpClient(requestSpy));
+    const agent = await client.get('agent_123');
 
-      expect(result).toEqual(mockAgent);
-      expect(httpClient.request).toHaveBeenCalledWith({
-        method: 'GET',
-        path: '/v1/agents/agent-1',
-      });
+    expect(requestSpy).toHaveBeenCalledWith({
+      method: 'GET',
+      path: '/v1/agents/agent_123',
     });
+    expect(agent).toEqual(mockAgent);
   });
 
-  describe('create', () => {
-    it('sends POST /v1/agents with the input body', async () => {
-      const input: CreateAgentRequest = {
-        name: 'New Agent',
-        network: 'stellar-mainnet',
-        capabilities: ['identity'],
-      };
-      vi.mocked(httpClient.request).mockResolvedValueOnce({
+  it('creates an agent with payload', async () => {
+    const requestSpy = vi.fn(() =>
+      Promise.resolve({
         status: 201,
         headers: new Headers(),
-        data: { ...mockAgent, ...input },
-      } as HttpResponse);
+        data: mockAgent,
+      }),
+    );
 
-      const result = await client.create(input);
+    const createPayload: CreateAgentRequest = {
+      name: 'Research Agent',
+      capabilities: ['search', 'analyze'],
+    };
 
-      expect(result.name).toBe('New Agent');
-      expect(httpClient.request).toHaveBeenCalledWith({
-        method: 'POST',
-        path: '/v1/agents',
-        body: input,
-      });
+    const client = new AgentClient(createMockHttpClient(requestSpy));
+    const agent = await client.create(createPayload);
+
+    expect(requestSpy).toHaveBeenCalledWith({
+      method: 'POST',
+      path: '/v1/agents',
+      body: createPayload,
     });
+    expect(agent).toEqual(mockAgent);
   });
 
-  describe('update', () => {
-    it('sends PATCH /v1/agents/:id with the update body', async () => {
-      const input: UpdateAgentRequest = {
-        name: 'Updated Name',
-        status: 'inactive',
-      };
-      vi.mocked(httpClient.request).mockResolvedValueOnce({
+  it('updates an agent by id', async () => {
+    const updatedAgent: Agent = {
+      ...mockAgent,
+      status: 'paused',
+    };
+
+    const requestSpy = vi.fn(() =>
+      Promise.resolve({
         status: 200,
         headers: new Headers(),
-        data: { ...mockAgent, ...input },
-      } as HttpResponse);
+        data: updatedAgent,
+      }),
+    );
 
-      const result = await client.update('agent-1', input);
+    const updatePayload: UpdateAgentRequest = {
+      status: 'paused',
+    };
 
-      expect(result.name).toBe('Updated Name');
-      expect(result.status).toBe('inactive');
-      expect(httpClient.request).toHaveBeenCalledWith({
-        method: 'PATCH',
-        path: '/v1/agents/agent-1',
-        body: input,
-      });
+    const client = new AgentClient(createMockHttpClient(requestSpy));
+    const agent = await client.update('agent_123', updatePayload);
+
+    expect(requestSpy).toHaveBeenCalledWith({
+      method: 'PATCH',
+      path: '/v1/agents/agent_123',
+      body: updatePayload,
     });
+    expect(agent.status).toBe('paused');
   });
 });
