@@ -1,3 +1,4 @@
+import { encodePathSegment } from '../http/path';
 import type {
   ExecutePaymentRequest,
   Payment,
@@ -27,7 +28,7 @@ export class PaymentClient extends BaseClient implements PaymentClientContract {
   public get(paymentId: string): Promise<Payment> {
     return this.request({
       method: 'GET',
-      path: `/v1/payments/${paymentId}`,
+      path: `/v1/payments/${encodePathSegment(paymentId)}`,
     });
   }
 }

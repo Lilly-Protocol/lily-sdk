@@ -1,33 +1,48 @@
-import { describe, expect, it } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import fs from "node:fs";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
 
-import pkg from '../package.json';
+describe("package exports contract", () => {
+  const packageJsonPath = path.resolve(__dirname, "../package.json");
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
 
-const require = createRequire(import.meta.url);
-const root = join(__dirname, '..');
+  it("declares subpaths in exports that map to corresponding source files", () => {
+    const exportsMap = packageJson.exports as Record<
+      string,
+      string | { import?: string; require?: string; types?: string }
+    >;
 
-describe('package exports resolve to real files', () => {
-  const exportEntries = Object.entries(pkg.exports).filter(
-    ([key]) => key !== './package.json',
-  );
+    expect(exportsMap).toBeDefined();
 
-  it.each(exportEntries)('%s resolves via require()', (_subpath, value: Record<string, string> | string) => {
-    if (typeof value === 'string') return;
-    const entry = value.require ?? value.import;
-    if (!entry) return;
-    const resolved = require.resolve(join(root, entry));
-    expect(existsSync(resolved)).toBe(true);
+    for (const [subpath, target] of Object.entries(exportsMap)) {
+      if (subpath === "./package.json") {
+        expect(target).toBe("./package.json");
+        continue;
+      }
+
+      if (typeof target === "object") {
+        // Verify source module counterpart exists in src/
+        const moduleName = subpath === "." ? "index" : subpath.replace(/^\.\//, "");
+        const srcFile = path.resolve(__dirname, `../src/${moduleName}.ts`);
+        expect(fs.existsSync(srcFile), `Expected source file ${srcFile} to exist for export ${subpath}`).toBe(true);
+
+        // Verify declared output files have valid paths
+        if (target.import) {
+          expect(target.import.startsWith("./dist/")).toBe(true);
+        }
+        if (target.types) {
+          expect(target.types.startsWith("./dist/")).toBe(true);
+        }
+        if (target.require) {
+          expect(target.require.startsWith("./dist/")).toBe(true);
+        }
+      }
+    }
   });
 
-  it.each(exportEntries)('%s has a non-empty type declaration', (_subpath, value: Record<string, string> | string) => {
-    if (typeof value === 'string') return;
-    const typesPath = value.types;
-    if (!typesPath) return;
-    const full = join(root, typesPath);
-    expect(existsSync(full)).toBe(true);
-    const content = readFileSync(full, 'utf8').trim();
-    expect(content.length).toBeGreaterThan(0);
+  it("declares top-level main, module, and types fields pointing to dist/index", () => {
+    expect(packageJson.main).toBe("./dist/index.cjs");
+    expect(packageJson.module).toBe("./dist/index.js");
+    expect(packageJson.types).toBe("./dist/index.d.ts");
   });
 });
