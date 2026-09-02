@@ -1,3 +1,4 @@
+import { encodePathSegment } from '../http/path';
 import type {
   Agent,
   CreateAgentRequest,
@@ -21,7 +22,7 @@ export class AgentClient extends BaseClient implements AgentClientContract {
   public get(agentId: string): Promise<Agent> {
     return this.request({
       method: 'GET',
-      path: `/v1/agents/${agentId}`,
+      path: `/v1/agents/${encodePathSegment(agentId)}`,
     });
   }
 
@@ -36,7 +37,7 @@ export class AgentClient extends BaseClient implements AgentClientContract {
   public update(agentId: string, input: UpdateAgentRequest): Promise<Agent> {
     return this.request({
       method: 'PATCH',
-      path: `/v1/agents/${agentId}`,
+      path: `/v1/agents/${encodePathSegment(agentId)}`,
       body: input,
     });
   }
