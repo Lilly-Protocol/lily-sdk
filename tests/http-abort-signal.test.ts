@@ -1,47 +1,50 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import type { ResolvedLilySdkConfig } from '../src/config/types';
 import { LilyTransportError } from '../src/errors/sdk-error';
 
 describe('HttpRequest.signal support', () => {
-  const baseConfig: ResolvedLilySdkConfig = {
-    baseUrl: new URL('https://api.example.com/'),
-    timeoutMs: 5000,
-    retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
-    defaultHeaders: {},
-    userAgent: 'test-agent',
-    fetch: vi.fn(),
-  };
+  let mockFetch: ReturnType<typeof vi.fn>;
+  let config: ResolvedLilySdkConfig;
 
-  it('cancels request when external signal is aborted before completion', async () => {
+  beforeEach(() => {
+    mockFetch = vi.fn();
+    config = {
+      baseUrl: new URL('https://api.example.com'),
+      timeoutMs: 5000,
+      retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
+      defaultHeaders: {},
+      userAgent: 'test-agent',
+      fetch: mockFetch as unknown as typeof globalThis.fetch,
+    };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('cancels request when external signal is aborted', async () => {
     const controller = new AbortController();
-    const mockFetch = vi.fn().mockImplementation(() => {
+    mockFetch.mockImplementation((_url: string, init: RequestInit) => {
       return new Promise((_resolve, reject) => {
-        setTimeout(() => {
-          reject(new DOMException('The operation was aborted.', 'AbortError'));
-        }, 10);
+        init.signal?.addEventListener('abort', () => {
+          const error = new Error('The operation was aborted');
+          error.name = 'AbortError';
+          reject(error);
+        });
       });
     });
 
-    const config = {
-      ...baseConfig,
-      fetch: mockFetch as unknown as typeof fetch,
-    };
     const client = createFetchHttpClient(config);
+    const promise = client.request({ method: 'GET', path: '/test', signal: controller.signal });
 
-    const promise = client.request({
-      method: 'GET',
-      path: '/test',
-      signal: controller.signal,
-    });
-
-    controller.abort();
+    setTimeout(() => controller.abort(), 10);
 
     await expect(promise).rejects.toThrow(LilyTransportError);
     try {
       await promise;
-    } catch (e) {
-      expect((e as LilyTransportError).code).toBe('CANCELLED');
+    } catch (error) {
+      expect((error as LilyTransportError).code).toBe('CANCELLED');
     }
   });
 
@@ -49,53 +52,37 @@ describe('HttpRequest.signal support', () => {
     const controller = new AbortController();
     controller.abort();
 
-    const mockFetch = vi.fn();
-    const config = {
-      ...baseConfig,
-      fetch: mockFetch as unknown as typeof fetch,
-    };
     const client = createFetchHttpClient(config);
-
-    const promise = client.request({
-      method: 'GET',
-      path: '/test',
-      signal: controller.signal,
-    });
+    const promise = client.request({ method: 'GET', path: '/test', signal: controller.signal });
 
     await expect(promise).rejects.toThrow(LilyTransportError);
     try {
       await promise;
-    } catch (e) {
-      expect((e as LilyTransportError).code).toBe('CANCELLED');
+    } catch (error) {
+      expect((error as LilyTransportError).code).toBe('CANCELLED');
     }
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it('distinguishes timeout abort from external cancel', async () => {
-    const mockFetch = vi.fn().mockImplementation(() => {
+  it('distinguishes timeout from external cancellation', async () => {
+    mockFetch.mockImplementation((_url: string, init: RequestInit) => {
       return new Promise((_resolve, reject) => {
-        setTimeout(() => {
-          reject(new DOMException('The operation was aborted.', 'AbortError'));
-        }, 20);
+        init.signal?.addEventListener('abort', () => {
+          const error = new Error('The operation was aborted');
+          error.name = 'AbortError';
+          reject(error);
+        });
       });
     });
 
-    const config = {
-      ...baseConfig,
-      timeoutMs: 5,
-      fetch: mockFetch as unknown as typeof fetch,
-    };
-    const client = createFetchHttpClient(config);
-
-    const promise = client.request({
-      method: 'GET',
-      path: '/test',
-    });
+    const client = createFetchHttpClient({ ...config, timeoutMs: 10 });
+    const promise = client.request({ method: 'GET', path: '/test' });
 
     await expect(promise).rejects.toThrow(LilyTransportError);
     try {
       await promise;
-    } catch (e) {
-      expect((e as LilyTransportError).code).toBe('TIMEOUT');
+    } catch (error) {
+      expect((error as LilyTransportError).code).toBe('TIMEOUT');
     }
   });
 });

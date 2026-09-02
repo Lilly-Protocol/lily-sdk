@@ -1,3 +1,4 @@
+import { encodePathSegment } from '../http/path';
 import type {
   ProvisionWalletRequest,
   Wallet,
@@ -20,7 +21,7 @@ export class WalletClient extends BaseClient implements WalletClientContract {
   public get(walletId: string): Promise<Wallet> {
     return this.request({
       method: 'GET',
-      path: `/v1/wallets/${walletId}`,
+      path: `/v1/wallets/${encodePathSegment(walletId)}`,
     });
   }
 }
