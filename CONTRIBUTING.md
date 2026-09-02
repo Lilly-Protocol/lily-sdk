@@ -51,19 +51,66 @@ npm run test
 
 ## Adding a New Client (Contract-Driven Pattern)
 
-Lily SDK uses a contract-driven architecture to keep clients consistent, testable, and easy to extend. Follow these five steps when adding a new client:
+Lily SDK uses a contract-driven architecture to ensure consistency across all domain clients. Follow this five-step pattern when adding new functionality:
 
-1. **Define the contract** in `src/types/contracts.ts`. Create an interface (e.g., `NewClientContract`) that lists every public method the client will expose. Use existing interfaces like `AgentClientContract` or `PaymentClientContract` as templates for naming and JSDoc style.
+### 1. Define the Contract
 
-2. **Add models** in `src/models/`. Define request and response types needed by the contract. Export them from `src/models/index.ts` so they can be imported by both the contract file and the implementation.
+Add a new interface to `src/types/contracts.ts` that extends or mirrors existing client contracts:
 
-3. **Implement the client** in `src/clients/new-client.ts`. Extend `BaseClient` from `src/clients/base-client.ts` and implement the contract interface. Use `this.request<TResponse, TRequest>()` for all HTTP calls — never call `httpClient` directly. Keep methods focused and avoid leaking transport details into business logic.
+```ts
+export interface NewFeatureClientContract {
+  list(params?: ListParams): Promise<ListResponse>;
+  create(data: CreateRequest): Promise<CreateResponse>;
+}
+```
 
-4. **Register in the SDK.** Import the new client in `src/sdk.ts`, add it as a public readonly property on `LilySdk`, and instantiate it in the constructor alongside the existing clients. Also export the client class from `src/index.ts` so consumers can import it directly if needed.
+### 2. Add Domain Models
 
-5. **Add tests** in `tests/`. Place test files directly in the `tests/` directory (no subdirectories). Mock `HttpClient` using classes that implement the interface rather than object literals with `vi.fn()` to satisfy `@typescript-eslint/unbound-method`. Cover happy paths, error responses, and edge cases defined by the contract.
+Create request/response types in `src/models/new-feature.ts` and export them from `src/models/index.ts`:
 
-Following this pattern ensures new clients are discoverable, type-safe, and consistent with the rest of the SDK surface area.
+```ts
+export interface CreateRequest { /* ... */ }
+export interface CreateResponse { /* ... */ }
+```
+
+### 3. Implement via BaseClient
+
+Create `src/clients/new-feature-client.ts` extending `BaseClient`:
+
+```ts
+import { BaseClient } from './base-client';
+import type { NewFeatureClientContract } from '../types/contracts';
+
+export class NewFeatureClient extends BaseClient implements NewFeatureClientContract {
+  async list(params?: ListParams) {
+    return this.request({ method: 'GET', path: '/new-feature', query: params });
+  }
+}
+```
+
+### 4. Register in LilySdk
+
+Update `src/sdk.ts` to compose the new client and expose it as a public property:
+
+```ts
+this.newFeature = new NewFeatureClient(this.transport);
+```
+
+Export relevant symbols from `src/index.ts`.
+
+### 5. Add Tests
+
+Write unit tests in `tests/new-feature.test.ts` covering happy paths, error cases, and contract compliance. Use stubbed fetch for deterministic results.
+
+### Checklist for New Clients
+
+- [ ] Contract defined in `src/types/contracts.ts`
+- [ ] Models added to `src/models/` and re-exported
+- [ ] Client implements contract via `BaseClient`
+- [ ] Registered in `LilySdk` constructor (`src/sdk.ts`)
+- [ ] Public exports updated in `src/index.ts`
+- [ ] Unit tests cover success, error, and edge cases
+- [ ] README or docs updated if user-facing behavior changes
 
 ## Pull Requests
 
@@ -71,3 +118,62 @@ Following this pattern ensures new clients are discoverable, type-safe, and cons
 - Link related issues when possible.
 - Call out breaking changes explicitly.
 - Include follow-up work if you intentionally defer part of the implementation.
+
+## Architecture: Adding a New Client
+
+Lily SDK uses a contract-driven pattern to ensure consistency and testability across all API clients. When adding support for a new Lily service or endpoint group, follow this five-step checklist:
+
+### 1. Define the Contract
+
+Add a new interface to `src/types/contracts.ts` that extends the logical grouping of operations. Contracts define the public shape of the client without tying it to HTTP details:
+
+```ts
+export interface ExampleClientContract {
+  list(query?: ListExamplesQuery): Promise<readonly Example[]>;
+  get(id: string): Promise<Example>;
+  create(input: CreateExampleRequest): Promise<Example>;
+}
+```
+
+### 2. Add Models
+
+Create request/response types in `src/models/` and re-export them from `src/models/index.ts`. Keep models pure data structures; validation and transformation belong in the client or config layer.
+
+### 3. Implement the Client
+
+Create `src/clients/example-client.ts` extending `BaseClient`. Use `this.request()` for all HTTP calls so retry, timeout, and transport logic stay centralized:
+
+```ts
+import { BaseClient } from './base-client';
+import type { ExampleClientContract } from '../types/contracts';
+
+export class ExampleClient extends BaseClient implements ExampleClientContract {
+  public async list(query?: ListExamplesQuery): Promise<readonly Example[]> {
+    return this.request({ method: 'GET', path: '/examples', query });
+  }
+}
+```
+
+### 4. Register in the SDK
+
+Export the new client from `src/index.ts` and add it as a property in `src/sdk.ts`:
+
+```ts
+// src/sdk.ts
+this.example = new ExampleClient(resolvedHttpClient);
+```
+
+This ensures every `LilySdk` instance exposes the new client with the shared transport and configuration.
+
+### 5. Add Tests
+
+Write unit tests in `tests/example-client.test.ts` using the stubbed `HttpClient` pattern established by existing tests. Cover success paths, error propagation, and edge cases like empty responses or non-JSON payloads.
+
+### Why This Pattern Matters
+
+- **Consistency**: Every client follows the same lifecycle, making the SDK predictable.
+- **Testability**: Contracts allow mocking at the interface level without HTTP coupling.
+- **Maintainability**: Transport concerns (retries, timeouts, auth) live in `BaseClient` and `HttpClient`, not duplicated per endpoint.
+- **Discoverability**: New contributors can trace from contract → model → client → SDK registration without guessing.
+
+See `src/types/contracts.ts`, `src/clients/base-client.ts`, and `src/sdk.ts` for reference implementations.
