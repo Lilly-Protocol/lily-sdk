@@ -3,9 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   BaseClient,
   LilyAuthenticationError,
+  LilyApiError,
   LilySdk,
   createFetchHttpClient,
   LilyTransportError,
+  resolveLilySdkConfig,
 } from '../src/index';
 import { createMockHttpClient } from './helpers/mock-http-client';
 

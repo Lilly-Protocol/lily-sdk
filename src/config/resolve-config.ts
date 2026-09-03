@@ -1,8 +1,10 @@
 import type { LilySdkConfig, ResolvedLilySdkConfig } from './types';
 import { LilyConfigError } from '../errors/sdk-error';
+import { VERSION } from '../version';
 import type { RetryPolicy } from '../http/types';
 
 const DEFAULT_TIMEOUT_MS = 10_000;
+const DEFAULT_USER_AGENT = `lily-sdk/${VERSION}`;
 const DEFAULT_RETRY_POLICY: RetryPolicy = {
   retries: 2,
   retryDelayMs: 250,
@@ -41,7 +43,7 @@ export function resolveLilySdkConfig(
     defaultHeaders: Object.freeze({
       ...config.defaultHeaders,
     }),
-    userAgent: config.userAgent ?? 'lily-sdk',
+    userAgent: config.userAgent ?? DEFAULT_USER_AGENT,
     fetch: fetchImpl,
     ...(resolvedApiKey ? { apiKey: resolvedApiKey } : {}),
     ...(resolvedAuthToken ? { authToken: resolvedAuthToken } : {}),

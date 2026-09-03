@@ -95,6 +95,7 @@ describe('fetch-http-client coverage matrix', () => {
     const client = createFetchHttpClient(config);
 
     const promise = client.request({ method: 'GET', path: '/fail' });
+    const assertion = expect(promise).rejects.toBeInstanceOf(LilyApiError);
     
     // Advance timers for each retry delay
     await vi.advanceTimersByTimeAsync(1);
@@ -103,7 +104,7 @@ describe('fetch-http-client coverage matrix', () => {
     // Ensure all pending promises settle before asserting
     await vi.runAllTimersAsync();
 
-    await expect(promise).rejects.toBeInstanceOf(LilyApiError);
+    await assertion;
     expect(config.fetch).toHaveBeenCalledTimes(3);
   });
 
@@ -132,6 +133,7 @@ describe('fetch-http-client coverage matrix', () => {
     const client = createFetchHttpClient(config);
 
     const promise = client.request({ method: 'GET', path: '/net' });
+    const assertion = expect(promise).rejects.toBeInstanceOf(LilyTransportError);
     
     // Advance timer for retry delay
     await vi.advanceTimersByTimeAsync(1);
@@ -139,7 +141,7 @@ describe('fetch-http-client coverage matrix', () => {
     // Settle remaining microtasks/promises
     await vi.runAllTimersAsync();
 
-    await expect(promise).rejects.toBeInstanceOf(LilyTransportError);
+    await assertion;
     expect(config.fetch).toHaveBeenCalledTimes(2);
   });
 

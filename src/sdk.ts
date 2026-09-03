@@ -11,6 +11,7 @@ import type { HttpClient, HttpRequest } from './http/types';
 export class LilySdk {
   public readonly config: ResolvedLilySdkConfig;
   private readonly httpClient: HttpClient;
+  public get http(): HttpClient { return this.httpClient; }
   public readonly agents: AgentClient;
   public readonly wallets: WalletClient;
   public readonly payments: PaymentClient;
@@ -47,7 +48,8 @@ export class LilySdk {
       options?.baseUrl ??
       (typeof process !== 'undefined'
         ? process.env.LILY_API_URL ?? process.env.LILY_BASE_URL
-        : undefined);
+        : undefined) ??
+      'https://api.lilyprotocol.org';
 
     if (!baseUrl) {
       throw new Error(

@@ -1,6 +1,8 @@
 import type { ResolvedLilySdkConfig } from '../config/types';
 import type { HttpHeaders } from './types';
 
+export const toHeaders = resolveAuthHeaders;
+
 export function resolveAuthHeaders(config: ResolvedLilySdkConfig): HttpHeaders {
   const headers: HttpHeaders = {};
 
