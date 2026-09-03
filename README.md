@@ -231,6 +231,27 @@ Run the example:
 npm run example
 ```
 
+## Error Handling
+
+All SDK errors extend `LilySdkError`. Use `isLilySdkError` to safely narrow an
+unknown caught value and `LILY_ERROR_CODES` to compare transport error codes
+without hardcoded strings:
+
+```ts
+import { isLilySdkError, LILY_ERROR_CODES } from '@lily-protocol/sdk';
+
+try {
+  await sdk.system.health();
+} catch (error) {
+  if (isLilySdkError(error) && error.code === LILY_ERROR_CODES.TIMEOUT) {
+    // Handle a request timeout.
+  }
+}
+```
+
+The transport uses `API_ERROR`, `AUTHENTICATION_ERROR`, `TIMEOUT`, and
+`TRANSPORT_ERROR`. Their typed values are available from `LILY_ERROR_CODES`.
+
 ## Design Notes
 
 - `LilySdk` composes a shared transport with focused domain clients instead of exposing a single massive client surface. The resolved `HttpClient` is also available as `sdk.http` for one-off raw requests that must reuse the SDK's transport and config.

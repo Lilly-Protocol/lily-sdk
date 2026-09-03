@@ -1,6 +1,7 @@
 import type { ResolvedLilySdkConfig } from '../config/types';
 import { resolveAuthHeaders } from './resolve-auth-headers';
 import {
+  LILY_ERROR_CODES,
   LilyApiError,
   LilyAuthenticationError,
   LilyTransportError,
@@ -74,7 +75,7 @@ export function createFetchHttpClient(
 
           if (response.status === 401 || response.status === 403) {
             throw new LilyAuthenticationError('Authentication failed for Lily Protocol API.', {
-              code: 'AUTHENTICATION_ERROR',
+              code: LILY_ERROR_CODES.AUTHENTICATION_ERROR,
               statusCode: response.status,
               details: data,
               request: { method: request.method, path: request.path, url: url.toString() },
@@ -100,7 +101,7 @@ export function createFetchHttpClient(
           }
 
           throw new LilyApiError('Lily Protocol API request failed.', {
-            code: 'API_ERROR',
+            code: LILY_ERROR_CODES.API_ERROR,
             statusCode: response.status,
             details: data,
             request: { method: request.method, path: request.path, url: url.toString() },
@@ -120,7 +121,7 @@ export function createFetchHttpClient(
 
           if (error instanceof Error && error.name === 'AbortError') {
             throw new LilyTransportError('Request timed out while calling Lily Protocol API.', {
-              code: 'TIMEOUT',
+              code: LILY_ERROR_CODES.TIMEOUT,
               cause: error,
               request: { method: request.method, path: request.path, url: url.toString() },
             });
@@ -133,7 +134,7 @@ export function createFetchHttpClient(
           }
 
           throw new LilyTransportError('Network error while calling Lily Protocol API.', {
-            code: 'TRANSPORT_ERROR',
+            code: LILY_ERROR_CODES.TRANSPORT_ERROR,
             cause: error,
             request: { method: request.method, path: request.path, url: url.toString() },
           });

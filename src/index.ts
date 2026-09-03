@@ -6,6 +6,7 @@ export type {
 } from './config/types';
 export { resolveLilySdkConfig } from './config/resolve-config';
 export {
+  LILY_ERROR_CODES,
   LilySdkError,
   LilyConfigError,
   LilyApiError,
@@ -15,6 +16,7 @@ export {
   LILY_ERROR_CODES,
   isLilySdkError,
 } from './errors/sdk-error';
+export type { LilyErrorCode } from './errors/sdk-error';
 export { AgentClient } from './clients/agent-client';
 export { IdentityClient } from './clients/identity-client';
 export { PaymentClient } from './clients/payment-client';
