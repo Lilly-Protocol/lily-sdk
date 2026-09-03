@@ -1,6 +1,11 @@
 import type { AuditMetadata, MoneyAmount } from './common';
 
-export type PaymentStatus = 'queued' | 'processing' | 'submitted' | 'settled' | 'failed';
+export type PaymentStatus =
+  | 'queued'
+  | 'processing'
+  | 'submitted'
+  | 'settled'
+  | 'failed';
 
 export interface Payment extends AuditMetadata {
   id: string;
@@ -29,5 +34,6 @@ export interface ExecutePaymentRequest {
   toAddress: string;
   amount: MoneyAmount;
   memo?: string;
+  /** Sent as the `Idempotency-Key` header when the payment is executed. */
   idempotencyKey?: string;
 }
