@@ -1,0 +1,13 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+    patch:
+      default:
+        target: auto
+        informational: false
+
+comment:
+  layout: "reach,diff,flags,files"
+  require_changes: true
