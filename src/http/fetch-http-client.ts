@@ -34,7 +34,7 @@ export function createFetchHttpClient(
         if (request.signal) {
           if (request.signal.aborted) {
             throw new LilyTransportError('Request cancelled by caller.', {
-              code: 'CANCELLED',
+              code: LILY_ERROR_CODES.CANCELLED,
               cause: request.signal.reason ?? new Error('Aborted'),
             });
           }
@@ -247,7 +247,7 @@ async function parseResponse(response: Response): Promise<unknown> {
       throw new LilyValidationError(
         `Failed to parse response body as JSON (status ${response.status}, content-type: ${contentType}).`,
         {
-          code: 'RESPONSE_VALIDATION_ERROR',
+          code: LILY_ERROR_CODES.RESPONSE_VALIDATION_ERROR,
           statusCode: response.status,
           cause: error,
         },
