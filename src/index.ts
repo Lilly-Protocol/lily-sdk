@@ -37,4 +37,14 @@ export type {
   RetryPolicy,
 } from './http/types';
 export { createFetchHttpClient } from './http/fetch-http-client';
+export { MockHttpClient, createMockHttpClient } from './testing';
+export type {
+  MockAssertionHook,
+  MockHttpClientOptions,
+  MockHttpHandler,
+  MockRequestMatcher,
+  MockResponseStub,
+  MockStubResponse,
+  RecordedHttpRequest,
+} from './testing';
 export * from './models';

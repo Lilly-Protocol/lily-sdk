@@ -64,6 +64,7 @@ describe('API report snapshot (issue #95)', () => {
       'errors.d.ts',
       'http.d.ts',
       'models.d.ts',
+      'testing.d.ts',
       'types.d.ts',
     ];
     for (const file of subpaths) {
