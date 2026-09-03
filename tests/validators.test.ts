@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateMoneyAmount, validateMemo } from '../src/models/validators';
+import { validateMoneyAmount, validateMemo } from '../src/validation';
 import { LilyValidationError } from '../src/errors/sdk-error';
 
 describe('validateMoneyAmount', () => {
