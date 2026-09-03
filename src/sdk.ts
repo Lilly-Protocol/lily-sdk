@@ -60,7 +60,7 @@ export class LilySdk {
 
     if (!baseUrl) {
       throw new Error(
-        'baseUrl is required. Pass it in options or set the LILY_API_URL environment variable.',
+        'baseUrl is required. Pass it in options or set the LILY_API_URL or LILY_BASE_URL environment variable.',
       );
     }
 
