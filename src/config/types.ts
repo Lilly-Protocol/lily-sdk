@@ -1,7 +1,7 @@
 import type { RetryPolicy } from '../http/types';
 
 export interface LilySdkConfig {
-  baseUrl: string;
+  baseUrl?: string;
   apiKey?: string;
   authToken?: string;
   timeoutMs?: number;
@@ -9,6 +9,12 @@ export interface LilySdkConfig {
   defaultHeaders?: Record<string, string>;
   userAgent?: string;
   fetch?: typeof globalThis.fetch;
+  /** Enable runtime response validation for known models. Default: false. */
+  validateResponses?: boolean;
+}
+
+export interface LilySdkCreateOptions extends Omit<LilySdkConfig, 'baseUrl'> {
+  baseUrl?: string;
 }
 
 export interface ResolvedLilySdkConfig {
@@ -20,4 +26,5 @@ export interface ResolvedLilySdkConfig {
   readonly defaultHeaders: Readonly<Record<string, string>>;
   readonly userAgent: string;
   readonly fetch: typeof globalThis.fetch;
+  readonly validateResponses?: boolean;
 }
