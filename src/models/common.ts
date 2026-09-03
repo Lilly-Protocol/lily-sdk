@@ -66,18 +66,136 @@ export interface MoneyAmount {
   amount: string;
 }
 
-export type ResourceStatus = 'pending' | 'active' | 'inactive' | 'failed' | 'paused';
+export type ResourceStatus =
+  | 'pending'
+  | 'active'
+  | 'inactive'
+  | 'failed'
+  | 'paused';
+
+export interface NormalizeMoneyAmountOptions {
+  /**
+   * Target decimal scale between 0 and 7.
+   * If omitted, preserves all fractional digits up to 7 (minimum 2 decimal places).
+   */
+  scale?: number;
+
+  /**
+   * When true, rounds to the specified scale using half-up rounding instead of truncating.
+   * @default false
+   */
+  round?: boolean;
+}
 
 /**
- * Normalizes a decimal string amount to exactly two decimal places.
+ * Normalizes a decimal string amount, preserving up to 7 fractional digits (Stellar stroops)
+ * or formatting to an explicit target scale.
  *
- * Leading zeros are stripped and the fractional part is truncated (not
- * rounded) to two digits and padded with trailing zeros, e.g.
- * `'0075.5'` becomes `'75.50'`. The input object is not mutated.
+ * Leading zeros on the integer part are stripped (e.g. `'0075.5'` becomes `'75.50'`).
+ * When no scale is specified, fractional values with fewer than two digits are padded
+ * to two places, and sub-cent precision up to 7 digits is preserved without truncation.
+ *
+ * When an explicit scale is provided, excess decimal places are truncated by default,
+ * or rounded half-up when `round` is true. Amounts exceeding Stellar's 7-decimal limit
+ * are rounded to 7 decimal places.
+ *
+ * @param input - The MoneyAmount object to normalize. The input object is not mutated.
+ * @param scaleOrOptions - Explicit target scale (0-7) or normalization options object.
+ * @param options - Additional options when scale is passed as a number.
+ * @returns A new MoneyAmount object with normalized amount string.
+ * @throws {RangeError} When scale is not an integer between 0 and 7.
+ *
+ * @example
+ * ```ts
+ * normalizeMoneyAmount({ assetCode: 'USDC', amount: '100' });
+ * // => { assetCode: 'USDC', amount: '100.00' }
+ *
+ * normalizeMoneyAmount({ assetCode: 'XLM', amount: '0.0000001' });
+ * // => { assetCode: 'XLM', amount: '0.0000001' }
+ *
+ * normalizeMoneyAmount({ assetCode: 'USDC', amount: '1.234567' }, 2);
+ * // => { assetCode: 'USDC', amount: '1.23' }
+ *
+ * normalizeMoneyAmount({ assetCode: 'USDC', amount: '1.235' }, 2, { round: true });
+ * // => { assetCode: 'USDC', amount: '1.24' }
+ * ```
  */
-export function normalizeMoneyAmount(input: MoneyAmount): MoneyAmount {
+export function normalizeMoneyAmount(
+  input: MoneyAmount,
+  scaleOrOptions?: number | NormalizeMoneyAmountOptions,
+  options?: NormalizeMoneyAmountOptions,
+): MoneyAmount {
+  let targetScale: number | undefined;
+  let round = false;
+
+  if (typeof scaleOrOptions === 'number') {
+    targetScale = scaleOrOptions;
+    round = options?.round ?? false;
+  } else if (typeof scaleOrOptions === 'object') {
+    targetScale = scaleOrOptions.scale;
+    round = scaleOrOptions.round ?? false;
+  }
+
+  if (
+    targetScale !== undefined &&
+    (!Number.isInteger(targetScale) || targetScale < 0 || targetScale > 7)
+  ) {
+    throw new RangeError(
+      `Scale must be an integer between 0 and 7. Got ${String(targetScale)}.`,
+    );
+  }
+
   const [wholeRaw = '', fractionRaw = ''] = input.amount.split('.');
-  const whole = wholeRaw.replace(/^0+(?=\d)/, '');
-  const fraction = fractionRaw.slice(0, 2).padEnd(2, '0');
-  return { ...input, amount: `${whole}.${fraction}` };
+  const wholeClean = wholeRaw.replace(/^0+(?=\d)/, '') || '0';
+
+  let normalizedAmount: string;
+
+  if (targetScale === undefined) {
+    if (fractionRaw.length < 2) {
+      normalizedAmount = `${wholeClean}.${fractionRaw.padEnd(2, '0')}`;
+    } else if (fractionRaw.length <= 7) {
+      normalizedAmount = `${wholeClean}.${fractionRaw}`;
+    } else {
+      normalizedAmount = roundDecimal(wholeClean, fractionRaw, 7);
+    }
+  } else if (targetScale === 0) {
+    if (!round) {
+      normalizedAmount = wholeClean;
+    } else {
+      normalizedAmount = roundDecimal(wholeClean, fractionRaw, 0);
+    }
+  } else if (!round) {
+    const fraction = fractionRaw.slice(0, targetScale).padEnd(targetScale, '0');
+    normalizedAmount = `${wholeClean}.${fraction}`;
+  } else {
+    normalizedAmount = roundDecimal(wholeClean, fractionRaw, targetScale);
+  }
+
+  return { ...input, amount: normalizedAmount };
+}
+
+function roundDecimal(whole: string, fraction: string, scale: number): string {
+  if (fraction.length <= scale) {
+    return scale === 0 ? whole : `${whole}.${fraction.padEnd(scale, '0')}`;
+  }
+
+  const nextDigit = Number(fraction[scale]);
+  if (nextDigit < 5) {
+    return scale === 0 ? whole : `${whole}.${fraction.slice(0, scale)}`;
+  }
+
+  const truncatedFraction = fraction.slice(0, scale);
+  const combined = `${whole}${truncatedFraction}`;
+  const incremented = (BigInt(combined) + BigInt(1)).toString();
+
+  if (scale === 0) {
+    return incremented;
+  }
+
+  if (incremented.length <= scale) {
+    const padded = incremented.padStart(scale + 1, '0');
+    return `${padded.slice(0, -scale)}.${padded.slice(-scale)}`;
+  }
+
+  return `${incremented.slice(0, -scale)}.${incremented.slice(-scale)}`;
 }
