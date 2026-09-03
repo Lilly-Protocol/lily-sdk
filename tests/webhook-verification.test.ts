@@ -57,7 +57,10 @@ describe('Webhook signature verification (issue #70)', () => {
   describe('verifyWebhookJSON', () => {
     it('verifies parsed JSON object', () => {
       const data = { event: 'payment.completed', data: { id: 'pm_123' } };
-      const payload = JSON.stringify(data);
+      const payload = JSON.stringify({
+        data: { id: 'pm_123' },
+        event: 'payment.completed',
+      });
       const signature = sign(payload, SECRET);
       expect(verifyWebhookJSON(data, signature, SECRET)).toBe(true);
     });

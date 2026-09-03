@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual} from '"'"'node:crypto'"'"';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
 /**
  * Recursively sorts object keys for canonical JSON serialization.
@@ -7,7 +7,7 @@ function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(canonicalize);
   }
-  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
     const sorted: Record<string, unknown> = {};
     for (const key of Object.keys(value as Record<string, unknown>).sort()) {
       sorted[key] = canonicalize((value as Record<string, unknown>)[key]);
@@ -28,9 +28,9 @@ export function verifyWebhookSignature(
   if (!signature || !secret) {
     return false;
   }
-  const expected = createHmac("sha256", secret).update(payload).digest("hex");
-  const expectedBuf = Buffer.from(expected, "hex");
-  const providedBuf = Buffer.from(signature, "hex");
+  const expected = createHmac('sha256', secret).update(payload).digest('hex');
+  const expectedBuf = Buffer.from(expected, 'hex');
+  const providedBuf = Buffer.from(signature, 'hex');
   if (expectedBuf.length !== providedBuf.length) {
     return false;
   }
@@ -61,15 +61,15 @@ export function parseWebhookHeader(header: string): {
   if (!header) {
     return { timestamp: null, signature: null };
   }
-  const parts = header.split(",");
+  const parts = header.split(',');
   let timestamp: number | null = null;
   let signature: string | null = null;
   for (const part of parts) {
-    const [key, value] = part.split("=");
-    if (key?.trim() === "t") {
-      const parsed = parseInt(value?.trim() ?? "", 10);
+    const [key, value] = part.split('=');
+    if (key?.trim() === 't') {
+      const parsed = parseInt(value?.trim() ?? '', 10);
       timestamp = Number.isFinite(parsed) ? parsed : null;
-    } else if (key?.trim() === "v1") {
+    } else if (key?.trim() === 'v1') {
       signature = value?.trim() ?? null;
     }
   }
@@ -94,6 +94,6 @@ export function verifyWebhookWithReplay(
   if (age > toleranceMs) {
     return false;
   }
-  const signedPayload = `${timestamp}.${payload instanceof Buffer ? payload.toString("utf8") : payload}`;
+  const signedPayload = `${timestamp}.${payload instanceof Buffer ? payload.toString('utf8') : payload}`;
   return verifyWebhookSignature(signedPayload, signature, secret);
 }
