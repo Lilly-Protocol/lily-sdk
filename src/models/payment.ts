@@ -1,11 +1,7 @@
 import type { AuditMetadata, MoneyAmount } from './common';
 
 export type PaymentStatus =
-  | 'queued'
-  | 'processing'
-  | 'submitted'
-  | 'settled'
-  | 'failed';
+  'queued' | 'processing' | 'submitted' | 'settled' | 'failed';
 
 export interface Payment extends AuditMetadata {
   id: string;
