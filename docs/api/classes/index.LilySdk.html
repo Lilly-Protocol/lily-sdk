@@ -12,7 +12,7 @@
 <li><a href="" aria-current="page">LilySdk</a></li></ul>
 <h1>Class LilySdk</h1></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/rafaio1/lily-sdk/blob/7cddc1c80a71ff898e37da242a92a7b85a3fe409/src/sdk.ts#L11">src/sdk.ts:11</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/Lilly-Protocol/lily-sdk/blob/main/src/sdk.ts#L14">src/sdk.ts:14</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -26,10 +26,22 @@
 <h3 class="tsd-index-heading tsd-anchor-link" id="properties">Properties<a href="#properties" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-index-list"><a href="#agents" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>agents</span></a>
 <a href="#config" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>config</span></a>
+<a href="#httpclient" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>http<wbr/>Client</span></a>
 <a href="#identity" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>identity</span></a>
 <a href="#payments" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>payments</span></a>
 <a href="#system" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>system</span></a>
 <a href="#wallets" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>wallets</span></a>
+<a href="#version" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>version</span></a>
+</div></section>
+<section class="tsd-index-section">
+<h3 class="tsd-index-heading tsd-anchor-link" id="accessors">Accessors<a href="#accessors" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-index-list"><a href="#http" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Accessor"><use href="../assets/icons.svg#icon-262144"></use></svg><span>http</span></a>
+</div></section>
+<section class="tsd-index-section">
+<h3 class="tsd-index-heading tsd-anchor-link" id="methods">Methods<a href="#methods" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-index-list"><a href="#request" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>request</span></a>
+<a href="#withconfig" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>with<wbr/>Config</span></a>
+<a href="#create" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>create</span></a>
 </div></section></div></details></section></section>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Constructors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="constructors-1">Constructors<a href="#constructors-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
@@ -38,16 +50,16 @@
 <h3 class="tsd-anchor-link" id="constructor"><span>constructor</span><a href="#constructor" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
-<div class="tsd-signature tsd-anchor-link" id="constructorlilysdk"><span class="tsd-signature-keyword">new</span> <span class="tsd-kind-constructor-signature">LilySdk</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">config</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/index.LilySdkConfig.html" class="tsd-signature-type tsd-kind-interface">LilySdkConfig</a><span class="tsd-signature-symbol">,</span> <span class="tsd-kind-parameter">httpClient</span><span class="tsd-signature-symbol">?:</span> <a href="../interfaces/index.HttpClient.html" class="tsd-signature-type tsd-kind-interface">HttpClient</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="" class="tsd-signature-type tsd-kind-class">LilySdk</a><a href="#constructorlilysdk" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-signature tsd-anchor-link" id="constructorlilysdk"><span class="tsd-signature-keyword">new</span> <span class="tsd-kind-constructor-signature">LilySdk</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">config</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/index.LilySdkConfig.html" class="tsd-signature-type tsd-kind-interface">LilySdkConfig</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span> <span class="tsd-kind-parameter">httpClient</span><span class="tsd-signature-symbol">?:</span> <a href="../interfaces/index.HttpClient.html" class="tsd-signature-type tsd-kind-interface">HttpClient</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="" class="tsd-signature-type tsd-kind-class">LilySdk</a><a href="#constructorlilysdk" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
 <ul class="tsd-parameter-list">
-<li><span><span class="tsd-kind-parameter">config</span>: <a href="../interfaces/index.LilySdkConfig.html" class="tsd-signature-type tsd-kind-interface">LilySdkConfig</a></span></li>
+<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">config</span>: <span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/index.LilySdkConfig.html" class="tsd-signature-type tsd-kind-interface">LilySdkConfig</a><span class="tsd-signature-symbol">&gt;</span></span></li>
 <li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">httpClient</span>: <a href="../interfaces/index.HttpClient.html" class="tsd-signature-type tsd-kind-interface">HttpClient</a></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">LilySdk</a></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/rafaio1/lily-sdk/blob/7cddc1c80a71ff898e37da242a92a7b85a3fe409/src/sdk.ts#L19">src/sdk.ts:19</a></li></ul></aside></div></li></ul></section></section></details>
+<li>Defined in <a href="https://github.com/Lilly-Protocol/lily-sdk/blob/main/src/sdk.ts#L28">src/sdk.ts:28</a></li></ul></aside></div></li></ul></section></section></details>
 <details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Properties"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
 <h2 class="tsd-anchor-link" id="properties-1">Properties<a href="#properties-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
 <section>
@@ -55,32 +67,118 @@
 <h3 class="tsd-anchor-link" id="agents"><code class="tsd-tag">Readonly</code><span>agents</span><a href="#agents" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">agents</span><span class="tsd-signature-symbol">:</span> <a href="index.AgentClient.html" class="tsd-signature-type tsd-kind-class">AgentClient</a></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/rafaio1/lily-sdk/blob/7cddc1c80a71ff898e37da242a92a7b85a3fe409/src/sdk.ts#L13">src/sdk.ts:13</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/Lilly-Protocol/lily-sdk/blob/main/src/sdk.ts#L22">src/sdk.ts:22</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="config"><code class="tsd-tag">Readonly</code><span>config</span><a href="#config" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">config</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/index.ResolvedLilySdkConfig.html" class="tsd-signature-type tsd-kind-interface">ResolvedLilySdkConfig</a></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/rafaio1/lily-sdk/blob/7cddc1c80a71ff898e37da242a92a7b85a3fe409/src/sdk.ts#L12">src/sdk.ts:12</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/Lilly-Protocol/lily-sdk/blob/main/src/sdk.ts#L17">src/sdk.ts:17</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="httpclient"><code class="tsd-tag">Readonly</code><span>http<wbr/>Client</span><a href="#httpclient" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">httpClient</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/index.HttpClient.html" class="tsd-signature-type tsd-kind-interface">HttpClient</a></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/Lilly-Protocol/lily-sdk/blob/main/src/sdk.ts#L18">src/sdk.ts:18</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="identity"><code class="tsd-tag">Readonly</code><span>identity</span><a href="#identity" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">identity</span><span class="tsd-signature-symbol">:</span> <a href="index.IdentityClient.html" class="tsd-signature-type tsd-kind-class">IdentityClient</a></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/rafaio1/lily-sdk/blob/7cddc1c80a71ff898e37da242a92a7b85a3fe409/src/sdk.ts#L16">src/sdk.ts:16</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/Lilly-Protocol/lily-sdk/blob/main/src/sdk.ts#L25">src/sdk.ts:25</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="payments"><code class="tsd-tag">Readonly</code><span>payments</span><a href="#payments" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">payments</span><span class="tsd-signature-symbol">:</span> <a href="index.PaymentClient.html" class="tsd-signature-type tsd-kind-class">PaymentClient</a></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/rafaio1/lily-sdk/blob/7cddc1c80a71ff898e37da242a92a7b85a3fe409/src/sdk.ts#L15">src/sdk.ts:15</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/Lilly-Protocol/lily-sdk/blob/main/src/sdk.ts#L24">src/sdk.ts:24</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="system"><code class="tsd-tag">Readonly</code><span>system</span><a href="#system" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">system</span><span class="tsd-signature-symbol">:</span> <a href="index.SystemClient.html" class="tsd-signature-type tsd-kind-class">SystemClient</a></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/rafaio1/lily-sdk/blob/7cddc1c80a71ff898e37da242a92a7b85a3fe409/src/sdk.ts#L17">src/sdk.ts:17</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/Lilly-Protocol/lily-sdk/blob/main/src/sdk.ts#L26">src/sdk.ts:26</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="wallets"><code class="tsd-tag">Readonly</code><span>wallets</span><a href="#wallets" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">wallets</span><span class="tsd-signature-symbol">:</span> <a href="index.WalletClient.html" class="tsd-signature-type tsd-kind-class">WalletClient</a></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/rafaio1/lily-sdk/blob/7cddc1c80a71ff898e37da242a92a7b85a3fe409/src/sdk.ts#L14">src/sdk.ts:14</a></li></ul></aside></section></section></details></div>
+<li>Defined in <a href="https://github.com/Lilly-Protocol/lily-sdk/blob/main/src/sdk.ts#L23">src/sdk.ts:23</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="version"><code class="tsd-tag">Static</code> <code class="tsd-tag">Readonly</code><span>version</span><a href="#version" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">version</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> = SDK_VERSION</span></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/Lilly-Protocol/lily-sdk/blob/main/src/sdk.ts#L15">src/sdk.ts:15</a></li></ul></aside></section></section></details>
+<details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Accessors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
+<h2 class="tsd-anchor-link" id="accessors-1">Accessors<a href="#accessors-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
+<section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="http"><span>http</span><a href="#http" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li>
+<div class="tsd-signature" id="httphttp"><span class="tsd-signature-keyword">get</span> <span class="tsd-kind-get-signature">http</span><span class="tsd-signature-symbol">()</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/index.HttpClient.html" class="tsd-signature-type tsd-kind-interface">HttpClient</a></div>
+<div class="tsd-description">
+<h4 class="tsd-returns-title">Returns <a href="../interfaces/index.HttpClient.html" class="tsd-signature-type tsd-kind-interface">HttpClient</a></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/Lilly-Protocol/lily-sdk/blob/main/src/sdk.ts#L19">src/sdk.ts:19</a></li></ul></aside></div></li></ul></section></section></details>
+<details class="tsd-panel-group tsd-member-group tsd-accordion" open><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
+<h2 class="tsd-anchor-link" id="methods-1">Methods<a href="#methods-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h2></summary>
+<section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="request"><span>request</span><a href="#request" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="">
+<div class="tsd-signature tsd-anchor-link" id="request-1"><span class="tsd-kind-call-signature">request</span><span class="tsd-signature-symbol">&lt;</span><a class="tsd-signature-type tsd-kind-type-parameter" href="#requesttresponse">TResponse</a><span class="tsd-signature-symbol">,</span> <a class="tsd-signature-type tsd-kind-type-parameter" href="#requesttrequest">TRequest</a> <span class="tsd-signature-symbol">=</span> <span class="tsd-signature-type">unknown</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">request</span><span class="tsd-signature-symbol">:</span> <a href="../interfaces/index.HttpRequest.html" class="tsd-signature-type tsd-kind-interface">HttpRequest</a><span class="tsd-signature-symbol">&lt;</span><a class="tsd-signature-type tsd-kind-type-parameter" href="#requesttrequest">TRequest</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a class="tsd-signature-type tsd-kind-type-parameter" href="#requesttresponse">TResponse</a><span class="tsd-signature-symbol">&gt;</span><a href="#request-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Sends a typed request using the SDK's shared HttpClient and returns the
+parsed response data, mirroring the client method API.</p>
+</div>
+<section class="tsd-panel">
+<h4>Type Parameters</h4>
+<ul class="tsd-type-parameter-list">
+<li><span id="requesttresponse"><span class="tsd-kind-type-parameter">TResponse</span></span></li>
+<li><span id="requesttrequest"><span class="tsd-kind-type-parameter">TRequest</span> = <span class="tsd-signature-type">unknown</span></span></li></ul></section>
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">request</span>: <a href="../interfaces/index.HttpRequest.html" class="tsd-signature-type tsd-kind-interface">HttpRequest</a><span class="tsd-signature-symbol">&lt;</span><a class="tsd-signature-type tsd-kind-type-parameter" href="#requesttrequest">TRequest</a><span class="tsd-signature-symbol">&gt;</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a class="tsd-signature-type tsd-kind-type-parameter" href="#requesttresponse">TResponse</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/Lilly-Protocol/lily-sdk/blob/main/src/sdk.ts#L90">src/sdk.ts:90</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="withconfig"><span>with<wbr/>Config</span><a href="#withconfig" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="">
+<div class="tsd-signature tsd-anchor-link" id="withconfig-1"><span class="tsd-kind-call-signature">withConfig</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">overrides</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/index.LilySdkConfig.html" class="tsd-signature-type tsd-kind-interface">LilySdkConfig</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="" class="tsd-signature-type tsd-kind-class">LilySdk</a><a href="#withconfig-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Creates a new LilySdk instance with merged configuration.
+Useful for multi-tenant scenarios where credentials or baseUrl differ per tenant.</p>
+</div>
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><span class="tsd-kind-parameter">overrides</span>: <span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/index.LilySdkConfig.html" class="tsd-signature-type tsd-kind-interface">LilySdkConfig</a><span class="tsd-signature-symbol">&gt;</span></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">LilySdk</a></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/Lilly-Protocol/lily-sdk/blob/main/src/sdk.ts#L103">src/sdk.ts:103</a></li></ul></aside></div></li></ul></section>
+<section class="tsd-panel tsd-member">
+<h3 class="tsd-anchor-link" id="create"><code class="tsd-tag">Static</code><span>create</span><a href="#create" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="">
+<div class="tsd-signature tsd-anchor-link" id="create-1"><span class="tsd-kind-call-signature">create</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/index.LilySdkConfig.html" class="tsd-signature-type tsd-kind-interface">LilySdkConfig</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">,</span> <span class="tsd-kind-parameter">httpClient</span><span class="tsd-signature-symbol">?:</span> <a href="../interfaces/index.HttpClient.html" class="tsd-signature-type tsd-kind-interface">HttpClient</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <a href="" class="tsd-signature-type tsd-kind-class">LilySdk</a><a href="#create-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
+<div class="tsd-description">
+<div class="tsd-comment tsd-typography"><p>Creates a LilySdk instance with sensible defaults from environment variables.
+Explicit options always take precedence over environment variables.</p>
+<p>Env vars read:</p>
+<ul>
+<li>LILY_API_URL (or LILY_BASE_URL)</li>
+<li>LILY_API_KEY</li>
+<li>LILY_AUTH_TOKEN</li>
+</ul>
+<p>Throws if no baseUrl is provided and no env var is set.</p>
+</div>
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">options</span>: <span class="tsd-signature-type">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/index.LilySdkConfig.html" class="tsd-signature-type tsd-kind-interface">LilySdkConfig</a><span class="tsd-signature-symbol">&gt;</span></span></li>
+<li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">httpClient</span>: <a href="../interfaces/index.HttpClient.html" class="tsd-signature-type tsd-kind-interface">HttpClient</a></span></li></ul></div>
+<h4 class="tsd-returns-title">Returns <a href="" class="tsd-signature-type tsd-kind-class">LilySdk</a></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/Lilly-Protocol/lily-sdk/blob/main/src/sdk.ts#L50">src/sdk.ts:50</a></li></ul></aside></div></li></ul></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">
@@ -99,7 +197,11 @@
 <details open class="tsd-accordion tsd-page-navigation-section"><summary class="tsd-accordion-summary" data-key="section-Constructors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>Constructors</summary>
 <div><a href="#constructor"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Constructor"><use href="../assets/icons.svg#icon-512"></use></svg><span>constructor</span></a></div></details>
 <details open class="tsd-accordion tsd-page-navigation-section"><summary class="tsd-accordion-summary" data-key="section-Properties"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>Properties</summary>
-<div><a href="#agents"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>agents</span></a><a href="#config"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>config</span></a><a href="#identity"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>identity</span></a><a href="#payments"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>payments</span></a><a href="#system"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>system</span></a><a href="#wallets"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>wallets</span></a></div></details></div></details></div>
+<div><a href="#agents"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>agents</span></a><a href="#config"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>config</span></a><a href="#httpclient"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>http<wbr/>Client</span></a><a href="#identity"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>identity</span></a><a href="#payments"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>payments</span></a><a href="#system"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>system</span></a><a href="#wallets"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>wallets</span></a><a href="#version"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Property"><use href="../assets/icons.svg#icon-1024"></use></svg><span>version</span></a></div></details>
+<details open class="tsd-accordion tsd-page-navigation-section"><summary class="tsd-accordion-summary" data-key="section-Accessors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>Accessors</summary>
+<div><a href="#http"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Accessor"><use href="../assets/icons.svg#icon-262144"></use></svg><span>http</span></a></div></details>
+<details open class="tsd-accordion tsd-page-navigation-section"><summary class="tsd-accordion-summary" data-key="section-Methods"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>Methods</summary>
+<div><a href="#request"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>request</span></a><a href="#withconfig"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>with<wbr/>Config</span></a><a href="#create"><svg class="tsd-kind-icon" viewBox="0 0 24 24" aria-label="Method"><use href="../assets/icons.svg#icon-2048"></use></svg><span>create</span></a></div></details></div></details></div>
 <div class="site-menu">
 <nav class="tsd-navigation"><a href="../modules.html">@lily-protocol/sdk</a>
 <ul class="tsd-small-nested-navigation" id="tsd-nav-container">
