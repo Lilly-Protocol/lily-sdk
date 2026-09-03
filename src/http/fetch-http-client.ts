@@ -4,6 +4,7 @@ import {
   LILY_ERROR_CODES,
   LilyApiError,
   LilyAuthenticationError,
+  LilyConfigError,
   LilyTransportError,
   LilyValidationError,
 } from '../errors/sdk-error';
@@ -14,6 +15,15 @@ import type {
   HttpResponse,
 } from './types';
 
+function validateTimeoutMs(timeoutMs: number | undefined): void {
+  if (timeoutMs === undefined || timeoutMs === 0) return;
+  if (!Number.isFinite(timeoutMs) || timeoutMs < 0) {
+    throw new LilyConfigError(
+      "timeoutMs must be a non-negative finite number.",
+    );
+  }
+}
+
 export function createFetchHttpClient(
   config: ResolvedLilySdkConfig,
 ): HttpClient {
@@ -21,6 +31,7 @@ export function createFetchHttpClient(
     async request<TResponse, TRequest = unknown>(
       request: HttpRequest<TRequest>,
     ): Promise<HttpResponse<TResponse>> {
+      validateTimeoutMs(request.timeoutMs);
       const url = buildUrl(config.baseUrl, request.path, request.query);
       const body = serializeBody(request.body);
       const headers = buildHeaders(config, body, request.headers);
