@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { AgentClient } from '../src/clients/agent-client';
+import { IdentityClient } from '../src/clients/identity-client';
 import { WalletClient } from '../src/clients/wallet-client';
 import { PaymentClient } from '../src/clients/payment-client';
 import type { HttpClient } from '../src/http/types';
@@ -40,6 +41,28 @@ describe('Path parameter encoding in clients', () => {
     expect(mock.lastRequest).toEqual(
       expect.objectContaining({
         path: '/v1/agents/agent%2Fid%20with%20spaces',
+      }),
+    );
+  });
+
+  it('AgentClient.delete encodes special characters in agentId', async () => {
+    const mock = createMockHttpClient();
+    const client = new AgentClient(mock);
+    await client.delete('agent/with?special#chars and spaces');
+    expect(mock.lastRequest).toEqual(
+      expect.objectContaining({
+        path: '/v1/agents/agent%2Fwith%3Fspecial%23chars%20and%20spaces',
+      }),
+    );
+  });
+
+  it('IdentityClient.get uses the shared path encoder', async () => {
+    const mock = createMockHttpClient();
+    const client = new IdentityClient(mock);
+    await client.get('identity/with?special#chars and spaces');
+    expect(mock.lastRequest).toEqual(
+      expect.objectContaining({
+        path: '/v1/identity/identity%2Fwith%3Fspecial%23chars%20and%20spaces',
       }),
     );
   });

@@ -1,3 +1,4 @@
+import { encodePathSegment } from '../http/path';
 import type {
   IdentityProfile,
   ResolveIdentityRequest,
@@ -36,7 +37,7 @@ export class IdentityClient
     validateNonEmptyString(identityId, 'identityId');
     return this.request({
       method: 'GET',
-      path: `/v1/identity/${encodeURIComponent(identityId)}`,
+      path: `/v1/identity/${encodePathSegment(identityId)}`,
     });
   }
 }
