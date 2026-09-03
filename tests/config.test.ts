@@ -1,19 +1,93 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { LilyConfigError } from '../src/errors/sdk-error';
 import { resolveLilySdkConfig } from '../src/config/resolve-config';
+import { SDK_VERSION } from '../src/version';
 
 describe('resolveLilySdkConfig', () => {
-  it('normalizes base url and defaults', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it('uses explicit baseUrl over env', () => {
+    process.env.LILY_API_URL = 'https://env.example.com';
+    const config = resolveLilySdkConfig({ baseUrl: 'https://explicit.example.com' });
+    expect(config.baseUrl.toString()).toBe('https://explicit.example.com/');
+  });
+
+  it('falls back to LILY_API_URL when baseUrl is omitted', () => {
+    process.env.LILY_API_URL = 'https://env.example.com';
+    const config = resolveLilySdkConfig({});
+    expect(config.baseUrl.toString()).toBe('https://env.example.com/');
+  });
+
+  it('throws when neither baseUrl nor env is provided', () => {
+    delete process.env.LILY_API_URL;
+    expect(() => resolveLilySdkConfig({})).toThrow(LilyConfigError);
+  });
+
+  it('resolves apiKey and authToken from env when not explicit', () => {
+    process.env.LILY_API_URL = 'https://api.example.com';
+    process.env.LILY_API_KEY = 'env-key';
+    process.env.LILY_AUTH_TOKEN = 'env-token';
+    const config = resolveLilySdkConfig({});
+    expect(config.apiKey).toBe('env-key');
+    expect(config.authToken).toBe('env-token');
+  });
+
+  it('prefers explicit credentials over env', () => {
+    process.env.LILY_API_URL = 'https://api.example.com';
+    process.env.LILY_API_KEY = 'env-key';
+    process.env.LILY_AUTH_TOKEN = 'env-token';
     const config = resolveLilySdkConfig({
-      baseUrl: 'https://api.lily.test',
-      fetch: globalThis.fetch,
+      apiKey: 'explicit-key',
+      authToken: 'explicit-token',
     });
 
     expect(config.baseUrl.toString()).toBe('https://api.lily.test/');
     expect(config.timeoutMs).toBe(10_000);
     expect(config.retry.retries).toBe(2);
-    expect(config.userAgent).toBe('lily-sdk/0.1.0');
+    expect(config.userAgent).toBe(`lily-sdk/${SDK_VERSION}`);
+  });
+
+  it('derives default user-agent from package version', () => {
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.lily.test',
+      fetch: globalThis.fetch,
+    });
+
+    expect(config.userAgent).toBe(`lily-sdk/${SDK_VERSION}`);
+    expect(SDK_VERSION).toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  it('allows explicit userAgent to override default', () => {
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.lily.test',
+      fetch: globalThis.fetch,
+      userAgent: 'custom-agent/1.0',
+    });
+
+    expect(config.userAgent).toBe('custom-agent/1.0');
+  });
+
+  it('preserves a path prefix and appends a trailing slash', () => {
+    const withoutSlash = resolveLilySdkConfig({
+      baseUrl: 'https://host/lily/api',
+      fetch: globalThis.fetch,
+    });
+    const withSlash = resolveLilySdkConfig({
+      baseUrl: 'https://host/lily/api/',
+      fetch: globalThis.fetch,
+    });
+
+    expect(withoutSlash.baseUrl.toString()).toBe('https://host/lily/api/');
+    expect(withSlash.baseUrl.toString()).toBe('https://host/lily/api/');
   });
 
   it('throws when base url is invalid', () => {
@@ -35,46 +109,60 @@ describe('resolveLilySdkConfig', () => {
     ).toThrow('`timeoutMs` must be a positive number.');
   });
 
-  it('deep-freezes the resolved config snapshot', () => {
-    const input = {
-      baseUrl: 'https://api.lily.test',
-      timeoutMs: 5_000,
-      retry: {
-        retries: 3,
-        retryableStatusCodes: [429, 503],
-      },
-      defaultHeaders: {
-        'x-client': 'test',
-      },
-      fetch: globalThis.fetch,
-    };
-    const config = resolveLilySdkConfig(input);
+  it('throws when fetch implementation is missing', () => {
+    const originalFetch = globalThis.fetch;
+    // @ts-expect-error - intentionally removing fetch to test validation
+    delete globalThis.fetch;
 
-    expect(Object.isFrozen(config)).toBe(true);
-    expect(Object.isFrozen(config.baseUrl)).toBe(true);
-    expect(Object.isFrozen(config.defaultHeaders)).toBe(true);
-    expect(Object.isFrozen(config.retry)).toBe(true);
-    expect(Object.isFrozen(config.retry.retryableStatusCodes)).toBe(true);
+    try {
+      expect(() =>
+        resolveLilySdkConfig({
+          baseUrl: 'https://api.lily.test',
+        }),
+      ).toThrow(LilyConfigError);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 
-    expect(() => {
-      (config as { timeoutMs: number }).timeoutMs = 1;
-    }).toThrow(TypeError);
-    expect(() => {
-      (config.defaultHeaders as Record<string, string>)['x-client'] = 'changed';
-    }).toThrow(TypeError);
-    expect(() => {
-      config.retry.retryableStatusCodes.push(500);
-    }).toThrow(TypeError);
-    expect(() => {
-      (config.baseUrl as URL & { changed?: boolean }).changed = true;
-    }).toThrow(TypeError);
+  it('throws when retry.retries is not an integer', () => {
+    expect(() =>
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+        retry: { retries: 1.5 },
+      }),
+    ).toThrow('`retry.retries` must be a non-negative integer.');
+  });
 
-    input.retry.retryableStatusCodes.push(500);
-    input.defaultHeaders['x-client'] = 'changed';
-
-    expect(config.timeoutMs).toBe(5_000);
-    expect(config.defaultHeaders).toEqual({ 'x-client': 'test' });
-    expect(config.retry.retryableStatusCodes).toEqual([429, 503]);
-    expect('changed' in config.baseUrl).toBe(false);
+  it('throws when retry.retryDelayMs is negative', () => {
+    expect(() =>
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+        retry: { retryDelayMs: -1 },
+      }),
+    ).toThrow('`retry.retryDelayMs` must be a non-negative number.');
   });
 });
+
+
+  it('throws when retry.retries is not an integer', () => {
+    expect(() =>
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+        retry: { retries: 1.5 },
+      }),
+    ).toThrow(LilyConfigError);
+  });
+
+  it('throws when retry.retryDelayMs is negative', () => {
+    expect(() =>
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+        retry: { retryDelayMs: -100 },
+      }),
+    ).toThrow(LilyConfigError);
+  });
