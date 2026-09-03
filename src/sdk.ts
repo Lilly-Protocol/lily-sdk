@@ -126,28 +126,5 @@ export class LilySdk {
     return new LilySdk(merged, this.httpClient);
   }
 
-  /**
-   * Creates an independent SDK instance by merging overrides with this instance's config.
-   */
-  public withConfig(overrides: Partial<LilySdkConfig>): LilySdk {
-    return new LilySdk({
-      baseUrl: this.config.baseUrl.toString(),
-      timeoutMs: this.config.timeoutMs,
-      retry: this.config.retry,
-      defaultHeaders: this.config.defaultHeaders,
-      userAgent: this.config.userAgent,
-      fetch: this.config.fetch,
-      ...(this.config.apiKey ? { apiKey: this.config.apiKey } : {}),
-      ...(this.config.authToken ? { authToken: this.config.authToken } : {}),
-      ...overrides,
-      ...(overrides.retry
-        ? {
-            retry: {
-              ...this.config.retry,
-              ...overrides.retry,
-            },
-          }
-        : {}),
-    });
-  }
+
 }
