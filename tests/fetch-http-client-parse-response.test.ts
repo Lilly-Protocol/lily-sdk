@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import { resolveLilySdkConfig } from '../src/config';
+import {
+  LilyApiError,
+  LilyAuthenticationError,
+  LilyValidationError,
+} from '../src/errors/sdk-error';
 import type { HttpRequest } from '../src/http';
 
 describe('fetch-http-client parseResponse', () => {
@@ -80,5 +85,121 @@ describe('fetch-http-client parseResponse', () => {
 
     expect(response.status).toBe(200);
     expect(response.data).toEqual(body);
+  });
+
+  it('throws LilyValidationError for 200 responses with empty JSON bodies', async () => {
+    globalThis.fetch = vi.fn(() => {
+      return Promise.resolve(
+        new Response('', {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+    });
+
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.example.com',
+      apiKey: 'test-key',
+    });
+    const client = createFetchHttpClient(config);
+    const request: HttpRequest = { method: 'GET', path: '/v1/empty-json' };
+
+    await expect(client.request(request)).rejects.toBeInstanceOf(
+      LilyValidationError,
+    );
+  });
+
+  it('throws LilyApiError (not LilyValidationError) for 500 responses with empty JSON bodies', async () => {
+    globalThis.fetch = vi.fn(() => {
+      return Promise.resolve(
+        new Response('', {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+    });
+
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.example.com',
+      apiKey: 'test-key',
+      retry: { retries: 0 },
+    });
+    const client = createFetchHttpClient(config);
+    const request: HttpRequest = { method: 'POST', path: '/v1/fail' };
+
+    try {
+      await client.request(request);
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(LilyApiError);
+      expect(err).not.toBeInstanceOf(LilyValidationError);
+      const apiErr = err as LilyApiError;
+      expect(apiErr.statusCode).toBe(500);
+      expect(apiErr.code).toBe('API_ERROR');
+      expect(apiErr.details).toMatchObject({
+        contentType: 'application/json',
+      });
+    }
+  });
+
+  it('throws LilyApiError for 500 responses with malformed HTML body declaring json content-type', async () => {
+    globalThis.fetch = vi.fn(() => {
+      return Promise.resolve(
+        new Response('<html>500 Internal Server Error</html>', {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+    });
+
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.example.com',
+      apiKey: 'test-key',
+      retry: { retries: 0 },
+    });
+    const client = createFetchHttpClient(config);
+    const request: HttpRequest = { method: 'POST', path: '/v1/fail' };
+
+    try {
+      await client.request(request);
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(LilyApiError);
+      expect(err).not.toBeInstanceOf(LilyValidationError);
+      const apiErr = err as LilyApiError;
+      expect(apiErr.statusCode).toBe(500);
+      expect(apiErr.details).toMatchObject({
+        contentType: 'application/json',
+      });
+    }
+  });
+
+  it('throws LilyAuthenticationError for 401 responses with empty JSON bodies', async () => {
+    globalThis.fetch = vi.fn(() => {
+      return Promise.resolve(
+        new Response('', {
+          status: 401,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+    });
+
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.example.com',
+      apiKey: 'test-key',
+    });
+    const client = createFetchHttpClient(config);
+    const request: HttpRequest = { method: 'GET', path: '/v1/protected' };
+
+    try {
+      await client.request(request);
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(LilyAuthenticationError);
+      expect(err).not.toBeInstanceOf(LilyValidationError);
+      const authErr = err as LilyAuthenticationError;
+      expect(authErr.statusCode).toBe(401);
+      expect(authErr.code).toBe('AUTHENTICATION_ERROR');
+    }
   });
 });
