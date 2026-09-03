@@ -2,28 +2,43 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
+    branches: [main, master]
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       matrix:
-        node-version: [20, 22]
+        node-version: [20, 22, 24]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run test
 
-      - name: Install dependencies
-        run: npm ci
+  example:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run example
 
       - name: Lint
         run: npm run lint
@@ -31,8 +46,70 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Typecheck Examples
+        run: npm run typecheck:examples
+
       - name: Test
-        run: npm run test
+        run: npm run test -- --coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/coverage-final.json
+          flags: unittests
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/coverage-final.json
+          fail_ci_if_error: false
+        if: matrix.node-version == '20'
+
+      - name: Upload coverage to Codecov
+        if: matrix.node-version == 22
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage/coverage-final.json
+          fail_ci_if_error: true
+          use_oidc: true
 
       - name: Build
         run: npm run build
+
+      - name: Verify npm pack contents
+        run: |
+          PACK_CONTENTS=$(npm pack --dry-run --json)
+          echo "$PACK_CONTENTS" | jq -e '.[0].files | map(.path) | sort' > /tmp/pack-files.json
+          
+          # Expected files: package.json, README.md, LICENSE, and dist/**
+          # Fail if src/, tests/, coverage/, .env, or other dev artifacts are present
+          UNEXPECTED=$(jq -r '.[] | select(
+            test("^package\\.json$") or
+            test("^README\\.md$") or
+            test("^LICENSE$") or
+            test("^dist/")
+          | not)' /tmp/pack-files.json)
+          
+          if [ -n "$UNEXPECTED" ]; then
+            echo "::error::Unexpected files in npm tarball:"
+            echo "$UNEXPECTED"
+            exit 1
+          fi
+          
+          # Verify essential files are present
+          ESSENTIAL_MISSING=$(echo '["package.json","README.md","LICENSE"]' | jq -r '.[]' | while read f; do
+            if ! jq -e ".[] | select(. == \"$f\")" /tmp/pack-files.json > /dev/null 2>&1; then
+              echo "$f"
+            fi
+          done)
+          
+          if [ -n "$ESSENTIAL_MISSING" ]; then
+            echo "::error::Missing essential files in npm tarball:"
+            echo "$ESSENTIAL_MISSING"
+            exit 1
+          fi
+          
+          echo "✅ npm pack contents verified successfully"
