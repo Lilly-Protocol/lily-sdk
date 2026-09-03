@@ -6,11 +6,18 @@ describe('package exports contract', () => {
   const packageJsonPath = path.resolve(__dirname, '../package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
+  function collectLeafPaths(value: unknown, into: string[]) {
+    if (typeof value === 'string') {
+      into.push(value);
+    } else if (value && typeof value === 'object') {
+      for (const nested of Object.values(value as Record<string, unknown>)) {
+        collectLeafPaths(nested, into);
+      }
+    }
+  }
+
   it('declares subpaths in exports that map to corresponding source files', () => {
-    const exportsMap = packageJson.exports as Record<
-      string,
-      string | { import?: string; require?: string; types?: string }
-    >;
+    const exportsMap = packageJson.exports as Record<string, unknown>;
 
     expect(exportsMap).toBeDefined();
 
@@ -20,26 +27,21 @@ describe('package exports contract', () => {
         continue;
       }
 
-      if (typeof target === 'object') {
-        // Verify source module counterpart exists in src/
-        const moduleName =
-          subpath === '.' ? 'index' : subpath.replace(/^\.\//, '');
-        const srcFile = path.resolve(__dirname, `../src/${moduleName}.ts`);
-        expect(
-          fs.existsSync(srcFile),
-          `Expected source file ${srcFile} to exist for export ${subpath}`,
-        ).toBe(true);
+      // Verify source module counterpart exists in src/
+      const moduleName =
+        subpath === '.' ? 'index' : subpath.replace(/^\.\//, '');
+      const srcFile = path.resolve(__dirname, `../src/${moduleName}.ts`);
+      expect(
+        fs.existsSync(srcFile),
+        `Expected source file ${srcFile} to exist for export ${subpath}`,
+      ).toBe(true);
 
-        // Verify declared output files have valid paths
-        if (target.import) {
-          expect(target.import.startsWith('./dist/')).toBe(true);
-        }
-        if (target.types) {
-          expect(target.types.startsWith('./dist/')).toBe(true);
-        }
-        if (target.require) {
-          expect(target.require.startsWith('./dist/')).toBe(true);
-        }
+      // Verify every declared output file is under dist/
+      const outputFiles: string[] = [];
+      collectLeafPaths(target, outputFiles);
+      expect(outputFiles.length).toBeGreaterThan(0);
+      for (const outputFile of outputFiles) {
+        expect(outputFile.startsWith('./dist/')).toBe(true);
       }
     }
   });

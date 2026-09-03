@@ -1,72 +1,87 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-/**
- * Bounty #114 — $90
- * "Add a test that every exports subpath resolves to a real file"
- *
- * Verifies that each entry in `package.json` `exports` map points to a real
- * source file that will exist in the built `dist/` output.
- */
-describe('exports subpath resolves to a real file', () => {
-  const pkg = JSON.parse(
-    readFileSync(resolve(process.cwd(), 'package.json'), 'utf8'),
-  ) as {
-    exports: Record<string, Record<string, string>>;
-  };
+interface FormatConditions {
+  types: string;
+  default: string;
+}
 
-  const subpaths = Object.entries(pkg.exports).filter(
-    ([key]) => key !== './package.json',
+interface ConditionalExport {
+  browser?: string;
+  import: FormatConditions;
+  require: FormatConditions;
+}
+
+const pkg = JSON.parse(
+  readFileSync(resolve(process.cwd(), 'package.json'), 'utf-8'),
+) as {
+  exports: Record<string, ConditionalExport | string>;
+};
+
+const dist = resolve(process.cwd(), 'dist');
+const entries = Object.entries(pkg.exports).filter(
+  (entry): entry is [string, ConditionalExport] => typeof entry[1] !== 'string',
+);
+
+function existsWithinDist(file: string, label: string) {
+  const target = resolve(process.cwd(), file);
+  expect(target.startsWith(`${dist}/`), `${label} must live under dist/`).toBe(
+    true,
   );
+  expect(
+    readFileSync(target, 'utf8').length,
+    `${file} should not be empty`,
+  ).toBeGreaterThan(0);
+}
 
-  it('has at least 5 subpaths defined', () => {
-    expect(subpaths.length).toBeGreaterThanOrEqual(5);
+describe('subpath exports resolve to dual-format builds', () => {
+  it('provides a types, import, and require condition for every subpath', () => {
+    expect(entries.length).toBeGreaterThanOrEqual(6);
+    for (const [subpath, entry] of entries) {
+      expect(entry.import, `${subpath} has an import condition`).toBeDefined();
+      expect(entry.require, `${subpath} has a require condition`).toBeDefined();
+      expect(entry.import.types).toBeTruthy();
+      expect(entry.require.types).toBeTruthy();
+    }
   });
 
-  for (const [subpath, conditions] of subpaths) {
-    describe(`subpath "${subpath}"`, () => {
-      it('has types, import, and require conditions', () => {
-        expect(conditions).toHaveProperty('types');
-        expect(conditions).toHaveProperty('import');
-        expect(conditions).toHaveProperty('require');
-      });
-
-      it('types condition points to a .d.ts file', () => {
-        expect(conditions.types).toMatch(/\.d\.ts$/);
-      });
-
-      it('import condition points to a .js file', () => {
-        expect(conditions.import).toMatch(/\.js$/);
-      });
-
-      it('require condition points to a .cjs file', () => {
-        expect(conditions.require).toMatch(/\.cjs$/);
-      });
-
-      it('all conditions share the same base name (minus extension)', () => {
-        const typesBase = conditions.types!.replace(/\.d\.ts$/, '');
-        const importBase = conditions.import!.replace(/\.js$/, '');
-        const requireBase = conditions.require!.replace(/\.cjs$/, '');
-        expect(typesBase).toBe(importBase);
-        expect(importBase).toBe(requireBase);
-      });
-    });
-  }
-
-  it('root subpath "." is defined', () => {
-    expect(pkg.exports).toHaveProperty('.');
+  it('resolves ESM and CJS entry files for each subpath', () => {
+    for (const [subpath, entry] of entries) {
+      existsWithinDist(entry.import.default, `${subpath} import.default`);
+      existsWithinDist(entry.require.default, `${subpath} require.default`);
+    }
   });
 
-  it('subpaths "./config", "./errors", "./http", "./models", "./types" are all defined', () => {
-    for (const sub of [
-      './config',
-      './errors',
-      './http',
-      './models',
-      './types',
-    ]) {
-      expect(pkg.exports).toHaveProperty(sub);
+  it('resolves the type declaration files for each subpath', () => {
+    for (const [subpath, entry] of entries) {
+      expect(entry.import.types).toMatch(/\.d\.ts$/u);
+      expect(entry.require.types).toMatch(/\.d\.cts$/u);
+      existsWithinDist(entry.import.types, `${subpath} import.types`);
+      existsWithinDist(entry.require.types, `${subpath} require.types`);
+    }
+  });
+
+  it('points each ESM and CJS file at a matching output basename', () => {
+    for (const [, entry] of entries) {
+      const bases = [
+        entry.import.default,
+        entry.import.types,
+        entry.require.default,
+        entry.require.types,
+      ].map((file) =>
+        file
+          .replace(/^.*\//, '')
+          .replace(/\.d\.cts$/u, '')
+          .replace(/\.d\.ts$/u, '')
+          .replace(/\.cjs$/u, '')
+          .replace(/\.js$/u, ''),
+      );
+
+      expect(
+        new Set(bases).size,
+        `${JSON.stringify(bases)} share one basename`,
+      ).toBe(1);
     }
   });
 });

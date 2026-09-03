@@ -41,12 +41,24 @@
   "types": "./dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "*": ["dist/index.d.ts"],
-      "config": ["dist/config.d.ts"],
-      "errors": ["dist/errors.d.ts"],
-      "http": ["dist/http.d.ts"],
-      "models": ["dist/models.d.ts"],
-      "types": ["dist/types.d.ts"]
+      "*": [
+        "dist/index.d.ts"
+      ],
+      "config": [
+        "dist/config.d.ts"
+      ],
+      "errors": [
+        "dist/errors.d.ts"
+      ],
+      "http": [
+        "dist/http.d.ts"
+      ],
+      "models": [
+        "dist/models.d.ts"
+      ],
+      "types": [
+        "dist/types.d.ts"
+      ]
     }
   },
   "exports": {

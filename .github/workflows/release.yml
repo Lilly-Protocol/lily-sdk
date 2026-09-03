@@ -36,11 +36,11 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Test
-        run: npm run test -- --coverage
-
       - name: Build
         run: npm run build
+
+      - name: Test
+        run: npm run test -- --coverage
 
       - name: Bundle size check
         run: npm run size

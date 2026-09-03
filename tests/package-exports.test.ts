@@ -4,10 +4,15 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-interface ConditionalExport {
+interface FormatConditions {
   types: string;
-  import: string;
-  require: string;
+  default: string;
+}
+
+interface ConditionalExport {
+  browser?: string;
+  import: FormatConditions;
+  require: FormatConditions;
 }
 
 interface PackageJson {
@@ -58,9 +63,10 @@ describe('package entry points', () => {
         return;
       }
 
-      await expectFile(entry.import);
-      await expectFile(entry.require);
-      await expectNonEmptyDeclaration(entry.types);
+      await expectNonEmptyDeclaration(entry.import.types);
+      await expectFile(entry.import.default);
+      await expectNonEmptyDeclaration(entry.require.types);
+      await expectFile(entry.require.default);
 
       const specifier =
         subpath === '.'
