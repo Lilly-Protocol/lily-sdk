@@ -1,4 +1,4 @@
-import { AgentClient } from './clients/agent-client';
+undefinedimport { AgentClient } from './clients/agent-client';
 import { IdentityClient } from './clients/identity-client';
 import { PaymentClient } from './clients/payment-client';
 import { SystemClient } from './clients/system-client';
@@ -12,7 +12,7 @@ import type {
 import { createFetchHttpClient } from './http/fetch-http-client';
 import type { HttpClient, HttpRequest } from './http/types';
 
-const DEFAULT_API_URL = 'https://api.lilyprotocol.com';
+export const DEFAULT_API_URL = 'https://api.lilyprotocol.com';
 
 export class LilySdk {
   public static readonly version: string = SDK_VERSION;
@@ -57,7 +57,7 @@ export class LilySdk {
       (typeof process !== 'undefined'
         ? process.env.LILY_API_URL ?? process.env.LILY_BASE_URL
         : undefined) ??
-      'https://api.lilyprotocol.org';
+      DEFAULT_API_URL;
 
     if (!baseUrl) {
       throw new Error(
