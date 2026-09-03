@@ -12,7 +12,7 @@ The Lily SDK reads the following environment variables when configuration option
 | `LILY_AUTH_TOKEN` | Bearer token for authentication | Sent via `authorization: Bearer <token>` header when provided.                                                                                                        |
 
 > **Note on Timeouts & Debugging**:  
-> `timeoutMs` and other operational options (such as custom retry policies or fetch implementations) are not configured via environment variables. Configure them programmatically via `LilySdkConfig` when initializing the SDK or per-request in client methods.
+> `timeoutMs` and other operational options (such as custom retry policies or fetch implementations) are not configured via environment variables. Configure SDK-wide defaults programmatically via `LilySdkConfig`. For a per-request timeout, set `timeoutMs` on the low-level `HttpRequest` passed to `sdk.request(...)` or `sdk.http.request(...)`; high-level client methods do not currently expose a per-call options bag.
 
 ## Precedence & Resolution
 
