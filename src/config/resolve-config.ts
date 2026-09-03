@@ -1,4 +1,8 @@
-import type { LilySdkConfig, ResolvedLilySdkConfig } from './types';
+import type {
+  LilySdkConfig,
+  ResolvedLilySdkConfig,
+  ResolvedRetryPolicy,
+} from './types';
 import { LilyConfigError } from '../errors/sdk-error';
 import { VERSION } from '../version';
 import type { RetryPolicy } from '../http/types';
@@ -130,7 +134,9 @@ function safeUrl(rawUrl: string | URL): URL {
   return url;
 }
 
-function resolveRetryPolicy(policy?: Partial<RetryPolicy>): RetryPolicy {
+function resolveRetryPolicy(
+  policy?: Partial<RetryPolicy>,
+): ResolvedRetryPolicy {
   const retries = policy?.retries ?? DEFAULT_RETRY_POLICY.retries;
   const retryDelayMs =
     policy?.retryDelayMs ?? DEFAULT_RETRY_POLICY.retryDelayMs;
@@ -177,7 +183,7 @@ function resolveRetryPolicy(policy?: Partial<RetryPolicy>): RetryPolicy {
     );
   }
 
-  return {
+  return Object.freeze({
     retries,
     retryDelayMs,
     retryableStatusCodes: [...retryableStatusCodes],

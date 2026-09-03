@@ -17,12 +17,18 @@ export interface LilySdkCreateOptions extends Omit<LilySdkConfig, 'baseUrl'> {
   baseUrl?: string;
 }
 
+export type ResolvedRetryPolicy = Readonly<
+  Omit<RetryPolicy, 'retryableStatusCodes'> & {
+    retryableStatusCodes: readonly number[];
+  }
+>;
+
 export interface ResolvedLilySdkConfig {
   readonly baseUrl: URL;
   readonly apiKey?: string;
   readonly authToken?: string;
   readonly timeoutMs: number;
-  readonly retry: RetryPolicy;
+  readonly retry: ResolvedRetryPolicy;
   readonly defaultHeaders: Readonly<Record<string, string>>;
   readonly userAgent: string;
   readonly fetch: typeof globalThis.fetch;
