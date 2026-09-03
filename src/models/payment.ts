@@ -34,5 +34,6 @@ export interface ExecutePaymentRequest {
   toAddress: string;
   amount: MoneyAmount;
   memo?: string;
+  /** Sent as the `Idempotency-Key` header when the payment is executed. */
   idempotencyKey?: string;
 }
