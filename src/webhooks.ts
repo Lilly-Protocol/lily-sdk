@@ -31,8 +31,62 @@ export function verifyWebhookSignature(
 }
 
 /**
+ * Deterministically serializes a value to a canonical JSON string
+ * by recursively sorting object keys.
+ *
+ * @param value - The value to serialize.
+ * @returns The canonical JSON string representation.
+ */
+export function canonicalJsonStringify(value: unknown): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+
+  const raw =
+    typeof (value as { toJSON?: () => unknown }).toJSON === 'function'
+      ? (value as { toJSON: () => unknown }).toJSON()
+      : value;
+
+  if (raw === null || typeof raw !== 'object') {
+    return JSON.stringify(raw);
+  }
+
+  if (Array.isArray(raw)) {
+    return (
+      '[' +
+      raw
+        .map((item) =>
+          item === undefined ||
+          typeof item === 'function' ||
+          typeof item === 'symbol'
+            ? 'null'
+            : canonicalJsonStringify(item),
+        )
+        .join(',') +
+      ']'
+    );
+  }
+
+  const keys = Object.keys(raw as Record<string, unknown>).sort();
+  const entries: string[] = [];
+  for (const key of keys) {
+    const val = (raw as Record<string, unknown>)[key];
+    if (
+      val !== undefined &&
+      typeof val !== 'function' &&
+      typeof val !== 'symbol'
+    ) {
+      entries.push(`${JSON.stringify(key)}:${canonicalJsonStringify(val)}`);
+    }
+  }
+
+  return `{${entries.join(',')}}`;
+}
+
+/**
  * Verifies a webhook signature from parsed JSON.
- * Re-serializes the JSON to a canonical form before verifying.
+ * Re-serializes the JSON to a canonical form (recursively sorting object keys)
+ * before verifying so that verification is independent of key insertion order.
  *
  * @param data - The parsed JSON object.
  * @param signature - The signature from the webhook header.
@@ -44,8 +98,18 @@ export function verifyWebhookJSON(
   signature: string,
   secret: string,
 ): boolean {
-  const payload = JSON.stringify(data);
-  return verifyWebhookSignature(payload, signature, secret);
+  const canonicalPayload = canonicalJsonStringify(data);
+  if (verifyWebhookSignature(canonicalPayload, signature, secret)) {
+    return true;
+  }
+
+  // Fallback to insertion-order JSON.stringify for compatibility with non-canonical senders
+  const rawPayload = JSON.stringify(data);
+  if (rawPayload !== canonicalPayload) {
+    return verifyWebhookSignature(rawPayload, signature, secret);
+  }
+
+  return false;
 }
 
 /**
