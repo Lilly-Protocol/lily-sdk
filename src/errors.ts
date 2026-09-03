@@ -10,5 +10,8 @@ export {
   LilySdkError,
   LilyServerError,
   LilyTransportError,
+  LilyValidationError,
+  isLilySdkError,
 } from './errors/sdk-error';
 export type { LilyErrorCode } from './errors/sdk-error';
+
