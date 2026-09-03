@@ -24,7 +24,12 @@ describe('Runtime response validation', () => {
   });
 
   it('validates and returns valid HealthStatus when validateResponses is true', async () => {
-    const validData = { status: 'ok', version: '1.0.0', uptime: 3600 };
+    const validData = {
+      status: 'ok',
+      version: '1.0.0',
+      timestamp: '2024-01-01T00:00:00Z',
+      checks: {},
+    };
     const config = {
       baseUrl: new URL('https://api.example.com'),
       timeoutMs: 5000,
