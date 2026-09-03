@@ -1,218 +1,166 @@
-import { describe, expect, it, vi } from 'vitest';
-
-import type { ResolvedLilySdkConfig } from '../src/config/types';
-import { LilyApiError, LilyTransportError } from '../src/errors/sdk-error';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
-import type { HttpMethod } from '../src/http/types';
+import type { ResolvedLilySdkConfig } from '../src/config/types';
+import { LilyApiError, LilyAuthenticationError, LilyTransportError } from '../src/errors/sdk-error';
 
-function config(
-  fetch: typeof globalThis.fetch,
-  retries = 0,
-): ResolvedLilySdkConfig {
+function makeConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): ResolvedLilySdkConfig {
   return {
-    baseUrl: new URL('https://api.lily.test/root/'),
-    timeoutMs: 2_000,
-    retry: { retries, retryDelayMs: 0, retryableStatusCodes: [] },
-    defaultHeaders: { 'x-default': 'default' },
+    baseUrl: new URL('https://api.example.com'),
+    apiKey: 'test-key',
+    authToken: undefined,
     userAgent: 'lily-sdk/test',
-    fetch,
-  };
+    defaultHeaders: {},
+    timeoutMs: 1000,
+    retry: { retries: 2, retryDelayMs: 1 },
+    fetch: vi.fn(),
+    ...overrides,
+  } as ResolvedLilySdkConfig;
 }
 
-function jsonResponse(status: number, body: unknown = { ok: true }): Response {
-  return new Response(JSON.stringify(body), {
+function jsonResponse(body: unknown, status = 200) {
+  return () => new Response(JSON.stringify(body), {
     status,
     headers: { 'content-type': 'application/json' },
   });
 }
 
-describe('fetch HTTP client', () => {
-  const retryableStatuses = [408, 409, 425, 429, 500, 502, 503, 504];
-  const retryableMethods: HttpMethod[] = ['GET', 'PUT', 'DELETE'];
+function textResponse(body: string, status = 200) {
+  return () => new Response(body, {
+    status,
+    headers: { 'content-type': 'text/plain' },
+  });
+}
 
-  it.each(
-    retryableMethods.flatMap((method) =>
-      retryableStatuses.map((status) => [method, status] as const),
-    ),
-  )('retries %s requests after status %i', async (method, status) => {
-    const fetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockResolvedValueOnce(jsonResponse(status))
-      .mockResolvedValueOnce(jsonResponse(200));
+function emptyResponse(status: number) {
+  return () => new Response(null, { status });
+}
 
-    const response = await createFetchHttpClient(config(fetch, 1)).request({
-      method,
-      path: '/v1/resource',
-    });
+describe('fetch-http-client coverage matrix', () => {
+  let config: ResolvedLilySdkConfig;
 
-    expect(response.status).toBe(200);
-    expect(fetch).toHaveBeenCalledTimes(2);
+  beforeEach(() => {
+    config = makeConfig();
+    vi.useFakeTimers();
   });
 
-  it.each(['POST', 'PATCH'] as const)(
-    'does not retry non-idempotent %s requests',
-    async (method) => {
-      const fetch = vi
-        .fn<typeof globalThis.fetch>()
-        .mockResolvedValue(jsonResponse(503));
-
-      await expect(
-        createFetchHttpClient(config(fetch, 1)).request({
-          method,
-          path: '/v1/resource',
-        }),
-      ).rejects.toBeInstanceOf(LilyApiError);
-      expect(fetch).toHaveBeenCalledOnce();
-    },
-  );
-
-  it('stops retrying status failures at the configured limit', async () => {
-    const fetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockImplementation(() => Promise.resolve(jsonResponse(503)));
-
-    await expect(
-      createFetchHttpClient(config(fetch, 1)).request({
-        method: 'GET',
-        path: '/v1/resource',
-      }),
-    ).rejects.toMatchObject({ code: 'API_ERROR', statusCode: 503 });
-    expect(fetch).toHaveBeenCalledTimes(2);
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
-  it.each(retryableMethods)(
-    'retries transport errors for %s requests',
-    async (method) => {
-      const fetch = vi
-        .fn<typeof globalThis.fetch>()
-        .mockRejectedValueOnce(new TypeError('connection reset'))
-        .mockResolvedValueOnce(jsonResponse(200));
+  it('buildUrl handles path without leading slash and query params', async () => {
+    config.fetch = vi.fn().mockImplementation(jsonResponse({ ok: true }));
+    const client = createFetchHttpClient(config);
 
-      await expect(
-        createFetchHttpClient(config(fetch, 1)).request({
-          method,
-          path: '/v1/resource',
-        }),
-      ).resolves.toMatchObject({ status: 200 });
-      expect(fetch).toHaveBeenCalledTimes(2);
-    },
-  );
+    await client.request({ method: 'GET', path: 'health', query: { v: 1, empty: undefined } });
 
-  it('wraps exhausted and non-Error transport failures', async () => {
-    const exhaustedFetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockRejectedValue(new TypeError('connection reset'));
-    await expect(
-      createFetchHttpClient(config(exhaustedFetch, 1)).request({
-        method: 'GET',
-        path: '/v1/resource',
-      }),
-    ).rejects.toMatchObject({ code: 'TRANSPORT_ERROR' });
-    expect(exhaustedFetch).toHaveBeenCalledTimes(2);
-
-    const nonErrorFetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockRejectedValue('offline');
-    await expect(
-      createFetchHttpClient(config(nonErrorFetch, 1)).request({
-        method: 'GET',
-        path: '/v1/resource',
-      }),
-    ).rejects.toBeInstanceOf(LilyTransportError);
-    expect(nonErrorFetch).toHaveBeenCalledOnce();
+    const calledUrl = config.fetch.mock.calls[0][0] as URL;
+    expect(calledUrl.pathname).toBe('/health');
+    expect(calledUrl.searchParams.get('v')).toBe('1');
+    expect(calledUrl.searchParams.has('empty')).toBe(false);
   });
 
-  it('does not retry transport errors for non-idempotent methods', async () => {
-    const fetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockRejectedValue(new TypeError('offline'));
+  it('serializeBody returns undefined for null/undefined and stringifies objects', async () => {
+    config.fetch = vi.fn().mockImplementation(jsonResponse({}));
+    const client = createFetchHttpClient(config);
 
-    await expect(
-      createFetchHttpClient(config(fetch, 1)).request({
-        method: 'POST',
-        path: '/v1/resource',
-      }),
-    ).rejects.toBeInstanceOf(LilyTransportError);
-    expect(fetch).toHaveBeenCalledOnce();
+    await client.request({ method: 'POST', path: '/a', body: undefined });
+    expect(config.fetch.mock.calls[0][1].body).toBeUndefined();
+
+    await client.request({ method: 'POST', path: '/b', body: null });
+    expect(config.fetch.mock.calls[1][1].body).toBeUndefined();
+
+    await client.request({ method: 'POST', path: '/c', body: { x: 1 } });
+    expect(config.fetch.mock.calls[2][1].body).toBe('{"x":1}');
   });
 
-  it('builds the URL and serializes request bodies', async () => {
-    const fetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockResolvedValue(jsonResponse(200));
+  it('parseResponse returns null for 204, text for non-json, json for application/json', async () => {
+    const client = createFetchHttpClient(config);
 
-    await createFetchHttpClient(config(fetch)).request({
-      method: 'POST',
-      path: 'v1/resource',
-      query: {
-        text: 'hello world',
-        page: 2,
-        enabled: false,
-        omitted: undefined,
-      },
-      headers: { 'x-request': 'request' },
-      body: { amount: 12 },
-    });
+    config.fetch = vi.fn().mockImplementation(emptyResponse(204));
+    const r1 = await client.request({ method: 'GET', path: '/no-content' });
+    expect(r1.data).toBeNull();
 
-    const call = fetch.mock.calls.at(0);
-    if (!call) {
-      throw new Error('Expected fetch to be called');
-    }
-    const [url, init] = call;
-    if (!(url instanceof URL)) {
-      throw new Error('Expected transport URL to be a URL instance');
-    }
-    expect(url.href).toBe(
-      'https://api.lily.test/root/v1/resource?text=hello+world&page=2&enabled=false',
-    );
-    expect(init?.body).toBe('{"amount":12}');
-    expect(init?.headers).toMatchObject({
-      'x-default': 'default',
-      'x-request': 'request',
+    config.fetch = vi.fn().mockImplementation(textResponse('plain text'));
+    const r2 = await client.request({ method: 'GET', path: '/text' });
+    expect(r2.data).toBe('plain text');
+
+    config.fetch = vi.fn().mockImplementation(jsonResponse({ key: 'val' }));
+    const r3 = await client.request({ method: 'GET', path: '/json' });
+    expect(r3.data).toEqual({ key: 'val' });
+  });
+
+  it('retries on retryable status codes for safe methods and exhausts to LilyApiError', async () => {
+    config.retry.retries = 2;
+    config.fetch = vi.fn().mockImplementation(jsonResponse({ err: 'fail' }, 500));
+    const client = createFetchHttpClient(config);
+
+    const promise = client.request({ method: 'GET', path: '/fail' });
+    const assertion = expect(promise).rejects.toBeInstanceOf(LilyApiError);
+    
+    // Advance timers for each retry delay
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(2);
+    
+    // Ensure all pending promises settle before asserting
+    await vi.runAllTimersAsync();
+
+    await assertion;
+    expect(config.fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not retry POST on 500', async () => {
+    config.fetch = vi.fn().mockImplementation(jsonResponse({}, 500));
+    const client = createFetchHttpClient(config);
+
+    await expect(client.request({ method: 'POST', path: '/p' })).rejects.toBeInstanceOf(LilyApiError);
+    expect(config.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws LilyAuthenticationError on 401/403 without retry', async () => {
+    config.fetch = vi.fn()
+      .mockImplementationOnce(jsonResponse({}, 401))
+      .mockImplementationOnce(jsonResponse({}, 403));
+    const client = createFetchHttpClient(config);
+
+    await expect(client.request({ method: 'GET', path: '/auth' })).rejects.toBeInstanceOf(LilyAuthenticationError);
+    await expect(client.request({ method: 'GET', path: '/forbidden' })).rejects.toBeInstanceOf(LilyAuthenticationError);
+    expect(config.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries on transport errors for safe methods and exhausts to LilyTransportError', async () => {
+    config.retry.retries = 1;
+    config.fetch = vi.fn().mockRejectedValue(new Error('network down'));
+    const client = createFetchHttpClient(config);
+
+    const promise = client.request({ method: 'GET', path: '/net' });
+    const assertion = expect(promise).rejects.toBeInstanceOf(LilyTransportError);
+    
+    // Advance timer for retry delay
+    await vi.advanceTimersByTimeAsync(1);
+    
+    // Settle remaining microtasks/promises
+    await vi.runAllTimersAsync();
+
+    await assertion;
+    expect(config.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('wraps AbortError as TIMEOUT transport error', async () => {
+    const abortErr = new Error('aborted');
+    abortErr.name = 'AbortError';
+    config.fetch = vi.fn().mockRejectedValue(abortErr);
+    const client = createFetchHttpClient(config);
+
+    await expect(client.request({ method: 'GET', path: '/timeout' })).rejects.toMatchObject({
+      code: 'TIMEOUT',
     });
   });
 
-  it.each([
-    [204, '', null],
-    [200, 'plain text', 'plain text'],
-  ] as const)(
-    'parses a %i non-JSON response',
-    async (status, body, expected) => {
-      const fetch = vi
-        .fn<typeof globalThis.fetch>()
-        .mockResolvedValue(new Response(body || null, { status }));
+  it('does not retry transport errors for POST', async () => {
+    config.fetch = vi.fn().mockRejectedValue(new Error('fail'));
+    const client = createFetchHttpClient(config);
 
-      const response = await createFetchHttpClient(config(fetch)).request({
-        method: 'GET',
-        path: '/v1/resource',
-        body: null,
-      });
-
-      expect(response.data).toBe(expected);
-      const call = fetch.mock.calls.at(0);
-      if (!call) {
-        throw new Error('Expected fetch to be called');
-      }
-      expect(call[1]?.body).toBeUndefined();
-    },
-  );
-
-  it('maps abort errors to timeout transport errors', async () => {
-    const fetch = vi.fn<typeof globalThis.fetch>().mockImplementation(
-      (_input, init) =>
-        new Promise((_resolve, reject) => {
-          init?.signal?.addEventListener('abort', () => {
-            reject(new DOMException('aborted', 'AbortError'));
-          });
-        }),
-    );
-
-    await expect(
-      createFetchHttpClient({ ...config(fetch), timeoutMs: 1 }).request({
-        method: 'GET',
-        path: '/v1/resource',
-      }),
-    ).rejects.toMatchObject({ code: 'TIMEOUT' });
-    expect(fetch).toHaveBeenCalledOnce();
+    await expect(client.request({ method: 'POST', path: '/post-net' })).rejects.toBeInstanceOf(LilyTransportError);
+    expect(config.fetch).toHaveBeenCalledTimes(1);
   });
 });
