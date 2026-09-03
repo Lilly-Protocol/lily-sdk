@@ -2,6 +2,7 @@ import type { LilySdkConfig, ResolvedLilySdkConfig } from './types';
 import { LilyConfigError } from '../errors/sdk-error';
 import { VERSION } from '../version';
 import type { RetryPolicy } from '../http/types';
+import { PACKAGE_VERSION } from '../version';
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_USER_AGENT = `lily-sdk/${VERSION}`;
