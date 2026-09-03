@@ -99,3 +99,22 @@ export function normalizeMoneyAmount(input: MoneyAmount): MoneyAmount {
   const fraction = fractionRaw.slice(0, 2).padEnd(2, '0');
   return { ...input, amount: `${whole}.${fraction}` };
 }
+
+/**
+ * Safely converts a numeric value to a fixed-decimal string suitable for MoneyAmount.
+ */
+export function toAmountString(value: number, decimals: number = 7): string {
+  if (!Number.isFinite(value)) {
+    throw new Error(	oAmountString: invalid value );
+  }
+  const factor = Math.pow(10, decimals);
+  return (Math.round(value * factor) / factor).toFixed(decimals);
+}
+
+export function parseAmount(value: string | number, decimals: number = 7): string {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(num)) {
+    throw new Error(\parseAmount: invalid value '\'\);
+  }
+  return toAmountString(num, decimals);
+}

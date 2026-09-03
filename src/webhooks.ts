@@ -39,12 +39,29 @@ export function verifyWebhookSignature(
  * @param secret - The webhook signing secret.
  * @returns `true` if the signature is valid.
  */
+/**
+ * Canonical JSON serializer that sorts object keys recursively
+ * to ensure consistent output regardless of insertion order.
+ */
+function canonicalStringify(obj: unknown): string {
+  if (obj === null || obj === undefined) return 'null';
+  if (typeof obj === 'string') return JSON.stringify(obj);
+  if (typeof obj === 'number' || typeof obj === 'boolean') return String(obj);
+  if (Array.isArray(obj)) return '[' + obj.map(canonicalStringify).join(',') + ']';
+  if (typeof obj === 'object') {
+    const keys = Object.keys(obj as Record<string, unknown>).sort();
+    const pairs = keys.map(k => JSON.stringify(k) + ':' + canonicalStringify((obj as Record<string, unknown>)[k]));
+    return '{' + pairs.join(',') + '}';
+  }
+  return JSON.stringify(obj);
+}
+
 export function verifyWebhookJSON(
   data: unknown,
   signature: string,
   secret: string,
 ): boolean {
-  const payload = JSON.stringify(data);
+  const payload = canonicalStringify(data);
   return verifyWebhookSignature(payload, signature, secret);
 }
 

@@ -6,3 +6,15 @@ coverage
 .idea
 .vscode
 docs/api
+
+# temp files
+README_fixed.md
+add_test.cjs
+add_test2.cjs
+fix_*.cjs
+fix_*.py
+fix_*.ps1
+timeout_patch.txt
+fix_*.txt
+*.bak
+

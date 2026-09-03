@@ -1,8 +1,8 @@
 export interface HealthStatus {
   status: 'ok' | 'degraded' | 'down';
-  version: string;
-  timestamp: string;
-  checks: Record<string, 'ok' | 'degraded' | 'down'>;
+  version?: string;
+  timestamp?: string;
+  checks?: Record<string, 'ok' | 'degraded' | 'down'>;
 }
 
 export interface ServiceInfo {
