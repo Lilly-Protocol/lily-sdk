@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { IdentityClient } from '../src/clients/identity-client';
+import { LilyValidationError } from '../src/errors/sdk-error';
 import type { HttpClient, HttpResponse } from '../src/http/types';
 import type { IdentityProfile, ResolveIdentityRequest, VerifyIdentityRequest, VerificationResult } from '../src/models';
 
@@ -44,7 +45,6 @@ describe('IdentityClient', () => {
     it('sends POST /v1/identity/resolve with the input body and returns the profile', async () => {
       const input: ResolveIdentityRequest = {
         agentId: 'agent-1',
-        stellarAddress: 'GABC...',
       };
       vi.mocked(httpClient.request).mockResolvedValueOnce({
         status: 200,
@@ -60,6 +60,23 @@ describe('IdentityClient', () => {
         path: '/v1/identity/resolve',
         body: input,
       });
+    });
+
+    it('throws LilyValidationError when no resolver key is provided', async () => {
+      await expect(client.resolve({})).rejects.toBeInstanceOf(LilyValidationError);
+      expect(httpClient.request).not.toHaveBeenCalled();
+    });
+
+    it('throws LilyValidationError when resolver key is empty', async () => {
+      await expect(client.resolve({ agentId: '   ' })).rejects.toBeInstanceOf(LilyValidationError);
+      expect(httpClient.request).not.toHaveBeenCalled();
+    });
+
+    it('throws LilyValidationError when more than one resolver key is provided', async () => {
+      await expect(
+        client.resolve({ agentId: 'agent-1', stellarAddress: 'GABC...' }),
+      ).rejects.toBeInstanceOf(LilyValidationError);
+      expect(httpClient.request).not.toHaveBeenCalled();
     });
   });
 
@@ -84,6 +101,20 @@ describe('IdentityClient', () => {
         path: '/v1/identity/verify',
         body: input,
       });
+    });
+
+    it('throws LilyValidationError for empty required fields', async () => {
+      await expect(
+        client.verify({ identityId: '', challenge: 'c', signature: 's' }),
+      ).rejects.toBeInstanceOf(LilyValidationError);
+      expect(httpClient.request).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('get', () => {
+    it('throws LilyValidationError for empty identityId', async () => {
+      await expect(client.get('   ')).rejects.toBeInstanceOf(LilyValidationError);
+      expect(httpClient.request).not.toHaveBeenCalled();
     });
   });
 });

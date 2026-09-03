@@ -3,8 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   BaseClient,
   LilyAuthenticationError,
+  LilyApiError,
   LilySdk,
   createFetchHttpClient,
+  LilyTransportError,
+  resolveLilySdkConfig,
 } from '../src/index';
 import { createMockHttpClient } from './helpers/mock-http-client';
 
@@ -223,19 +226,23 @@ describe('client behavior', () => {
           });
         });
       }),
-    ).rejects.toThrow(LilyAuthenticationError);
+    });
 
     try {
       await httpClient.request({
         method: 'GET',
         path: '/v1/system/health',
       });
+      expect.fail('request should have thrown');
     } catch (error) {
-      expect(error).toBeInstanceOf(LilyAuthenticationError);
-      const authError = error as LilyAuthenticationError;
-      expect(authError.statusCode).toBe(401);
-      expect(authError.code).toBe('AUTHENTICATION_ERROR');
-      expect(authError.details).toEqual({ message: 'nope' });
+      expect(error).toBeInstanceOf(LilyTransportError);
+      const transportError = error as LilyTransportError;
+      expect(transportError.code).toBe('TIMEOUT');
+      expect(transportError.request).toEqual({
+        method: 'GET',
+        path: '/v1/system/health',
+        url: 'https://api.lily.test/v1/system/health',
+      });
     }
   });
 
@@ -703,4 +710,3 @@ describe('client behavior', () => {
     });
   });
 });
-

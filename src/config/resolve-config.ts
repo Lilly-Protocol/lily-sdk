@@ -1,12 +1,10 @@
-import { VERSION } from '../version';
 import type { LilySdkConfig, ResolvedLilySdkConfig } from './types';
 import { LilyConfigError } from '../errors/sdk-error';
-import { SDK_VERSION } from '../version';
+import { VERSION } from '../version';
 import type { RetryPolicy } from '../http/types';
-import { version } from '../../package.json' with { type: 'json' };
 
 const DEFAULT_TIMEOUT_MS = 10_000;
-const DEFAULT_USER_AGENT = `lily-sdk/${version}`;
+const DEFAULT_USER_AGENT = `lily-sdk/${VERSION}`;
 const DEFAULT_RETRY_POLICY: RetryPolicy = {
   retries: 2,
   retryDelayMs: 250,
@@ -20,12 +18,13 @@ export function resolveLilySdkConfig(
     throw new LilyConfigError('`baseUrl` is required.');
   }
 
-  const baseUrl = safeUrl(rawBaseUrl);
+  const baseUrl = safeUrl(config.baseUrl);
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const retry = Object.freeze(resolveRetryPolicy(config.retry));
   const fetchImpl = config.fetch ?? globalThis.fetch;
   const resolvedApiKey = resolveCredential(config.apiKey, 'LILY_API_KEY');
   const resolvedAuthToken = resolveCredential(config.authToken, 'LILY_AUTH_TOKEN');
+  const validateResponses = config.validateResponses ?? true;
 
   if (typeof fetchImpl !== 'function') {
     throw new LilyConfigError(
@@ -37,9 +36,6 @@ export function resolveLilySdkConfig(
     throw new LilyConfigError('`timeoutMs` must be a positive number.');
   }
 
-  const apiKey = config.apiKey ?? process.env.LILY_API_KEY;
-  const authToken = config.authToken ?? process.env.LILY_AUTH_TOKEN;
-
   return Object.freeze({
     baseUrl,
     timeoutMs,
@@ -49,16 +45,10 @@ export function resolveLilySdkConfig(
     }),
     userAgent: config.userAgent ?? DEFAULT_USER_AGENT,
     fetch: fetchImpl,
-    ...(apiKey ? { apiKey } : {}),
-    ...(authToken ? { authToken } : {}),
+    ...(resolvedApiKey ? { apiKey: resolvedApiKey } : {}),
+    ...(resolvedAuthToken ? { authToken: resolvedAuthToken } : {}),
+    validateResponses,
   });
-}
-
-function resolveCredential(
-  explicit: string | undefined,
-  envName: string,
-): string | undefined {
-  return explicit ?? process.env[envName] ?? undefined;
 }
 
 function resolveCredential(

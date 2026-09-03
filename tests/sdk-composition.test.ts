@@ -27,7 +27,7 @@ describe('LilySdk composition with injected HttpClient', () => {
     await sdk.agents.list();
     await sdk.wallets.get('wallet-1');
     await sdk.payments.get('payment-1');
-    await sdk.identity.resolve({ identityId: 'id-1' });
+    await sdk.identity.resolve({ agentId: 'id-1' });
 
     expect(http.calls).toHaveLength(5);
   });

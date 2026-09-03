@@ -22,5 +22,5 @@ export interface ResolvedLilySdkConfig {
   readonly defaultHeaders: Readonly<Record<string, string>>;
   readonly userAgent: string;
   readonly fetch: typeof globalThis.fetch;
-  readonly validateResponses: boolean;
+  readonly validateResponses?: boolean;
 }
