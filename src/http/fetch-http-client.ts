@@ -42,7 +42,10 @@ export function createFetchHttpClient(
           request.signal.addEventListener('abort', externalAbortHandler, { once: true });
         }
         const timeout = setTimeout(() => {
-          controller.abort();
+          if (abortSource === undefined) {
+            abortSource = 'timeout';
+            controller.abort();
+          }
         }, timeoutMs);
 
         const body = serializeBody(request.body);
@@ -129,7 +132,10 @@ export function createFetchHttpClient(
             });
           }
 
-          if (attempt < config.retry.retries && isRetryableTransportError(error, request.method)) {
+          if (
+            attempt < config.retry.retries &&
+            isRetryableTransportError(error, request.method)
+          ) {
             attempt += 1;
             await sleep(config.retry.retryDelayMs * attempt);
             continue;
