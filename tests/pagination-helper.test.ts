@@ -58,7 +58,9 @@ describe('pagination helper (issue #61)', () => {
 
   describe('paginate', () => {
     it('yields all items from a single page', async () => {
-      const fetchPage = vi.fn().mockResolvedValue([1, 2, 3]);
+      const fetchPage = vi
+        .fn()
+        .mockResolvedValue(parseCursorPage([1, 2, 3], null));
       const results: number[] = [];
       for await (const item of paginate<number>(fetchPage)) {
         results.push(item);
@@ -67,24 +69,42 @@ describe('pagination helper (issue #61)', () => {
       expect(fetchPage).toHaveBeenCalledTimes(1);
     });
 
-    it('stops at maxPages when limit is set', async () => {
-      const fetchPage = vi.fn().mockResolvedValue([1, 2]);
-      const results: number[] = [];
-      for await (const item of paginate<number>(fetchPage, {
-        limit: 2,
-        maxPages: 3,
-      })) {
-        results.push(item);
-      }
-      expect(results.length).toBe(6); // 3 pages * 2 items
-      expect(fetchPage).toHaveBeenCalledTimes(3);
-    });
-
-    it('stops when page returns fewer items than limit', async () => {
+    it('advances with cursor metadata without repeating a page', async () => {
       const fetchPage = vi
         .fn()
-        .mockResolvedValueOnce([1, 2])
-        .mockResolvedValueOnce([3]);
+        .mockResolvedValueOnce(parseCursorPage([1, 2], 'c1'))
+        .mockResolvedValueOnce(parseCursorPage([3, 4], null));
+      const results: number[] = [];
+      for await (const item of paginate<number>(fetchPage, { limit: 2 })) {
+        results.push(item);
+      }
+      expect(results).toEqual([1, 2, 3, 4]);
+      expect(fetchPage).toHaveBeenNthCalledWith(1, { limit: 2 });
+      expect(fetchPage).toHaveBeenNthCalledWith(2, {
+        limit: 2,
+        cursor: 'c1',
+      });
+    });
+
+    it('stops at maxPages', async () => {
+      const fetchPage = vi
+        .fn()
+        .mockResolvedValueOnce(parseCursorPage([1], 'c1'))
+        .mockResolvedValueOnce(parseCursorPage([2], 'c2'))
+        .mockResolvedValueOnce(parseCursorPage([3], 'c3'));
+      const results: number[] = [];
+      for await (const item of paginate<number>(fetchPage, { maxPages: 2 })) {
+        results.push(item);
+      }
+      expect(results).toEqual([1, 2]);
+      expect(fetchPage).toHaveBeenCalledTimes(2);
+    });
+
+    it('stops when a page returns fewer items than the limit', async () => {
+      const fetchPage = vi
+        .fn()
+        .mockResolvedValueOnce(parseCursorPage([1, 2], 'c1'))
+        .mockResolvedValueOnce(parseCursorPage([3], 'c2'));
       const results: number[] = [];
       for await (const item of paginate<number>(fetchPage, { limit: 2 })) {
         results.push(item);
@@ -94,13 +114,38 @@ describe('pagination helper (issue #61)', () => {
     });
 
     it('stops on empty page', async () => {
-      const fetchPage = vi.fn().mockResolvedValue([]);
+      const fetchPage = vi.fn().mockResolvedValue(parseCursorPage([], 'c1'));
       const results: number[] = [];
       for await (const item of paginate<number>(fetchPage, { limit: 10 })) {
         results.push(item);
       }
       expect(results).toEqual([]);
       expect(fetchPage).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops on a cursor-less response even when the page is full', async () => {
+      const fetchPage = vi
+        .fn()
+        .mockResolvedValue(parseCursorPage([1, 2], null));
+      const results: number[] = [];
+      for await (const item of paginate<number>(fetchPage, { limit: 2 })) {
+        results.push(item);
+      }
+      expect(results).toEqual([1, 2]);
+      expect(fetchPage).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not request the same cursor twice', async () => {
+      const fetchPage = vi
+        .fn()
+        .mockResolvedValueOnce(parseCursorPage([1], 'c1'))
+        .mockResolvedValueOnce(parseCursorPage([2], 'c1'));
+      const results: number[] = [];
+      for await (const item of paginate<number>(fetchPage)) {
+        results.push(item);
+      }
+      expect(results).toEqual([1, 2]);
+      expect(fetchPage).toHaveBeenCalledTimes(2);
     });
   });
 });
