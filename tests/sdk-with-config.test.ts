@@ -39,4 +39,42 @@ describe('LilySdk.withConfig', () => {
     expect(tenantB.config.apiKey).toBe('tenant-b-key');
     expect(base.config.apiKey).toBe('shared-key');
   });
+
+  it('allows clearing inherited credentials using null', () => {
+    const parent = new LilySdk({
+      baseUrl: 'https://api.example.com',
+      apiKey: 'parent-api-key',
+      authToken: 'parent-auth-token',
+    });
+
+    const child = parent.withConfig({
+      apiKey: null,
+      authToken: null,
+    });
+
+    expect(child.config.apiKey).toBeUndefined();
+    expect(child.config.authToken).toBeUndefined();
+
+    // Verify headers do not include x-api-key or authorization
+    const headers = child.config.toHeaders?.() ?? {};
+    expect(headers['x-api-key']).toBeUndefined();
+    expect(headers['authorization']).toBeUndefined();
+  });
+
+  it('inherits credentials when overrides do not specify them', () => {
+    const parent = new LilySdk({
+      baseUrl: 'https://api.example.com',
+      apiKey: 'parent-api-key',
+      authToken: 'parent-auth-token',
+    });
+
+    const child = parent.withConfig({ timeoutMs: 5000 });
+
+    expect(child.config.apiKey).toBe('parent-api-key');
+    expect(child.config.authToken).toBe('parent-auth-token');
+
+    const headers = child.config.toHeaders?.() ?? {};
+    expect(headers['x-api-key']).toBe('parent-api-key');
+    expect(headers['authorization']).toBe('Bearer parent-auth-token');
+  });
 });
