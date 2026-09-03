@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   type RequestLifecycleHooks,
   composeHooks,
@@ -94,10 +94,14 @@ describe('RequestLifecycleHooks (issue #64)', () => {
     it('calls all composed beforeRequest hooks in order', async () => {
       const calls: string[] = [];
       const hooks1: RequestLifecycleHooks = {
-        beforeRequest: () => calls.push('1'),
+        beforeRequest: () => {
+          calls.push('1');
+        },
       };
       const hooks2: RequestLifecycleHooks = {
-        beforeRequest: () => calls.push('2'),
+        beforeRequest: () => {
+          calls.push('2');
+        },
       };
       const composed = composeHooks(hooks1, hooks2);
       await composed.beforeRequest?.(sampleRequest);
@@ -114,14 +118,24 @@ describe('RequestLifecycleHooks (issue #64)', () => {
         beforeRequest: () => {},
       };
       const composed = composeHooks(badHooks, goodHooks);
-      await expect(composed.beforeRequest?.(sampleRequest)).resolves.toBeUndefined();
+      await expect(
+        composed.beforeRequest?.(sampleRequest),
+      ).resolves.toBeUndefined();
     });
 
     it('calls all composed afterResponse hooks', async () => {
       const calls: string[] = [];
       const composed = composeHooks(
-        { afterResponse: () => calls.push('a') },
-        { afterResponse: () => calls.push('b') },
+        {
+          afterResponse: () => {
+            calls.push('a');
+          },
+        },
+        {
+          afterResponse: () => {
+            calls.push('b');
+          },
+        },
       );
       await composed.afterResponse?.(sampleRequest, sampleResponse);
       expect(calls).toEqual(['a', 'b']);
@@ -130,8 +144,16 @@ describe('RequestLifecycleHooks (issue #64)', () => {
     it('calls all composed onError hooks', async () => {
       const calls: string[] = [];
       const composed = composeHooks(
-        { onError: () => calls.push('e1') },
-        { onError: () => calls.push('e2') },
+        {
+          onError: () => {
+            calls.push('e1');
+          },
+        },
+        {
+          onError: () => {
+            calls.push('e2');
+          },
+        },
       );
       await composed.onError?.(sampleRequest, new Error('test'));
       expect(calls).toEqual(['e1', 'e2']);
@@ -139,7 +161,9 @@ describe('RequestLifecycleHooks (issue #64)', () => {
 
     it('handles empty hook sets gracefully', async () => {
       const composed = composeHooks();
-      await expect(composed.beforeRequest?.(sampleRequest)).resolves.toBeUndefined();
+      await expect(
+        composed.beforeRequest?.(sampleRequest),
+      ).resolves.toBeUndefined();
     });
   });
 });

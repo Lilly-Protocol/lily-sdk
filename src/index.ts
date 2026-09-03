@@ -1,4 +1,5 @@
 export { LilySdk } from './sdk';
+export { SDK_VERSION } from './version';
 export type {
   LilySdkConfig,
   LilySdkCreateOptions,
@@ -17,6 +18,7 @@ export {
   LilyRateLimitError,
   LilyServerError,
   LilyTransportError,
+  LilyValidationError,
   isLilySdkError,
 } from './errors/sdk-error';
 export type { LilyErrorCode } from './errors/sdk-error';

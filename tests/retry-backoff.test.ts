@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import type { HttpClient, HttpRequest, HttpResponse } from '../src/http/types';
 import { BaseClient } from '../src/clients/base-client';
 
@@ -12,15 +12,25 @@ describe('Retries with backoff (issue #1)', () => {
   it('retries on 500 and succeeds on second attempt', async () => {
     let callCount = 0;
     const mockClient: HttpClient = {
-      async request<TResponse, TRequest>(req: HttpRequest<TRequest>): Promise<HttpResponse<TResponse>> {
+      async request<TResponse, TRequest>(
+        _req: HttpRequest<TRequest>,
+      ): Promise<HttpResponse<TResponse>> {
         callCount++;
         if (callCount === 1) {
-          return { status: 500, headers: new Headers(), data: { error: 'server error' } as any };
+          return {
+            status: 500,
+            headers: new Headers(),
+            data: { error: 'server error' } as any,
+          };
         }
-        return { status: 200, headers: new Headers(), data: { ok: true } as any };
+        return {
+          status: 200,
+          headers: new Headers(),
+          data: { ok: true } as any,
+        };
       },
     };
-    const test = new TestClient(mockClient);
+    const _test = new TestClient(mockClient);
     // BaseClient doesn't retry — that's the fetch client's job
     // This test verifies the retry logic exists in the transport layer
     expect(callCount).toBe(0);

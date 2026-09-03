@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { WalletClient } from '../src/clients/wallet-client';
 import type { HttpClient, HttpResponse } from '../src/http/types';
-import type { Wallet, ProvisionWalletRequest, WalletProvisioningResult } from '../src/models';
+import type {
+  Wallet,
+  ProvisionWalletRequest,
+  WalletProvisioningResult,
+} from '../src/models';
 
 function createMockHttpClient(responseData: unknown = {}): HttpClient {
   return {

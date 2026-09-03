@@ -10,7 +10,9 @@ import type { ResolvedLilySdkConfig } from '../src/config/types';
  * (e.g. `?tags=a&tags=b` or `?tags[]=a&tags[]=b`).
  */
 describe('array values in query string serialization', () => {
-  function createConfigWithFetch(fetchImpl: typeof globalThis.fetch): ResolvedLilySdkConfig {
+  function createConfigWithFetch(
+    fetchImpl: typeof globalThis.fetch,
+  ): ResolvedLilySdkConfig {
     return {
       baseUrl: new URL('https://api.example.com/'),
       timeoutMs: 5000,
@@ -24,9 +26,14 @@ describe('array values in query string serialization', () => {
 
   it('serializes array query params by repeating the key', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }),
+      new Response('{}', {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
     );
-    const client = createFetchHttpClient(createConfigWithFetch(fetchMock as typeof fetch));
+    const client = createFetchHttpClient(
+      createConfigWithFetch(fetchMock as typeof fetch),
+    );
 
     await client.request({
       method: 'GET',
@@ -34,15 +41,20 @@ describe('array values in query string serialization', () => {
       query: { tags: ['a', 'b', 'c'] },
     });
 
-    const url = fetchMock.mock.calls[0][0] as URL;
+    const url = fetchMock.mock.calls[0]![0] as URL;
     expect(url.searchParams.getAll('tags')).toEqual(['a', 'b', 'c']);
   });
 
   it('handles mixed scalar and array params', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }),
+      new Response('{}', {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
     );
-    const client = createFetchHttpClient(createConfigWithFetch(fetchMock as typeof fetch));
+    const client = createFetchHttpClient(
+      createConfigWithFetch(fetchMock as typeof fetch),
+    );
 
     await client.request({
       method: 'GET',
@@ -50,16 +62,21 @@ describe('array values in query string serialization', () => {
       query: { page: 1, tags: ['x', 'y'] },
     });
 
-    const url = fetchMock.mock.calls[0][0] as URL;
+    const url = fetchMock.mock.calls[0]![0] as URL;
     expect(url.searchParams.get('page')).toBe('1');
     expect(url.searchParams.getAll('tags')).toEqual(['x', 'y']);
   });
 
   it('handles empty arrays by omitting the param', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }),
+      new Response('{}', {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
     );
-    const client = createFetchHttpClient(createConfigWithFetch(fetchMock as typeof fetch));
+    const client = createFetchHttpClient(
+      createConfigWithFetch(fetchMock as typeof fetch),
+    );
 
     await client.request({
       method: 'GET',
@@ -67,15 +84,20 @@ describe('array values in query string serialization', () => {
       query: { tags: [] },
     });
 
-    const url = fetchMock.mock.calls[0][0] as URL;
+    const url = fetchMock.mock.calls[0]![0] as URL;
     expect(url.searchParams.has('tags')).toBe(false);
   });
 
   it('handles number arrays', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }),
+      new Response('{}', {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
     );
-    const client = createFetchHttpClient(createConfigWithFetch(fetchMock as typeof fetch));
+    const client = createFetchHttpClient(
+      createConfigWithFetch(fetchMock as typeof fetch),
+    );
 
     await client.request({
       method: 'GET',
@@ -83,15 +105,20 @@ describe('array values in query string serialization', () => {
       query: { ids: [1, 2, 3] },
     });
 
-    const url = fetchMock.mock.calls[0][0] as URL;
+    const url = fetchMock.mock.calls[0]![0] as URL;
     expect(url.searchParams.getAll('ids')).toEqual(['1', '2', '3']);
   });
 
   it('handles mixed array of numbers and strings', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }),
+      new Response('{}', {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
     );
-    const client = createFetchHttpClient(createConfigWithFetch(fetchMock as typeof fetch));
+    const client = createFetchHttpClient(
+      createConfigWithFetch(fetchMock as typeof fetch),
+    );
 
     await client.request({
       method: 'GET',
@@ -99,15 +126,20 @@ describe('array values in query string serialization', () => {
       query: { filter: ['active', 42] },
     });
 
-    const url = fetchMock.mock.calls[0][0] as URL;
+    const url = fetchMock.mock.calls[0]![0] as URL;
     expect(url.searchParams.getAll('filter')).toEqual(['active', '42']);
   });
 
   it('preserves undefined values (omits them)', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }),
+      new Response('{}', {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
     );
-    const client = createFetchHttpClient(createConfigWithFetch(fetchMock as typeof fetch));
+    const client = createFetchHttpClient(
+      createConfigWithFetch(fetchMock as typeof fetch),
+    );
 
     await client.request({
       method: 'GET',
@@ -115,7 +147,7 @@ describe('array values in query string serialization', () => {
       query: { page: undefined, tags: ['a'] },
     });
 
-    const url = fetchMock.mock.calls[0][0] as URL;
+    const url = fetchMock.mock.calls[0]![0] as URL;
     expect(url.searchParams.has('page')).toBe(false);
     expect(url.searchParams.getAll('tags')).toEqual(['a']);
   });

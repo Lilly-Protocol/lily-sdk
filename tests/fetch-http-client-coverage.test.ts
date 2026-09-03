@@ -36,8 +36,10 @@ describe('fetch-http-client coverage matrix', () => {
     });
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    const [calledUrl, calledInit] = mockFetch.mock.calls[0];
-    expect(calledUrl.toString()).toBe('https://api.example.com/users?id=1&active=true');
+    const [calledUrl, calledInit] = mockFetch.mock.calls[0]!;
+    expect(calledUrl.toString()).toBe(
+      'https://api.example.com/users?id=1&active=true',
+    );
     expect(calledInit).toEqual(expect.objectContaining({ method: 'GET' }));
   });
 
@@ -53,7 +55,7 @@ describe('fetch-http-client coverage matrix', () => {
     const client = createFetchHttpClient(config);
     await client.request({ method: 'POST', path: '/test', body: null });
 
-    const init = mockFetch.mock.calls[0][1] as RequestInit;
+    const init = mockFetch.mock.calls[0]![1] as RequestInit;
     expect(init.body).toBeUndefined();
   });
 
@@ -107,7 +109,10 @@ describe('fetch-http-client coverage matrix', () => {
       });
 
     const client = createFetchHttpClient(config);
-    const res = await client.request({ method: 'GET', path: '/transport-retry' });
+    const res = await client.request({
+      method: 'GET',
+      path: '/transport-retry',
+    });
 
     expect(res.data).toEqual({ recovered: true });
     expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -159,7 +164,7 @@ describe('fetch-http-client coverage matrix', () => {
       headers: { 'x-request': 'yes' },
     });
 
-    const init = mockFetch.mock.calls[0][1] as RequestInit;
+    const init = mockFetch.mock.calls[0]![1] as RequestInit;
     const headers = init.headers as Record<string, string>;
     expect(headers['x-custom']).toBe('value');
     expect(headers['x-request']).toBe('yes');

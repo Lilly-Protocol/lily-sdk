@@ -1,13 +1,13 @@
 # Subpath Imports
 
-| Subpath | Description |
-|---------|-------------|
-| `lily-sdk` | Full SDK (all clients) |
+| Subpath           | Description                      |
+| ----------------- | -------------------------------- |
+| `lily-sdk`        | Full SDK (all clients)           |
 | `lily-sdk/config` | Configuration types and resolver |
-| `lily-sdk/errors` | Error classes and type guards |
-| `lily-sdk/http` | HTTP transport layer |
-| `lily-sdk/models` | Domain models |
-| `lily-sdk/types` | Shared type definitions |
+| `lily-sdk/errors` | Error classes and type guards    |
+| `lily-sdk/http`   | HTTP transport layer             |
+| `lily-sdk/models` | Domain models                    |
+| `lily-sdk/types`  | Shared type definitions          |
 
 ## Usage
 

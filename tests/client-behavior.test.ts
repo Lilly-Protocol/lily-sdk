@@ -5,11 +5,13 @@ import {
   LilyAuthenticationError,
   LilyApiError,
   LilySdk,
+  LilyValidationError,
   createFetchHttpClient,
   LilyTransportError,
   resolveLilySdkConfig,
 } from '../src/index';
 import { createMockHttpClient } from './helpers/mock-http-client';
+import type { HealthStatus, ServiceInfo } from '../src/models/system';
 
 describe('client behavior', () => {
   it('exposes transport primitives from the root entrypoint', () => {
@@ -151,7 +153,7 @@ describe('client behavior', () => {
         );
       });
 
-      const httpClient = createFetchHttpClient({
+      const client = createFetchHttpClient({
         baseUrl: new URL('https://api.lily.test/'),
         timeoutMs: 2_000,
         retry: {
@@ -165,21 +167,7 @@ describe('client behavior', () => {
         ...credentials,
       });
 
-    const httpClient = createFetchHttpClient({
-      baseUrl: new URL('https://api.lily.test/'),
-      apiKey: 'secret-key',
-      authToken: 'secret-token',
-      timeoutMs: 2_000,
-      retry: {
-        retries: 0,
-        retryDelayMs: 0,
-        retryableStatusCodes: [],
-      },
-      defaultHeaders: {},
-      userAgent: 'lily-sdk/test',
-    validateResponses: false,
-      fetch: fetchSpy,
-    });
+      await client.request({ method: 'GET', path: '/v1/system/health' });
 
       expect(fetchSpy).toHaveBeenCalledOnce();
       expect(fetchSpy.mock.calls[0]?.[1]?.headers).toEqual({
@@ -202,15 +190,18 @@ describe('client behavior', () => {
       },
       defaultHeaders: {},
       userAgent: 'lily-sdk/test',
-    validateResponses: false,
+      validateResponses: false,
       fetch: vi.fn(() =>
         Promise.resolve(
-          new Response(JSON.stringify({ message: 'nope', code: 'INVALID_TOKEN' }), {
-            status: 401,
-            headers: {
-              'content-type': 'application/json',
+          new Response(
+            JSON.stringify({ message: 'nope', code: 'INVALID_TOKEN' }),
+            {
+              status: 401,
+              headers: {
+                'content-type': 'application/json',
+              },
             },
-          }),
+          ),
         ),
       ),
     });
@@ -386,53 +377,55 @@ describe('client behavior', () => {
       expectedHeaders: {},
       disallowedHeaders: ['authorization', 'x-api-key'],
     },
-  ])('auth credential forwarding ($scenario)', ({ config, expectedHeaders, disallowedHeaders }) => {
-    it(`forwards the expected authentication headers for ${config}`, async () => {
-      const fetchSpy = vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
-        const headers = (init?.headers ?? {}) as Record<string, string>;
+  ])(
+    'auth credential forwarding ($scenario)',
+    ({ config, expectedHeaders, disallowedHeaders }) => {
+      it(`forwards the expected authentication headers for ${config}`, async () => {
+        const fetchSpy = vi.fn(
+          (_input: URL | RequestInfo, init?: RequestInit) => {
+            const headers = (init?.headers ?? {}) as Record<string, string>;
 
-        for (const [key, value] of Object.entries(expectedHeaders)) {
-          expect(headers[key]).toBe(value);
-        }
+            for (const [key, value] of Object.entries(expectedHeaders)) {
+              expect(headers[key]).toBe(value);
+            }
 
-        for (const key of disallowedHeaders) {
-          expect(headers[key]).toBeUndefined();
-        }
+            for (const key of disallowedHeaders) {
+              expect(headers[key]).toBeUndefined();
+            }
 
-        return Promise.resolve(
-          new Response(
-            JSON.stringify({ status: 'ok' }),
-            {
-              status: 200,
-              headers: { 'content-type': 'application/json' },
-            },
-          ),
+            return Promise.resolve(
+              new Response(JSON.stringify({ status: 'ok' }), {
+                status: 200,
+                headers: { 'content-type': 'application/json' },
+              }),
+            );
+          },
         );
-      });
 
-      const httpClient = createFetchHttpClient({
-        baseUrl: new URL('https://api.lily.test/'),
-        ...config,
-        timeoutMs: 2_000,
-        retry: {
-          retries: 0,
-          retryDelayMs: 0,
-          retryableStatusCodes: [],
-        },
-        defaultHeaders: {},
-        userAgent: 'lily-sdk/test',
-        fetch: fetchSpy,
-      });
+        const httpClient = createFetchHttpClient({
+          baseUrl: new URL('https://api.lily.test/'),
+          ...config,
+          timeoutMs: 2_000,
+          retry: {
+            retries: 0,
+            retryDelayMs: 0,
+            retryableStatusCodes: [],
+          },
+          defaultHeaders: {},
+          userAgent: 'lily-sdk/test',
+          fetch: fetchSpy,
+        });
 
-      const response = await httpClient.request({
-        method: 'GET',
-        path: '/v1/system/health',
-      });
+        const response = await httpClient.request({
+          method: 'GET',
+          path: '/v1/system/health',
+        });
 
-      expect(response.status).toBe(200);
-      expect(fetchSpy).toHaveBeenCalledOnce();
-    });
-  });
+        expect(response.status).toBe(200);
+        expect(fetchSpy).toHaveBeenCalledOnce();
+      });
+    },
+  );
 
   it('merges defaultHeaders with per-request headers', async () => {
     const fetchSpy = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
@@ -852,21 +845,3 @@ describe('client behavior', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
 });
-
-function createTestHttpClient(
-  fetch: typeof globalThis.fetch,
-  timeoutMs = 2_000,
-) {
-  return createFetchHttpClient({
-    baseUrl: new URL('https://api.lily.test/'),
-    timeoutMs,
-    retry: {
-      retries: 0,
-      retryDelayMs: 0,
-      retryableStatusCodes: [],
-    },
-    defaultHeaders: {},
-    userAgent: 'lily-sdk/test',
-    fetch,
-  });
-}

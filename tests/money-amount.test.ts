@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeMoneyAmount } from '../src/models/common';
-import { MoneyAmount } from '../src/models/common';
+import type { MoneyAmount } from '../src/models/common';
 
 describe('MoneyAmount decimal normalization', () => {
   it('normalizes a whole-number amount to 2 decimal places', () => {
@@ -34,7 +34,11 @@ describe('MoneyAmount decimal normalization', () => {
   });
 
   it('preserves assetCode and assetIssuer', () => {
-    const input: MoneyAmount = { assetCode: 'USDC', assetIssuer: 'GA123...', amount: '10' };
+    const input: MoneyAmount = {
+      assetCode: 'USDC',
+      assetIssuer: 'GA123...',
+      amount: '10',
+    };
     const result = normalizeMoneyAmount(input);
     expect(result.assetCode).toBe('USDC');
     expect(result.assetIssuer).toBe('GA123...');

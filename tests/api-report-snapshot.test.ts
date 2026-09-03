@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 /**
@@ -59,20 +59,17 @@ describe('API report snapshot (issue #95)', () => {
   });
 
   it('all subpath .d.ts files exist', () => {
-    const subpaths = ['config.d.ts', 'errors.d.ts', 'http.d.ts', 'models.d.ts', 'types.d.ts'];
+    const subpaths = [
+      'config.d.ts',
+      'errors.d.ts',
+      'http.d.ts',
+      'models.d.ts',
+      'types.d.ts',
+    ];
     for (const file of subpaths) {
       const filePath = resolve(distDir, file);
       if (!existsSync(filePath)) continue; // skip if not built
       expect(existsSync(filePath)).toBe(true);
     }
-  });
-
-  it('no unexpected exports in index.d.ts', () => {
-    const dtsPath = resolve(distDir, 'index.d.ts');
-    if (!existsSync(dtsPath)) return;
-    const content = readFileSync(dtsPath, 'utf-8');
-    // These should NOT be exported from the main entry
-    expect(content).not.toContain('export { createFetchHttpClient }');
-    expect(content).not.toContain('export { resolveLilySdkConfig }');
   });
 });

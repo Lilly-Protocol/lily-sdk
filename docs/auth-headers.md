@@ -25,8 +25,8 @@ When both are set, both headers are sent on every request.
 ```typescript
 const sdk = new LilySdk({
   baseUrl: 'https://api.lily.io',
-  apiKey: 'lk_live_xxx',        // → x-api-key: lk_live_xxx
-  authToken: 'eyJhbGciOi...',   // → Authorization: Bearer eyJhbGciOi...
+  apiKey: 'lk_live_xxx', // → x-api-key: lk_live_xxx
+  authToken: 'eyJhbGciOi...', // → Authorization: Bearer eyJhbGciOi...
 });
 ```
 

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { resolveAuthHeaders } from '../src/http/resolve-auth-headers';
 import type { ResolvedLilySdkConfig } from '../src/config/types';
 
-function makeConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): ResolvedLilySdkConfig {
+function makeConfig(
+  overrides: Partial<ResolvedLilySdkConfig> = {},
+): ResolvedLilySdkConfig {
   return {
     baseUrl: new URL('https://api.example.com/'),
     timeoutMs: 10_000,
@@ -10,6 +12,7 @@ function makeConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): ResolvedLil
     defaultHeaders: {},
     userAgent: 'test-agent',
     fetch: globalThis.fetch,
+    toHeaders: () => ({}),
     ...overrides,
   };
 }

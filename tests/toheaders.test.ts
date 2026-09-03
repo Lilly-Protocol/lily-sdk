@@ -9,7 +9,7 @@ describe('toHeaders — auth serialization', () => {
       apiKey: 'my-secret-key',
     };
     const resolved = resolveLilySdkConfig(config);
-    const headers = resolved.toHeaders();
+    const headers = resolved.toHeaders!();
     expect(headers['x-api-key']).toBe('my-secret-key');
   });
 
@@ -19,7 +19,7 @@ describe('toHeaders — auth serialization', () => {
       authToken: 'Bearer my-token',
     };
     const resolved = resolveLilySdkConfig(config);
-    const headers = resolved.toHeaders();
+    const headers = resolved.toHeaders!();
     expect(headers['authorization']).toBe('Bearer my-token');
   });
 
@@ -30,7 +30,7 @@ describe('toHeaders — auth serialization', () => {
       authToken: 'Bearer t',
     };
     const resolved = resolveLilySdkConfig(config);
-    const headers = resolved.toHeaders();
+    const headers = resolved.toHeaders!();
     expect(headers['x-api-key']).toBe('k');
     expect(headers['authorization']).toBe('Bearer t');
   });
@@ -40,7 +40,7 @@ describe('toHeaders — auth serialization', () => {
       baseUrl: 'https://api.lily.dev',
     };
     const resolved = resolveLilySdkConfig(config);
-    const headers = resolved.toHeaders();
+    const headers = resolved.toHeaders!();
     expect(headers).not.toHaveProperty('x-api-key');
     expect(headers).not.toHaveProperty('authorization');
   });
@@ -52,7 +52,7 @@ describe('toHeaders — auth serialization', () => {
       defaultHeaders: { 'x-custom': 'value' },
     };
     const resolved = resolveLilySdkConfig(config);
-    const headers = resolved.toHeaders();
+    const headers = resolved.toHeaders!();
     expect(headers['x-custom']).toBe('value');
   });
 
@@ -62,7 +62,7 @@ describe('toHeaders — auth serialization', () => {
       apiKey: 'k',
     };
     const resolved = resolveLilySdkConfig(config);
-    const headers = resolved.toHeaders();
+    const headers = resolved.toHeaders!();
     expect(headers['user-agent']).toBe('lily-sdk/0.1.0');
   });
 
@@ -72,8 +72,8 @@ describe('toHeaders — auth serialization', () => {
       apiKey: 'k',
     };
     const resolved = resolveLilySdkConfig(config);
-    const h1 = resolved.toHeaders();
-    const h2 = resolved.toHeaders();
+    const h1 = resolved.toHeaders!();
+    const h2 = resolved.toHeaders!();
     expect(h1).not.toBe(h2);
     expect(h1).toEqual(h2);
   });

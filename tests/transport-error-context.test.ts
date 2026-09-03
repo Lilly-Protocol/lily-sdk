@@ -1,7 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import { resolveLilySdkConfig } from '../src/config/resolve-config';
-import { LilyApiError, LilyAuthenticationError, LilyTransportError } from '../src/errors/sdk-error';
+import {
+  LilyApiError,
+  LilyAuthenticationError,
+  LilyTransportError,
+} from '../src/errors/sdk-error';
 
 function makeConfig(fetchImpl: typeof fetch) {
   return resolveLilySdkConfig({
@@ -60,15 +64,17 @@ describe('transport error request context', () => {
   });
 
   it('attaches request metadata to LilyTransportError on timeout', async () => {
-    const mockFetch = vi.fn().mockImplementation((_url: string, init: RequestInit) => {
-      return new Promise((_resolve, reject) => {
-        init.signal?.addEventListener('abort', () => {
-          const abortErr = new Error('The operation was aborted');
-          abortErr.name = 'AbortError';
-          reject(abortErr);
+    const mockFetch = vi
+      .fn()
+      .mockImplementation((_url: string, init: RequestInit) => {
+        return new Promise((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => {
+            const abortErr = new Error('The operation was aborted');
+            abortErr.name = 'AbortError';
+            reject(abortErr);
+          });
         });
       });
-    });
     const config = resolveLilySdkConfig({
       baseUrl: 'https://api.example.com',
       apiKey: 'test-key',

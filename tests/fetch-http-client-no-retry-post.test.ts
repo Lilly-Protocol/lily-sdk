@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import type { ResolvedLilySdkConfig } from '../src/config/types';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 
-function createConfig(overrides: Record<string, unknown> = {}) {
+function createConfig(
+  overrides: Record<string, unknown> = {},
+): ResolvedLilySdkConfig {
   return {
     baseUrl: new URL('https://api.lily.test/'),
     timeoutMs: 2_000,
@@ -13,9 +16,9 @@ function createConfig(overrides: Record<string, unknown> = {}) {
     },
     defaultHeaders: {},
     userAgent: 'lily-sdk/test',
-    fetch: vi.fn(),
+    fetch: vi.fn<typeof globalThis.fetch>(),
     ...overrides,
-  };
+  } as unknown as ResolvedLilySdkConfig;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -27,7 +30,9 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 describe('fetch-http-client — POST requests are never retried', () => {
   it('does not retry POST requests on 429', async () => {
-    const fetchSpy = vi.fn(() => Promise.resolve(jsonResponse({ message: 'rate limited' }, 429)));
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve(jsonResponse({ message: 'rate limited' }, 429)),
+    );
     const client = createFetchHttpClient(createConfig({ fetch: fetchSpy }));
 
     await expect(
@@ -43,7 +48,9 @@ describe('fetch-http-client — POST requests are never retried', () => {
   });
 
   it('does not retry POST requests on 500', async () => {
-    const fetchSpy = vi.fn(() => Promise.resolve(jsonResponse({ message: 'server error' }, 500)));
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve(jsonResponse({ message: 'server error' }, 500)),
+    );
     const client = createFetchHttpClient(createConfig({ fetch: fetchSpy }));
 
     await expect(
@@ -58,7 +65,9 @@ describe('fetch-http-client — POST requests are never retried', () => {
   });
 
   it('does not retry POST requests on 503', async () => {
-    const fetchSpy = vi.fn(() => Promise.resolve(jsonResponse({ message: 'unavailable' }, 503)));
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve(jsonResponse({ message: 'unavailable' }, 503)),
+    );
     const client = createFetchHttpClient(createConfig({ fetch: fetchSpy }));
 
     await expect(
@@ -73,7 +82,9 @@ describe('fetch-http-client — POST requests are never retried', () => {
   });
 
   it('does not retry POST requests on 502', async () => {
-    const fetchSpy = vi.fn(() => Promise.resolve(jsonResponse({ message: 'bad gateway' }, 502)));
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve(jsonResponse({ message: 'bad gateway' }, 502)),
+    );
     const client = createFetchHttpClient(createConfig({ fetch: fetchSpy }));
 
     await expect(
@@ -88,15 +99,19 @@ describe('fetch-http-client — POST requests are never retried', () => {
   });
 
   it('retries GET requests on 429 (for contrast)', async () => {
-    const fetchSpy = vi.fn(() => Promise.resolve(jsonResponse({ message: 'rate limited' }, 429)));
-    const client = createFetchHttpClient(createConfig({
-      fetch: fetchSpy,
-      retry: {
-        retries: 2,
-        retryDelayMs: 0,
-        retryableStatusCodes: [429],
-      },
-    }));
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve(jsonResponse({ message: 'rate limited' }, 429)),
+    );
+    const client = createFetchHttpClient(
+      createConfig({
+        fetch: fetchSpy,
+        retry: {
+          retries: 2,
+          retryDelayMs: 0,
+          retryableStatusCodes: [429],
+        },
+      }),
+    );
 
     await expect(
       client.request({

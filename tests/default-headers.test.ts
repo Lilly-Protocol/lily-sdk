@@ -1,8 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import type { ResolvedLilySdkConfig } from '../src/config/types';
 
-function createMockConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): ResolvedLilySdkConfig {
+function createMockConfig(
+  overrides: Partial<ResolvedLilySdkConfig> = {},
+): ResolvedLilySdkConfig {
   return {
     baseUrl: new URL('https://api.example.com'),
     apiKey: 'test-key',
@@ -31,7 +33,7 @@ describe('defaultHeaders merging', () => {
 
     await client.request({ method: 'GET', path: '/v1/test' });
 
-    const calledInit = vi.mocked(config.fetch).mock.calls[0][1] as RequestInit;
+    const calledInit = vi.mocked(config.fetch).mock.calls[0]![1] as RequestInit;
     const headers = calledInit.headers as Record<string, string>;
     expect(headers['x-custom-header']).toBe('custom-value');
   });
@@ -44,7 +46,7 @@ describe('defaultHeaders merging', () => {
 
     await client.request({ method: 'GET', path: '/v1/test' });
 
-    const calledInit = vi.mocked(config.fetch).mock.calls[0][1] as RequestInit;
+    const calledInit = vi.mocked(config.fetch).mock.calls[0]![1] as RequestInit;
     const headers = calledInit.headers as Record<string, string>;
     expect(headers['accept']).toBe('application/json');
     expect(headers['content-type']).toBe('application/json');
@@ -64,7 +66,7 @@ describe('defaultHeaders merging', () => {
       headers: { 'x-priority': 'high' },
     });
 
-    const calledInit = vi.mocked(config.fetch).mock.calls[0][1] as RequestInit;
+    const calledInit = vi.mocked(config.fetch).mock.calls[0]![1] as RequestInit;
     const headers = calledInit.headers as Record<string, string>;
     expect(headers['x-priority']).toBe('high');
   });
@@ -75,7 +77,7 @@ describe('defaultHeaders merging', () => {
 
     await client.request({ method: 'GET', path: '/v1/test' });
 
-    const calledInit = vi.mocked(config.fetch).mock.calls[0][1] as RequestInit;
+    const calledInit = vi.mocked(config.fetch).mock.calls[0]![1] as RequestInit;
     const headers = calledInit.headers as Record<string, string>;
     expect(headers['x-api-key']).toBe('my-secret-key');
   });
@@ -86,7 +88,7 @@ describe('defaultHeaders merging', () => {
 
     await client.request({ method: 'GET', path: '/v1/test' });
 
-    const calledInit = vi.mocked(config.fetch).mock.calls[0][1] as RequestInit;
+    const calledInit = vi.mocked(config.fetch).mock.calls[0]![1] as RequestInit;
     const headers = calledInit.headers as Record<string, string>;
     expect(headers['authorization']).toBe('Bearer bearer-token-xyz');
   });
@@ -107,7 +109,7 @@ describe('defaultHeaders merging', () => {
       },
     });
 
-    const calledInit = vi.mocked(config.fetch).mock.calls[0][1] as RequestInit;
+    const calledInit = vi.mocked(config.fetch).mock.calls[0]![1] as RequestInit;
     const headers = calledInit.headers as Record<string, string>;
     expect(headers['x-api-key']).toBe('default-key');
     expect(headers['authorization']).toBe('Bearer default-token');

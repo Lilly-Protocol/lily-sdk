@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  LilyApiError,
-  LilyTransportError,
-} from '../src/errors/sdk-error';
+import { LilyApiError, LilyTransportError } from '../src/errors/sdk-error';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 
 describe('fetch-http-client coverage', () => {
@@ -17,11 +14,14 @@ describe('fetch-http-client coverage', () => {
     },
     defaultHeaders: {},
     userAgent: 'lily-sdk/test',
+    toHeaders() {
+      return {};
+    },
   };
 
   it('retries on retryable status codes for GET requests', async () => {
     let calls = 0;
-    const fetchSpy = vi.fn(() => {
+    const fetchSpy = vi.fn<typeof globalThis.fetch>(() => {
       calls += 1;
       if (calls < 3) {
         return Promise.resolve(
@@ -50,7 +50,7 @@ describe('fetch-http-client coverage', () => {
   });
 
   it('throws LilyApiError after retry exhaustion', async () => {
-    const fetchSpy = vi.fn(() =>
+    const fetchSpy = vi.fn<typeof globalThis.fetch>(() =>
       Promise.resolve(
         new Response(JSON.stringify({ error: 'fail' }), {
           status: 500,
@@ -71,7 +71,7 @@ describe('fetch-http-client coverage', () => {
   });
 
   it('does not retry POST requests on server errors', async () => {
-    const fetchSpy = vi.fn(() =>
+    const fetchSpy = vi.fn<typeof globalThis.fetch>(() =>
       Promise.resolve(
         new Response(JSON.stringify({ error: 'fail' }), {
           status: 500,
@@ -93,7 +93,7 @@ describe('fetch-http-client coverage', () => {
 
   it('retries on transport errors for safe methods', async () => {
     let calls = 0;
-    const fetchSpy = vi.fn(() => {
+    const fetchSpy = vi.fn<typeof globalThis.fetch>(() => {
       calls += 1;
       if (calls === 1) {
         return Promise.reject(new TypeError('network failure'));
@@ -117,7 +117,7 @@ describe('fetch-http-client coverage', () => {
   });
 
   it('throws LilyTransportError after transport retry exhaustion', async () => {
-    const fetchSpy = vi.fn(() =>
+    const fetchSpy = vi.fn<typeof globalThis.fetch>(() =>
       Promise.reject(new TypeError('network failure')),
     );
 
@@ -133,7 +133,7 @@ describe('fetch-http-client coverage', () => {
   });
 
   it('handles 204 No Content responses', async () => {
-    const fetchSpy = vi.fn(() =>
+    const fetchSpy = vi.fn<typeof globalThis.fetch>(() =>
       Promise.resolve(
         new Response(null, {
           status: 204,
@@ -153,7 +153,7 @@ describe('fetch-http-client coverage', () => {
   });
 
   it('falls back to text parsing for non-JSON responses', async () => {
-    const fetchSpy = vi.fn(() =>
+    const fetchSpy = vi.fn<typeof globalThis.fetch>(() =>
       Promise.resolve(
         new Response('plain text response', {
           status: 200,
@@ -172,14 +172,14 @@ describe('fetch-http-client coverage', () => {
   });
 
   it('serializes query parameters correctly in buildUrl', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const fetchSpy = vi.fn((_input: unknown, _init?: unknown) =>
-      Promise.resolve(
-        new Response(JSON.stringify({}), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        }),
-      ),
+    const fetchSpy = vi.fn<typeof globalThis.fetch>(
+      (_input: unknown, _init?: unknown) =>
+        Promise.resolve(
+          new Response(JSON.stringify({}), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
     );
 
     const client = createFetchHttpClient({
@@ -208,14 +208,14 @@ describe('fetch-http-client coverage', () => {
   });
 
   it('serializes request body as JSON', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const fetchSpy = vi.fn((_input: unknown, init?: unknown) =>
-      Promise.resolve(
-        new Response(JSON.stringify({}), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        }),
-      ),
+    const fetchSpy = vi.fn<typeof globalThis.fetch>(
+      (_input: unknown, _init?: unknown) =>
+        Promise.resolve(
+          new Response(JSON.stringify({}), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
     );
 
     const client = createFetchHttpClient({
@@ -231,7 +231,8 @@ describe('fetch-http-client coverage', () => {
 
     const init = fetchSpy.mock.calls[0]?.[1] as RequestInit | undefined;
     const body = init?.body;
-    if (typeof body !== 'string') throw new Error('fetch body was not a string');
+    if (typeof body !== 'string')
+      throw new Error('fetch body was not a string');
     expect(JSON.parse(body)).toEqual({ key: 'value', nested: { a: 1 } });
   });
 });

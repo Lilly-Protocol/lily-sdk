@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface OpenApiSpec {
   openapi: string;
   info: { title: string; version: string };
@@ -24,9 +25,16 @@ export function generateContracts(spec: OpenApiSpec): ClientContract[] {
       contracts.push({
         endpoint: path,
         method: method.toUpperCase(),
-        operationId: op.operationId || `${method}_${path.replace(/[{}\/]/g, '_')}`,
-        requestType: op.requestBody?.content?.['application/json']?.schema?.$ref?.split('/')?.pop(),
-        responseType: op.responses?.['200']?.content?.['application/json']?.schema?.$ref?.split('/')?.pop(),
+        operationId:
+          op.operationId || `${method}_${path.replace(/[{}/]/g, '_')}`,
+        requestType: op.requestBody?.content?.['application/json']?.schema?.$ref
+          ?.split('/')
+          ?.pop(),
+        responseType: op.responses?.['200']?.content?.[
+          'application/json'
+        ]?.schema?.$ref
+          ?.split('/')
+          ?.pop(),
         parameters: (op.parameters || []).map((p: any) => ({
           name: p.name,
           in: p.in,

@@ -25,7 +25,7 @@ If you discover a security vulnerability in this project, please report it using
 ### Response Timeline
 
 - **Acknowledgment**: We will acknowledge receipt within 48 hours.
-- **Initial Assessment**: A preliminary assessment will be provided within 5 business days.
+- **Initial Assessment**: A preliminary assessment will be provided within 3 business days.
 - **Resolution Target**: Critical vulnerabilities will be patched within 30 days; lower-severity issues may take longer depending on complexity.
 
 ### Safe Harbor

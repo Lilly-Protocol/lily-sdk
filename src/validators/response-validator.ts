@@ -8,7 +8,10 @@ export interface ValidationRule {
 export class ResponseValidator {
   constructor(private rules: Record<string, ValidationRule[]>) {}
 
-  validate(endpoint: string, data: unknown): { valid: boolean; errors: string[] } {
+  validate(
+    endpoint: string,
+    data: unknown,
+  ): { valid: boolean; errors: string[] } {
     const rules = this.rules[endpoint];
     if (!rules) return { valid: true, errors: [] };
 
@@ -22,7 +25,9 @@ export class ResponseValidator {
         continue;
       }
       if (typeof value !== rule.type) {
-        errors.push(`Field ${rule.field} expected ${rule.type}, got ${typeof value}`);
+        errors.push(
+          `Field ${rule.field} expected ${rule.type}, got ${typeof value}`,
+        );
       }
       if (rule.validate && !rule.validate(value)) {
         errors.push(`Field ${rule.field} failed custom validation`);

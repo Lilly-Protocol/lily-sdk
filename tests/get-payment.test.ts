@@ -4,10 +4,15 @@ import { PaymentClient } from '../src/clients/payment-client';
 describe('PaymentClient.get (issue #3)', () => {
   it('sends GET /v1/payments/:id', async () => {
     const mockClient = {
-      request: vi.fn(async (req: any) => ({
+      request: vi.fn(async (_req: any) => ({
         status: 200,
         headers: new Headers(),
-        data: { id: 'pay_123', amount: '10.00', currency: 'USD', status: 'completed' },
+        data: {
+          id: 'pay_123',
+          amount: '10.00',
+          currency: 'USD',
+          status: 'completed',
+        },
       })),
     };
     const client = new PaymentClient(mockClient as any);

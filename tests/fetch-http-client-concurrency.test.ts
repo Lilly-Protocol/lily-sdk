@@ -12,43 +12,45 @@ describe('fetch HTTP client concurrency', () => {
 
     const requestCount = 12;
     const attempts = new Map<string, number>();
-    const fetchMock = vi.fn((input: URL | RequestInfo) => {
-      const url = new URL(
-        typeof input === 'string'
-          ? input
-          : input instanceof URL
-            ? input.href
-            : input.url,
-      );
-      const requestId = url.searchParams.get('requestId');
+    const fetchMock = vi.fn<typeof globalThis.fetch>(
+      (input: URL | RequestInfo) => {
+        const url = new URL(
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.href
+              : input.url,
+        );
+        const requestId = url.searchParams.get('requestId');
 
-      if (requestId === null) {
-        throw new Error('Expected a requestId query parameter');
-      }
+        if (requestId === null) {
+          throw new Error('Expected a requestId query parameter');
+        }
 
-      const attempt = (attempts.get(requestId) ?? 0) + 1;
-      attempts.set(requestId, attempt);
+        const attempt = (attempts.get(requestId) ?? 0) + 1;
+        attempts.set(requestId, attempt);
 
-      return new Promise<Response>((resolve) => {
-        // Resolve requests out of order so their retry delays and timeout timers overlap.
-        const staggerMs = (requestCount - Number(requestId)) * 3;
-        setTimeout(() => {
-          resolve(
-            new Response(
-              JSON.stringify(
-                attempt === 1
-                  ? { requestId, retry: true }
-                  : { requestId, attempt },
+        return new Promise<Response>((resolve) => {
+          // Resolve requests out of order so their retry delays and timeout timers overlap.
+          const staggerMs = (requestCount - Number(requestId)) * 3;
+          setTimeout(() => {
+            resolve(
+              new Response(
+                JSON.stringify(
+                  attempt === 1
+                    ? { requestId, retry: true }
+                    : { requestId, attempt },
+                ),
+                {
+                  status: attempt === 1 ? 503 : 200,
+                  headers: { 'content-type': 'application/json' },
+                },
               ),
-              {
-                status: attempt === 1 ? 503 : 200,
-                headers: { 'content-type': 'application/json' },
-              },
-            ),
-          );
-        }, staggerMs);
-      });
-    });
+            );
+          }, staggerMs);
+        });
+      },
+    );
 
     const httpClient = createFetchHttpClient({
       baseUrl: new URL('https://api.lily.test/'),
@@ -61,6 +63,9 @@ describe('fetch HTTP client concurrency', () => {
       defaultHeaders: {},
       userAgent: 'lily-sdk/test',
       fetch: fetchMock,
+      toHeaders() {
+        return {};
+      },
     });
 
     const responsesPromise = Promise.all(

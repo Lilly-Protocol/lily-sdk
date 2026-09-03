@@ -77,8 +77,12 @@ describe('Adversarial & Stress Testing for buildUrl', () => {
         epsilon: Number.EPSILON,
       });
 
-      expect(url.searchParams.get('maxSafe')).toBe(String(Number.MAX_SAFE_INTEGER));
-      expect(url.searchParams.get('minSafe')).toBe(String(Number.MIN_SAFE_INTEGER));
+      expect(url.searchParams.get('maxSafe')).toBe(
+        String(Number.MAX_SAFE_INTEGER),
+      );
+      expect(url.searchParams.get('minSafe')).toBe(
+        String(Number.MIN_SAFE_INTEGER),
+      );
       expect(url.searchParams.get('maxVal')).toBe(String(Number.MAX_VALUE));
       expect(url.searchParams.get('minVal')).toBe(String(Number.MIN_VALUE));
       expect(url.searchParams.get('epsilon')).toBe(String(Number.EPSILON));
@@ -114,7 +118,7 @@ describe('Adversarial & Stress Testing for buildUrl', () => {
   describe('4. Unicode, emojis, RTL characters, and non-ASCII glyphs', () => {
     it('handles Arabic (RTL) query keys and values', () => {
       const url = buildUrl(rootBaseUrl, 'v1/search', {
-        'استعلام': 'مرحبا بالعالم',
+        استعلام: 'مرحبا بالعالم',
       });
 
       expect(url.searchParams.get('استعلام')).toBe('مرحبا بالعالم');
@@ -192,13 +196,14 @@ describe('Adversarial & Stress Testing for buildUrl', () => {
 
   describe('6. Object prototype keys and inheritance safety', () => {
     it('safely handles own properties named toString, hasOwnProperty, valueOf, constructor', () => {
-      const trickyQuery: Record<string, string | number | boolean | undefined> = {
-        toString: 'customToString',
-        hasOwnProperty: 'customHasOwn',
-        valueOf: 'customValueOf',
-        constructor: 'customConstructor',
-        isPrototypeOf: 'customIsProto',
-      };
+      const trickyQuery: Record<string, string | number | boolean | undefined> =
+        {
+          toString: 'customToString',
+          hasOwnProperty: 'customHasOwn',
+          valueOf: 'customValueOf',
+          constructor: 'customConstructor',
+          isPrototypeOf: 'customIsProto',
+        };
 
       const url = buildUrl(rootBaseUrl, 'v1/props', trickyQuery);
 
@@ -210,8 +215,13 @@ describe('Adversarial & Stress Testing for buildUrl', () => {
     });
 
     it('ignores inherited properties from Object.prototype', () => {
-      const protoObj = { inheritedProp: 'should_not_appear_if_not_own_enumerable' };
-      const childObj = Object.create(protoObj) as Record<string, string | number | boolean | undefined>;
+      const protoObj = {
+        inheritedProp: 'should_not_appear_if_not_own_enumerable',
+      };
+      const childObj = Object.create(protoObj) as Record<
+        string,
+        string | number | boolean | undefined
+      >;
       childObj.ownProp = 'valid';
 
       const url = buildUrl(rootBaseUrl, 'v1/inheritance', childObj);
@@ -221,7 +231,10 @@ describe('Adversarial & Stress Testing for buildUrl', () => {
     });
 
     it('safely handles Object.create(null) dictionary without prototype', () => {
-      const nullProtoDict: Record<string, string | number | boolean | undefined> = Object.create(null) as Record<
+      const nullProtoDict: Record<
+        string,
+        string | number | boolean | undefined
+      > = Object.create(null) as Record<
         string,
         string | number | boolean | undefined
       >;
@@ -239,10 +252,9 @@ describe('Adversarial & Stress Testing for buildUrl', () => {
     });
 
     it('safely handles query with __proto__ key if defined as own property', () => {
-      const queryWithProto = JSON.parse('{"__proto__": "custom_proto_val", "foo": "bar"}') as Record<
-        string,
-        string | number | boolean | undefined
-      >;
+      const queryWithProto = JSON.parse(
+        '{"__proto__": "custom_proto_val", "foo": "bar"}',
+      ) as Record<string, string | number | boolean | undefined>;
 
       const url = buildUrl(rootBaseUrl, 'v1/proto-test', queryWithProto);
 
@@ -282,7 +294,9 @@ describe('Adversarial & Stress Testing for buildUrl', () => {
       expect(url.searchParams.has('query')).toBe(true);
       expect(url.searchParams.get('query')).toBe('');
       expect(url.searchParams.get('tag')).toBe('all');
-      expect(url.toString()).toBe('https://api.lily.test/v1/filter?query=&tag=all');
+      expect(url.toString()).toBe(
+        'https://api.lily.test/v1/filter?query=&tag=all',
+      );
     });
 
     it('serializes "null" or "false" string values as literal strings', () => {
@@ -305,7 +319,7 @@ describe('Adversarial & Stress Testing for buildUrl', () => {
 
       const url = buildUrl(rootBaseUrl, 'v1/quirks', runtimeQuirks);
 
-      expect(url.searchParams.get('arrayVal')).toBe('1,2,3');
+      expect(url.searchParams.getAll('arrayVal')).toEqual(['1', '2', '3']);
       expect(url.searchParams.get('nullVal')).toBe('null');
     });
   });

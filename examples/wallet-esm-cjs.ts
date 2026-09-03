@@ -1,5 +1,5 @@
 // ESM/CJS smoke example for wallet provisioning (issue #4)
-// 
+//
 // ESM usage:
 //   import { LilySdk } from 'lily-sdk';
 //

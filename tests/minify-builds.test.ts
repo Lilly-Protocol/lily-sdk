@@ -14,7 +14,7 @@ describe('Minify builds (issue #94)', () => {
   });
 
   it('tsup.config.ts has splitting set to false', async () => {
-    const config = await import('../tsup.config.ts');
+    const config = await import('../tsup.config');
     // The default config should have splitting: false
     expect(config.default).toBeDefined();
   });
@@ -25,7 +25,7 @@ describe('Minify builds (issue #94)', () => {
   });
 
   it('tsup.config.ts has treeshake: true', async () => {
-    const config = await import('../tsup.config.ts');
+    const config = await import('../tsup.config');
     expect(config.default).toBeDefined();
   });
 
@@ -34,7 +34,7 @@ describe('Minify builds (issue #94)', () => {
     const minPath = resolve(process.cwd(), 'dist/index.min.js');
     const normalPath = resolve(process.cwd(), 'dist/index.js');
     if (!existsSync(minPath) || !existsSync(normalPath)) return;
-    
+
     const minSize = statSync(minPath).size;
     const normalSize = statSync(normalPath).size;
     expect(minSize).toBeLessThanOrEqual(normalSize);

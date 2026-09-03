@@ -16,6 +16,7 @@ describe('HttpRequest.signal support', () => {
       defaultHeaders: {},
       userAgent: 'test-agent',
       fetch: mockFetch as unknown as typeof globalThis.fetch,
+      toHeaders: () => ({}),
     };
   });
 
@@ -36,7 +37,11 @@ describe('HttpRequest.signal support', () => {
     });
 
     const client = createFetchHttpClient(config);
-    const promise = client.request({ method: 'GET', path: '/test', signal: controller.signal });
+    const promise = client.request({
+      method: 'GET',
+      path: '/test',
+      signal: controller.signal,
+    });
 
     setTimeout(() => controller.abort(), 10);
 
@@ -53,7 +58,11 @@ describe('HttpRequest.signal support', () => {
     controller.abort();
 
     const client = createFetchHttpClient(config);
-    const promise = client.request({ method: 'GET', path: '/test', signal: controller.signal });
+    const promise = client.request({
+      method: 'GET',
+      path: '/test',
+      signal: controller.signal,
+    });
 
     await expect(promise).rejects.toThrow(LilyTransportError);
     try {

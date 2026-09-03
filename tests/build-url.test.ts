@@ -15,7 +15,9 @@ import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import type { ResolvedLilySdkConfig } from '../src/config/types';
 import { vi } from 'vitest';
 
-function createMockConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): ResolvedLilySdkConfig {
+function createMockConfig(
+  overrides: Partial<ResolvedLilySdkConfig> = {},
+): ResolvedLilySdkConfig {
   return {
     baseUrl: new URL('https://api.example.com/v1/'),
     apiKey: 'test-key',
@@ -46,7 +48,7 @@ describe('buildUrl query serialization', () => {
       query: { status: 'active', network: 'stellar-testnet' },
     });
 
-    const calledUrl = vi.mocked(config.fetch).mock.calls[0][0] as URL;
+    const calledUrl = vi.mocked(config.fetch).mock.calls[0]![0] as URL;
     expect(calledUrl.searchParams.get('status')).toBe('active');
     expect(calledUrl.searchParams.get('network')).toBe('stellar-testnet');
   });
@@ -61,7 +63,7 @@ describe('buildUrl query serialization', () => {
       query: { limit: 10, offset: 20 },
     });
 
-    const calledUrl = vi.mocked(config.fetch).mock.calls[0][0] as URL;
+    const calledUrl = vi.mocked(config.fetch).mock.calls[0]![0] as URL;
     expect(calledUrl.searchParams.get('limit')).toBe('10');
     expect(calledUrl.searchParams.get('offset')).toBe('20');
   });
@@ -76,7 +78,7 @@ describe('buildUrl query serialization', () => {
       query: { active: true, deleted: false },
     });
 
-    const calledUrl = vi.mocked(config.fetch).mock.calls[0][0] as URL;
+    const calledUrl = vi.mocked(config.fetch).mock.calls[0]![0] as URL;
     expect(calledUrl.searchParams.get('active')).toBe('true');
     expect(calledUrl.searchParams.get('deleted')).toBe('false');
   });
@@ -91,7 +93,7 @@ describe('buildUrl query serialization', () => {
       query: { status: 'active', network: undefined },
     });
 
-    const calledUrl = vi.mocked(config.fetch).mock.calls[0][0] as URL;
+    const calledUrl = vi.mocked(config.fetch).mock.calls[0]![0] as URL;
     expect(calledUrl.searchParams.has('status')).toBe(true);
     expect(calledUrl.searchParams.has('network')).toBe(false);
   });
@@ -106,12 +108,14 @@ describe('buildUrl query serialization', () => {
       query: {},
     });
 
-    const calledUrl = vi.mocked(config.fetch).mock.calls[0][0] as URL;
+    const calledUrl = vi.mocked(config.fetch).mock.calls[0]![0] as URL;
     expect(calledUrl.search).toBe('');
   });
 
   it('combines base URL path with request path correctly', async () => {
-    const config = createMockConfig({ baseUrl: new URL('https://api.example.com/v1/') });
+    const config = createMockConfig({
+      baseUrl: new URL('https://api.example.com/v1/'),
+    });
     const client = createFetchHttpClient(config);
 
     await client.request({
@@ -120,7 +124,7 @@ describe('buildUrl query serialization', () => {
       query: { limit: 5 },
     });
 
-    const calledUrl = vi.mocked(config.fetch).mock.calls[0][0] as URL;
+    const calledUrl = vi.mocked(config.fetch).mock.calls[0]![0] as URL;
     expect(calledUrl.pathname).toBe('/v1/agents');
     expect(calledUrl.origin).toBe('https://api.example.com');
   });

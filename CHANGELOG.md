@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Typed error hierarchy (`LilySdkError`, `LilyConfigError`, `LilyTransportError`, `LilyValidationError`, `LilyAuthenticationError`, `LilyApiError`)
 - Fetch-based HTTP transport with retry and timeout support
 - SDK configuration resolution and validation (`LilySdkConfig`)
@@ -17,4 +18,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Contributor onboarding documentation
 
 ### Changed
+
 - Initial package scaffolding and build toolchain (tsup, vitest, eslint, prettier)

@@ -13,14 +13,23 @@ describe('auth header matrix', () => {
   };
 
   it('sends only x-api-key when only apiKey is configured', async () => {
-    const fetchSpy = vi.fn(() => Promise.resolve(new Response('{}', { status: 200 })));
-    const config = resolveLilySdkConfig({ ...baseConfig, apiKey: 'test-key', fetch: fetchSpy });
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve(new Response('{}', { status: 200 })),
+    );
+    const config = resolveLilySdkConfig({
+      ...baseConfig,
+      apiKey: 'test-key',
+      fetch: fetchSpy,
+    });
     const client = createFetchHttpClient(config);
 
     await client.request({ method: 'GET', path: '/test' });
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const calls = fetchSpy.mock.calls as unknown as [RequestInfo | URL, RequestInit | undefined][];
+    const calls = fetchSpy.mock.calls as unknown as [
+      RequestInfo | URL,
+      RequestInit | undefined,
+    ][];
     const init = calls[0]?.[1];
     const headers = new Headers(init?.headers);
     expect(headers.get('x-api-key')).toBe('test-key');
@@ -28,14 +37,23 @@ describe('auth header matrix', () => {
   });
 
   it('sends only authorization bearer when only authToken is configured', async () => {
-    const fetchSpy = vi.fn(() => Promise.resolve(new Response('{}', { status: 200 })));
-    const config = resolveLilySdkConfig({ ...baseConfig, authToken: 'test-token', fetch: fetchSpy });
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve(new Response('{}', { status: 200 })),
+    );
+    const config = resolveLilySdkConfig({
+      ...baseConfig,
+      authToken: 'test-token',
+      fetch: fetchSpy,
+    });
     const client = createFetchHttpClient(config);
 
     await client.request({ method: 'GET', path: '/test' });
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const calls = fetchSpy.mock.calls as unknown as [RequestInfo | URL, RequestInit | undefined][];
+    const calls = fetchSpy.mock.calls as unknown as [
+      RequestInfo | URL,
+      RequestInit | undefined,
+    ][];
     const init = calls[0]?.[1];
     const headers = new Headers(init?.headers);
     expect(headers.get('authorization')).toBe('Bearer test-token');
@@ -43,14 +61,24 @@ describe('auth header matrix', () => {
   });
 
   it('sends both headers when both credentials are configured', async () => {
-    const fetchSpy = vi.fn(() => Promise.resolve(new Response('{}', { status: 200 })));
-    const config = resolveLilySdkConfig({ ...baseConfig, apiKey: 'test-key', authToken: 'test-token', fetch: fetchSpy });
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve(new Response('{}', { status: 200 })),
+    );
+    const config = resolveLilySdkConfig({
+      ...baseConfig,
+      apiKey: 'test-key',
+      authToken: 'test-token',
+      fetch: fetchSpy,
+    });
     const client = createFetchHttpClient(config);
 
     await client.request({ method: 'GET', path: '/test' });
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const calls = fetchSpy.mock.calls as unknown as [RequestInfo | URL, RequestInit | undefined][];
+    const calls = fetchSpy.mock.calls as unknown as [
+      RequestInfo | URL,
+      RequestInit | undefined,
+    ][];
     const init = calls[0]?.[1];
     const headers = new Headers(init?.headers);
     expect(headers.get('x-api-key')).toBe('test-key');
@@ -58,14 +86,19 @@ describe('auth header matrix', () => {
   });
 
   it('sends neither auth header when no credentials are configured', async () => {
-    const fetchSpy = vi.fn(() => Promise.resolve(new Response('{}', { status: 200 })));
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve(new Response('{}', { status: 200 })),
+    );
     const config = resolveLilySdkConfig({ ...baseConfig, fetch: fetchSpy });
     const client = createFetchHttpClient(config);
 
     await client.request({ method: 'GET', path: '/test' });
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const calls = fetchSpy.mock.calls as unknown as [RequestInfo | URL, RequestInit | undefined][];
+    const calls = fetchSpy.mock.calls as unknown as [
+      RequestInfo | URL,
+      RequestInit | undefined,
+    ][];
     const init = calls[0]?.[1];
     const headers = new Headers(init?.headers);
     expect(headers.has('x-api-key')).toBe(false);

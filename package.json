@@ -25,8 +25,9 @@
   "sideEffects": false,
   "engines": {
     "node": ">=20.0.0",
-    "npm": ">=10"
+    "npm": ">=10.0.0"
   },
+  "packageManager": "npm@10.9.2",
   "files": [
     "dist",
     "README.md",
@@ -38,8 +39,19 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": ["dist/index.d.ts"],
+      "config": ["dist/config.d.ts"],
+      "errors": ["dist/errors.d.ts"],
+      "http": ["dist/http.d.ts"],
+      "models": ["dist/models.d.ts"],
+      "types": ["dist/types.d.ts"]
+    }
+  },
   "exports": {
     ".": {
+      "browser": "./dist/browser/index.js",
       "import": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
@@ -105,9 +117,14 @@
     "clean": "rm -rf dist coverage .turbo",
     "prebuild": "bash scripts/generate-version.sh",
     "build": "tsup",
+    "build:browser": "tsup --config tsup.config.ts --env.BROWSER",
+    "build:minified": "tsup --minify",
     "size": "npm run build && node scripts/check-size.mjs",
+    "codegen": "tsx scripts/codegen.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "dev": "tsup --watch",
     "typecheck": "tsc --project tsconfig.json --noEmit && tsc --project tsconfig.examples.json --noEmit",
+    "typecheck:examples": "tsc --project tsconfig.examples.json --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check . examples/",

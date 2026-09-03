@@ -26,7 +26,7 @@ describe('resolveLilySdkConfig', () => {
     'use strict';
     const resolved = resolveLilySdkConfig(baseConfig);
     expect(() => {
-      (resolved as any).timeoutMs = 999;
+      (resolved as { timeoutMs: number }).timeoutMs = 999;
     }).toThrow(TypeError);
   });
 });

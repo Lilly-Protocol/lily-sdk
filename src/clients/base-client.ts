@@ -8,7 +8,10 @@ export abstract class BaseClient {
   protected readonly config?: ResolvedLilySdkConfig;
 
   public constructor(httpClientOrConfig: HttpClient | ResolvedLilySdkConfig) {
-    if ('request' in httpClientOrConfig && typeof (httpClientOrConfig as HttpClient).request === 'function') {
+    if (
+      'request' in httpClientOrConfig &&
+      typeof (httpClientOrConfig as HttpClient).request === 'function'
+    ) {
       this.httpClient = httpClientOrConfig as HttpClient;
     } else {
       const cfg = httpClientOrConfig as ResolvedLilySdkConfig;
@@ -54,7 +57,7 @@ export abstract class BaseClient {
     return `/${segments.map((segment) => encodeURIComponent(segment)).join('/')}`;
   }
 
-  protected async request<TResponse, TRequest = undefined>(
+  public async request<TResponse, TRequest = undefined>(
     request: HttpRequest<TRequest>,
   ): Promise<TResponse> {
     const response = await this.httpClient.request<TResponse, TRequest>(

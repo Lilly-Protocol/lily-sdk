@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync, statSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 /**
@@ -24,7 +24,7 @@ describe('Browser-target build (issue #87)', () => {
 
   it('tsup.config.ts exports browserConfig', async () => {
     // The browser config should be importable from tsup.config.ts
-    const config = await import('../tsup.config.ts');
+    const config = await import('../tsup.config');
     expect(config.browserConfig).toBeDefined();
   });
 
@@ -35,7 +35,7 @@ describe('Browser-target build (issue #87)', () => {
   });
 
   it('browser build targets es2022', async () => {
-    const config = await import('../tsup.config.ts');
+    const config = await import('../tsup.config');
     // browserConfig is a tsup config — check it has browser platform
     expect(config.browserConfig).toBeDefined();
   });

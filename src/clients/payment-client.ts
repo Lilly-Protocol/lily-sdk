@@ -38,7 +38,10 @@ export class PaymentClient extends BaseClient implements PaymentClientContract {
     });
   }
 
-  public async list(query?: { limit?: number; cursor?: string }): Promise<readonly Payment[]> {
+  public async list(query?: {
+    limit?: number;
+    cursor?: string;
+  }): Promise<readonly Payment[]> {
     return this.request({
       method: 'GET',
       path: '/v1/payments',

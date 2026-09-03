@@ -31,7 +31,9 @@ describe('LilySdk.withConfig', () => {
     const sdk = new LilySdk(baseConfig);
     const derived = sdk.withConfig({ baseUrl: 'https://tenant.example.com' });
 
-    expect(derived.config.baseUrl.toString()).toBe('https://tenant.example.com/');
+    expect(derived.config.baseUrl.toString()).toBe(
+      'https://tenant.example.com/',
+    );
     expect(sdk.config.baseUrl.toString()).toBe('https://api.example.com/');
   });
 

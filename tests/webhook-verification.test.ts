@@ -41,12 +41,16 @@ describe('Webhook signature verification (issue #70)', () => {
 
     it('accepts Buffer payload', () => {
       const signature = sign(PAYLOAD, SECRET);
-      expect(verifyWebhookSignature(Buffer.from(PAYLOAD), signature, SECRET)).toBe(true);
+      expect(
+        verifyWebhookSignature(Buffer.from(PAYLOAD), signature, SECRET),
+      ).toBe(true);
     });
 
     it('returns false for tampered payload', () => {
       const signature = sign(PAYLOAD, SECRET);
-      expect(verifyWebhookSignature('{"event":"tampered"}', signature, SECRET)).toBe(false);
+      expect(
+        verifyWebhookSignature('{"event":"tampered"}', signature, SECRET),
+      ).toBe(false);
     });
   });
 
@@ -113,7 +117,9 @@ describe('Webhook signature verification (issue #70)', () => {
       const signedPayload = `${timestamp}.${PAYLOAD}`;
       const signature = sign(signedPayload, SECRET);
       const header = `t=${timestamp},v1=${signature}`;
-      expect(verifyWebhookWithReplay(PAYLOAD, header, SECRET, 300_000)).toBe(false);
+      expect(verifyWebhookWithReplay(PAYLOAD, header, SECRET, 300_000)).toBe(
+        false,
+      );
     });
 
     it('returns false for invalid signature', () => {

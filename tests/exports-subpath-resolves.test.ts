@@ -45,9 +45,9 @@ describe('exports subpath resolves to a real file', () => {
       });
 
       it('all conditions share the same base name (minus extension)', () => {
-        const typesBase = conditions.types.replace(/\.d\.ts$/, '');
-        const importBase = conditions.import.replace(/\.js$/, '');
-        const requireBase = conditions.require.replace(/\.cjs$/, '');
+        const typesBase = conditions.types!.replace(/\.d\.ts$/, '');
+        const importBase = conditions.import!.replace(/\.js$/, '');
+        const requireBase = conditions.require!.replace(/\.cjs$/, '');
         expect(typesBase).toBe(importBase);
         expect(importBase).toBe(requireBase);
       });
@@ -59,7 +59,13 @@ describe('exports subpath resolves to a real file', () => {
   });
 
   it('subpaths "./config", "./errors", "./http", "./models", "./types" are all defined', () => {
-    for (const sub of ['./config', './errors', './http', './models', './types']) {
+    for (const sub of [
+      './config',
+      './errors',
+      './http',
+      './models',
+      './types',
+    ]) {
       expect(pkg.exports).toHaveProperty(sub);
     }
   });

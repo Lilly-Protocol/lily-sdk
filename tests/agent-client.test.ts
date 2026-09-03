@@ -1,13 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { AgentClient } from '../src/clients/agent-client';
-import type { Agent, CreateAgentRequest, UpdateAgentRequest } from '../src/models';
+import type {
+  Agent,
+  CreateAgentRequest,
+  UpdateAgentRequest,
+} from '../src/models';
 import { createMockHttpClient } from './helpers/mock-http-client';
 
 describe('AgentClient', () => {
   const mockAgent: Agent = {
     id: 'agent_123',
     name: 'Research Agent',
+    network: 'stellar-testnet',
     status: 'active',
     capabilities: ['search', 'analyze'],
     createdAt: '2026-09-01T00:00:00.000Z',
@@ -67,6 +72,7 @@ describe('AgentClient', () => {
 
     const createPayload: CreateAgentRequest = {
       name: 'Research Agent',
+      network: 'stellar-testnet',
       capabilities: ['search', 'analyze'],
     };
 
@@ -84,7 +90,7 @@ describe('AgentClient', () => {
   it('updates an agent by id', async () => {
     const updatedAgent: Agent = {
       ...mockAgent,
-      status: 'paused',
+      status: 'inactive',
     };
 
     const requestSpy = vi.fn(() =>
@@ -96,7 +102,7 @@ describe('AgentClient', () => {
     );
 
     const updatePayload: UpdateAgentRequest = {
-      status: 'paused',
+      status: 'inactive',
     };
 
     const client = new AgentClient(createMockHttpClient(requestSpy));
@@ -107,6 +113,6 @@ describe('AgentClient', () => {
       path: '/v1/agents/agent_123',
       body: updatePayload,
     });
-    expect(agent.status).toBe('paused');
+    expect(agent.status).toBe('inactive');
   });
 });

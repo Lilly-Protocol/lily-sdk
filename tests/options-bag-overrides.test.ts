@@ -9,7 +9,9 @@ import type { ResolvedLilySdkConfig } from '../src/config/types';
  * Tests that HttpRequest supports per-call timeoutMs and headers overrides.
  */
 describe('per-call options bag overrides', () => {
-  function createConfigWithFetch(fetchImpl: typeof globalThis.fetch): ResolvedLilySdkConfig {
+  function createConfigWithFetch(
+    fetchImpl: typeof globalThis.fetch,
+  ): ResolvedLilySdkConfig {
     return {
       baseUrl: new URL('https://api.example.com/'),
       timeoutMs: 5000,
@@ -23,9 +25,14 @@ describe('per-call options bag overrides', () => {
 
   it('allows per-request timeoutMs override', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }),
+      new Response('{}', {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
     );
-    const client = createFetchHttpClient(createConfigWithFetch(fetchMock as typeof fetch));
+    const client = createFetchHttpClient(
+      createConfigWithFetch(fetchMock as typeof fetch),
+    );
 
     await client.request({
       method: 'GET',
@@ -33,15 +40,20 @@ describe('per-call options bag overrides', () => {
       timeoutMs: 100, // override
     });
 
-    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    const init = fetchMock.mock.calls[0]![1] as RequestInit;
     expect(init.signal).toBeDefined();
   });
 
   it('allows per-request custom headers override', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }),
+      new Response('{}', {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
     );
-    const client = createFetchHttpClient(createConfigWithFetch(fetchMock as typeof fetch));
+    const client = createFetchHttpClient(
+      createConfigWithFetch(fetchMock as typeof fetch),
+    );
 
     await client.request({
       method: 'GET',
@@ -49,7 +61,7 @@ describe('per-call options bag overrides', () => {
       headers: { 'x-custom': 'value123' },
     });
 
-    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    const init = fetchMock.mock.calls[0]![1] as RequestInit;
     const headers = init.headers as Record<string, string>;
     expect(headers['x-custom']).toBe('value123');
   });
@@ -57,10 +69,17 @@ describe('per-call options bag overrides', () => {
   it('allows per-request headers to override config defaults', async () => {
     const config = createConfigWithFetch(
       vi.fn().mockResolvedValue(
-        new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }),
+        new Response('{}', {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
       ) as typeof fetch,
     );
-    config.defaultHeaders = { 'x-default': 'default-value' };
+    (
+      config as unknown as { defaultHeaders: Record<string, string> }
+    ).defaultHeaders = {
+      'x-default': 'default-value',
+    };
     const client = createFetchHttpClient(config);
 
     await client.request({
@@ -69,7 +88,8 @@ describe('per-call options bag overrides', () => {
       headers: { 'x-default': 'override-value' },
     });
 
-    const init = (config.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1] as RequestInit;
+    const init = (config.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0]![1] as RequestInit;
     const headers = init.headers as Record<string, string>;
     expect(headers['x-default']).toBe('override-value');
   });
@@ -77,7 +97,10 @@ describe('per-call options bag overrides', () => {
   it('HttpRequest type includes timeoutMs field', async () => {
     const { readFileSync } = await import('node:fs');
     const { resolve } = await import('node:path');
-    const content = readFileSync(resolve(process.cwd(), 'src/http/types.ts'), 'utf8');
+    const content = readFileSync(
+      resolve(process.cwd(), 'src/http/types.ts'),
+      'utf8',
+    );
     expect(content).toContain('timeoutMs');
   });
 });

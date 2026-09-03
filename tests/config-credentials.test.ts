@@ -22,18 +22,26 @@ describe('resolveLilySdkConfig credential validation', () => {
   });
 
   it('rejects empty-string apiKey', () => {
-    expect(() => resolveLilySdkConfig({ ...base, apiKey: '' })).toThrow(LilyConfigError);
+    expect(() => resolveLilySdkConfig({ ...base, apiKey: '' })).toThrow(
+      LilyConfigError,
+    );
   });
 
   it('rejects empty-string authToken', () => {
-    expect(() => resolveLilySdkConfig({ ...base, authToken: '' })).toThrow(LilyConfigError);
+    expect(() => resolveLilySdkConfig({ ...base, authToken: '' })).toThrow(
+      LilyConfigError,
+    );
   });
 
   it('rejects non-string apiKey', () => {
-    expect(() => resolveLilySdkConfig({ ...base, apiKey: 123 as unknown as string })).toThrow(LilyConfigError);
+    expect(() =>
+      resolveLilySdkConfig({ ...base, apiKey: 123 as unknown as string }),
+    ).toThrow(LilyConfigError);
   });
 
   it('rejects non-string authToken', () => {
-    expect(() => resolveLilySdkConfig({ ...base, authToken: null as unknown as string })).toThrow(LilyConfigError);
+    expect(() =>
+      resolveLilySdkConfig({ ...base, authToken: null as unknown as string }),
+    ).toThrow(LilyConfigError);
   });
 });

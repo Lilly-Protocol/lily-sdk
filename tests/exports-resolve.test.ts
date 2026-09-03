@@ -5,7 +5,9 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const pkgPath = resolve(__dirname, '../package.json');
-const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as { exports: Record<string, unknown> };
+const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as {
+  exports: Record<string, unknown>;
+};
 
 describe('package exports subpaths', () => {
   const exportEntries = Object.entries(pkg.exports).filter(

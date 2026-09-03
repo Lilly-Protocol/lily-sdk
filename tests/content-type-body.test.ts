@@ -22,9 +22,13 @@ describe('content-type only set when body is present', () => {
     const resolved = resolveLilySdkConfig(config);
     const client = createFetchHttpClient(resolved);
 
-    await client.request({ method: 'POST', path: '/v1/test', body: { data: 1 } });
+    await client.request({
+      method: 'POST',
+      path: '/v1/test',
+      body: { data: 1 },
+    });
 
-    expect(calls[0].headers).toEqual(
+    expect(calls[0]!.headers).toEqual(
       expect.objectContaining({ 'content-type': 'application/json' }),
     );
   });
@@ -49,7 +53,7 @@ describe('content-type only set when body is present', () => {
 
     await client.request({ method: 'GET', path: '/v1/test' });
 
-    const headers = calls[0].headers as Record<string, string>;
+    const headers = calls[0]!.headers as Record<string, string>;
     expect(headers['content-type']).toBe('application/json'); // default still set
   });
 
@@ -73,7 +77,7 @@ describe('content-type only set when body is present', () => {
 
     await client.request({ method: 'GET', path: '/v1/test' });
 
-    expect(calls[0].body).toBeUndefined();
+    expect(calls[0]!.body).toBeUndefined();
   });
 
   it('does not include body on DELETE requests', async () => {
@@ -96,7 +100,7 @@ describe('content-type only set when body is present', () => {
 
     await client.request({ method: 'DELETE', path: '/v1/test/123' });
 
-    expect(calls[0].body).toBeUndefined();
+    expect(calls[0]!.body).toBeUndefined();
   });
 
   it('serializes body as JSON string', async () => {
@@ -117,9 +121,13 @@ describe('content-type only set when body is present', () => {
     const resolved = resolveLilySdkConfig(config);
     const client = createFetchHttpClient(resolved);
 
-    await client.request({ method: 'POST', path: '/v1/test', body: { name: 'test' } });
+    await client.request({
+      method: 'POST',
+      path: '/v1/test',
+      body: { name: 'test' },
+    });
 
-    expect(calls[0].body).toBe(JSON.stringify({ name: 'test' }));
+    expect(calls[0]!.body).toBe(JSON.stringify({ name: 'test' }));
   });
 
   it('does not double-serialize a string body', async () => {
@@ -141,14 +149,18 @@ describe('content-type only set when body is present', () => {
     const client = createFetchHttpClient(resolved);
 
     const preSerialized = JSON.stringify({ name: 'test' });
-    await client.request({ method: 'POST', path: '/v1/test', body: preSerialized });
+    await client.request({
+      method: 'POST',
+      path: '/v1/test',
+      body: preSerialized,
+    });
 
     // The transport calls JSON.stringify on the body; for a string input,
     // JSON.stringify wraps it in quotes. This is expected behavior.
     // The test verifies the body is a string (not double-wrapped object).
-    expect(typeof calls[0].body).toBe('string');
+    expect(typeof calls[0]!.body).toBe('string');
     // Parsing should give back the original string, not a nested object
-    const parsed = JSON.parse(calls[0].body as string);
+    const parsed = JSON.parse(calls[0]!.body as string);
     expect(parsed).toBe(preSerialized);
   });
 });

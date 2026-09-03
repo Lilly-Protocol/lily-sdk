@@ -17,7 +17,10 @@ describe('Renovate configuration', () => {
   });
 
   it('has a valid JSON structure', () => {
-    const config = JSON.parse(readFileSync(renovatePath, 'utf8')) as Record<string, unknown>;
+    const config = JSON.parse(readFileSync(renovatePath, 'utf8')) as Record<
+      string,
+      unknown
+    >;
     expect(typeof config).toBe('object');
     expect(config).not.toBeNull();
   });

@@ -24,7 +24,9 @@ describe('Timeout abort (issue #8)', () => {
     });
     const client = createFetchHttpClient(config);
 
-    await expect(client.request({ method: 'GET', path: '/slow' })).rejects.toThrow();
+    await expect(
+      client.request({ method: 'GET', path: '/slow' }),
+    ).rejects.toThrow();
   });
 
   it('timeout can be overridden per-request', async () => {
@@ -43,7 +45,11 @@ describe('Timeout abort (issue #8)', () => {
     });
     const client = createFetchHttpClient(config);
 
-    const res = await client.request({ method: 'GET', path: '/fast', timeoutMs: 10000 });
+    const res = await client.request({
+      method: 'GET',
+      path: '/fast',
+      timeoutMs: 10000,
+    });
     expect(res.status).toBe(200);
   });
 });

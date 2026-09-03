@@ -76,6 +76,8 @@ describe('Transport against node:http (issue #104)', () => {
       retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
     });
     const client = createFetchHttpClient(config);
-    await expect(client.request({ method: 'GET', path: '/v1/unknown' })).rejects.toThrow();
+    await expect(
+      client.request({ method: 'GET', path: '/v1/unknown' }),
+    ).rejects.toThrow();
   });
 });

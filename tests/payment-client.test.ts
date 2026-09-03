@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PaymentClient } from '../src/clients/payment-client';
 import type { HttpClient, HttpResponse } from '../src/http/types';
-import type { Payment, PaymentQuote, PaymentQuoteRequest, ExecutePaymentRequest } from '../src/models';
+import type {
+  Payment,
+  PaymentQuote,
+  PaymentQuoteRequest,
+  ExecutePaymentRequest,
+} from '../src/models';
 
 function createMockHttpClient(responseData: unknown = {}): HttpClient {
   return {

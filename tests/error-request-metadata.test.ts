@@ -1,10 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import { resolveLilySdkConfig } from '../src/config/resolve-config';
-import { LilyApiError, LilyAuthenticationError, LilyTransportError } from '../src/errors/sdk-error';
+import {
+  LilyApiError,
+  LilyAuthenticationError,
+  LilyTransportError,
+} from '../src/errors/sdk-error';
 
 describe('transport error request metadata', () => {
-  const baseConfig = resolveLilySdkConfig({ baseUrl: 'https://api.example.com' });
+  const baseConfig = resolveLilySdkConfig({
+    baseUrl: 'https://api.example.com',
+  });
 
   interface MockResponseInit {
     ok?: boolean;
@@ -39,7 +45,11 @@ describe('transport error request metadata', () => {
     });
 
     try {
-      await client.request({ method: 'POST', path: '/payments', body: { amount: 10 } });
+      await client.request({
+        method: 'POST',
+        path: '/payments',
+        body: { amount: 10 },
+      });
       expect.fail('should have thrown');
     } catch (err) {
       if (!(err instanceof LilyApiError)) throw err;
@@ -54,7 +64,11 @@ describe('transport error request metadata', () => {
   it('attaches metadata to LilyAuthenticationError on 401', async () => {
     const client = createFetchHttpClient({
       ...baseConfig,
-      fetch: mockFetch({ ok: false, status: 401, json: { error: 'unauthorized' } }),
+      fetch: mockFetch({
+        ok: false,
+        status: 401,
+        json: { error: 'unauthorized' },
+      }),
     });
 
     try {
@@ -68,7 +82,9 @@ describe('transport error request metadata', () => {
   });
 
   it('attaches metadata to LilyTransportError on network failure', async () => {
-    const networkFail = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    const networkFail = vi
+      .fn()
+      .mockRejectedValue(new TypeError('Failed to fetch'));
     const client = createFetchHttpClient({
       ...baseConfig,
       retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },

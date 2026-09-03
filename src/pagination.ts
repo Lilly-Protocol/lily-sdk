@@ -26,7 +26,9 @@ export function parseCursorPage<T>(
  * Builds a PaginationQuery from a cursor string.
  * Returns an empty object when the cursor is null/empty.
  */
-export function buildPaginationQuery(cursor: string | null | undefined): PaginationQuery {
+export function buildPaginationQuery(
+  cursor: string | null | undefined,
+): PaginationQuery {
   if (!cursor) {
     return {};
   }
@@ -49,7 +51,9 @@ export async function* paginate<T>(
   let pageCount = 0;
 
   while (pageCount < maxPages) {
-    const query: PaginationQuery = options?.limit ? { limit: options.limit } : {};
+    const query: PaginationQuery = options?.limit
+      ? { limit: options.limit }
+      : {};
     const items = await fetchPage(query);
     for (const item of items) {
       yield item;

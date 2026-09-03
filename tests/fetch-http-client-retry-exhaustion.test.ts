@@ -15,6 +15,7 @@ describe('fetch-http-client retry exhaustion', () => {
       timeoutMs: 5000,
       fetch: mockFetch as typeof globalThis.fetch,
       defaultHeaders: {},
+      toHeaders: () => ({}),
       retry: {
         retries: 2,
         retryDelayMs: 1,
@@ -28,10 +29,14 @@ describe('fetch-http-client retry exhaustion', () => {
   });
 
   it('throws LilyApiError after exhausting retries with correct status code', async () => {
-    mockFetch.mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ error: 'Service Unavailable' }), {
-      status: 503,
-      headers: { 'content-type': 'application/json' },
-    })));
+    mockFetch.mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ error: 'Service Unavailable' }), {
+          status: 503,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    );
 
     const client = createFetchHttpClient(config);
 

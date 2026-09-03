@@ -36,6 +36,7 @@ function client(overrides: Partial<ResolvedLilySdkConfig> = {}) {
     defaultHeaders: {},
     userAgent: 'lily-sdk/test',
     fetch: hangingFetch(),
+    toHeaders: () => ({}),
     ...overrides,
   });
 }
@@ -52,7 +53,8 @@ describe('request timeout', () => {
       method: 'GET',
       path: '/v1/system/health',
     });
-    const assertion = expect(pending).rejects.toBeInstanceOf(LilyTransportError);
+    const assertion =
+      expect(pending).rejects.toBeInstanceOf(LilyTransportError);
 
     await vi.advanceTimersByTimeAsync(2_000);
     await assertion;
@@ -101,7 +103,8 @@ describe('request timeout', () => {
       path: '/v1/system/health',
       timeoutMs: 500,
     });
-    const assertion = expect(pending).rejects.toBeInstanceOf(LilyTransportError);
+    const assertion =
+      expect(pending).rejects.toBeInstanceOf(LilyTransportError);
 
     await vi.advanceTimersByTimeAsync(500);
     await assertion;

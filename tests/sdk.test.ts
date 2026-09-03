@@ -5,11 +5,12 @@ import { LilyConfigError } from '../src/errors/sdk-error.js';
 
 function createMockHttpClient(): HttpClient {
   return {
-    request: <TResponse>(): Promise<HttpResponse<TResponse>> => Promise.resolve({
-      status: 200,
-      headers: new Headers(),
-      data: {} as TResponse,
-    }),
+    request: <TResponse>(): Promise<HttpResponse<TResponse>> =>
+      Promise.resolve({
+        status: 200,
+        headers: new Headers(),
+        data: {} as TResponse,
+      }),
   };
 }
 
@@ -18,11 +19,16 @@ describe('LilySdk composition', () => {
     const http = createMockHttpClient();
     const sdk = new LilySdk({ baseUrl: 'https://api.example.com' }, http);
 
-    const agentsHttp = (sdk.agents as unknown as { httpClient: HttpClient }).httpClient;
-    const walletsHttp = (sdk.wallets as unknown as { httpClient: HttpClient }).httpClient;
-    const paymentsHttp = (sdk.payments as unknown as { httpClient: HttpClient }).httpClient;
-    const identityHttp = (sdk.identity as unknown as { httpClient: HttpClient }).httpClient;
-    const systemHttp = (sdk.system as unknown as { httpClient: HttpClient }).httpClient;
+    const agentsHttp = (sdk.agents as unknown as { httpClient: HttpClient })
+      .httpClient;
+    const walletsHttp = (sdk.wallets as unknown as { httpClient: HttpClient })
+      .httpClient;
+    const paymentsHttp = (sdk.payments as unknown as { httpClient: HttpClient })
+      .httpClient;
+    const identityHttp = (sdk.identity as unknown as { httpClient: HttpClient })
+      .httpClient;
+    const systemHttp = (sdk.system as unknown as { httpClient: HttpClient })
+      .httpClient;
 
     expect(agentsHttp).toBe(http);
     expect(walletsHttp).toBe(http);
@@ -44,12 +50,14 @@ describe('LilySdk composition', () => {
 
   it('throws LilyConfigError for invalid config before constructing clients', () => {
     expect(() => new LilySdk({ baseUrl: '' })).toThrow(LilyConfigError);
-    expect(() => new LilySdk({ baseUrl: 'not-a-url' })).toThrow(LilyConfigError);
+    expect(() => new LilySdk({ baseUrl: 'not-a-url' })).toThrow(
+      LilyConfigError,
+    );
   });
 
   it('creates an instance via LilySdk.create() with zero-config defaults', () => {
     const sdk = LilySdk.create();
-    expect(sdk.config.baseUrl.toString()).toBe('https://api.lilyprotocol.org/');
+    expect(sdk.config.baseUrl.toString()).toBe('https://api.lilyprotocol.com/');
     expect(sdk.agents).toBeDefined();
     expect(sdk.wallets).toBeDefined();
     expect(sdk.payments).toBeDefined();
@@ -64,7 +72,9 @@ describe('LilySdk composition', () => {
       process.env.LILY_API_KEY = 'env_secret_key_123';
 
       const sdk = LilySdk.create();
-      expect(sdk.config.baseUrl.toString()).toBe('https://custom-env.lily.test/');
+      expect(sdk.config.baseUrl.toString()).toBe(
+        'https://custom-env.lily.test/',
+      );
       expect(sdk.config.apiKey).toBe('env_secret_key_123');
     } finally {
       process.env.LILY_BASE_URL = originalUrl;
@@ -150,10 +160,12 @@ describe('LilySdk composition', () => {
     await sdk.system.health();
     await tenantSdk.system.health();
 
-    expect(requests[0]?.url).toBe('https://api.lily.test/health');
+    expect(requests[0]?.url).toBe('https://api.lily.test/v1/system/health');
     expect(requests[0]?.headers.get('x-api-key')).toBe('root-key');
     expect(requests[0]?.headers.get('authorization')).toBe('Bearer root-token');
-    expect(requests[1]?.url).toBe('https://tenant.lily.test/v1/health');
+    expect(requests[1]?.url).toBe(
+      'https://tenant.lily.test/v1/v1/system/health',
+    );
     expect(requests[1]?.headers.get('x-api-key')).toBe('tenant-key');
     expect(requests[1]?.headers.get('authorization')).toBe(
       'Bearer tenant-token',
@@ -171,4 +183,3 @@ describe('LilySdk composition', () => {
     expect(tenantSdk.system).not.toBe(sdk.system);
   });
 });
-

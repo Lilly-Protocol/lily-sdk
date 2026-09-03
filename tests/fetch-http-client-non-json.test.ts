@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { LilyApiError, LilyAuthenticationError, LilyTransportError } from '../src/errors/sdk-error';
+import type { ResolvedLilySdkConfig } from '../src/config/types';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
-import type { HttpRequest, HttpResponse } from '../src/http/types';
 
-function createConfig(overrides: Record<string, unknown> = {}) {
+function createConfig(
+  overrides: Record<string, unknown> = {},
+): ResolvedLilySdkConfig {
   return {
     baseUrl: new URL('https://api.lily.test/'),
     timeoutMs: 2_000,
@@ -15,16 +16,9 @@ function createConfig(overrides: Record<string, unknown> = {}) {
     },
     defaultHeaders: {},
     userAgent: 'lily-sdk/test',
-    fetch: vi.fn(),
+    fetch: vi.fn<typeof globalThis.fetch>(),
     ...overrides,
-  };
-}
-
-function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json', ...headers },
-  });
+  } as unknown as ResolvedLilySdkConfig;
 }
 
 function textResponse(body: string, status = 200): Response {
@@ -56,7 +50,9 @@ describe('fetch-http-client — non-JSON and 204 handling', () => {
   });
 
   it('returns text body for non-JSON content-type', async () => {
-    const fetchSpy = vi.fn(() => Promise.resolve(textResponse('plain text', 200)));
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve(textResponse('plain text', 200)),
+    );
     const client = createFetchHttpClient(createConfig({ fetch: fetchSpy }));
 
     const response = await client.request({

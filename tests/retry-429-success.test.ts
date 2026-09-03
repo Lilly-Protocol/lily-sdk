@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import type { ResolvedLilySdkConfig } from '../src/config/types';
 
-function createMockConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): ResolvedLilySdkConfig {
+function createMockConfig(
+  overrides: Partial<ResolvedLilySdkConfig> = {},
+): ResolvedLilySdkConfig {
   return {
     baseUrl: new URL('https://api.example.com'),
     apiKey: 'test-key',
@@ -10,7 +12,11 @@ function createMockConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): Resol
     userAgent: 'lily-sdk/test',
     defaultHeaders: {},
     timeoutMs: 5000,
-    retry: { retries: 3, retryDelayMs: 10, retryableStatusCodes: [429, 500, 502, 503, 504] },
+    retry: {
+      retries: 3,
+      retryDelayMs: 10,
+      retryableStatusCodes: [429, 500, 502, 503, 504],
+    },
     fetch: vi.fn(),
     ...overrides,
   } as unknown as ResolvedLilySdkConfig;
@@ -44,7 +50,10 @@ describe('fetch-http-client 429 then success retry flow', () => {
       .mockResolvedValueOnce(successResponse as unknown as Response);
 
     const client = createFetchHttpClient(config);
-    const result = await client.request({ method: 'GET', path: '/v1/resource' });
+    const result = await client.request({
+      method: 'GET',
+      path: '/v1/resource',
+    });
 
     expect(result.status).toBe(200);
     expect(result.data).toEqual({ data: 'ok' });
@@ -72,7 +81,11 @@ describe('fetch-http-client 429 then success retry flow', () => {
       .mockResolvedValueOnce(successResponse as unknown as Response);
 
     const client = createFetchHttpClient(config);
-    const result = await client.request({ method: 'PUT', path: '/v1/resource/1', body: { name: 'test' } });
+    const result = await client.request({
+      method: 'PUT',
+      path: '/v1/resource/1',
+      body: { name: 'test' },
+    });
 
     expect(result.status).toBe(200);
     expect(result.data).toEqual({ updated: true });
@@ -88,7 +101,9 @@ describe('fetch-http-client 429 then success retry flow', () => {
       text: vi.fn().mockResolvedValue('{"error":"Too Many Requests"}'),
     };
 
-    vi.mocked(config.fetch).mockResolvedValue(rateLimitedResponse as unknown as Response);
+    vi.mocked(config.fetch).mockResolvedValue(
+      rateLimitedResponse as unknown as Response,
+    );
 
     const client = createFetchHttpClient(config);
 

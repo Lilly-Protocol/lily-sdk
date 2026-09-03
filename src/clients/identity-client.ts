@@ -6,14 +6,19 @@ import type {
   VerificationResult,
 } from '../models';
 import type { IdentityClientContract } from '../types/contracts';
-import { validateNonEmptyString, validateResolveIdentityRequest } from '../validation';
+import {
+  validateNonEmptyString,
+  validateResolveIdentityRequest,
+} from '../validation';
 import { BaseClient } from './base-client';
 
 export class IdentityClient
   extends BaseClient
   implements IdentityClientContract
 {
-  public resolve(input: ResolveIdentityRequest): Promise<IdentityProfile> {
+  public async resolve(
+    input: ResolveIdentityRequest,
+  ): Promise<IdentityProfile> {
     validateResolveIdentityRequest(input);
     return this.request({
       method: 'POST',
@@ -22,7 +27,9 @@ export class IdentityClient
     });
   }
 
-  public verify(input: VerifyIdentityRequest): Promise<VerificationResult> {
+  public async verify(
+    input: VerifyIdentityRequest,
+  ): Promise<VerificationResult> {
     validateNonEmptyString(input.identityId, 'identityId');
     validateNonEmptyString(input.challenge, 'challenge');
     validateNonEmptyString(input.signature, 'signature');
@@ -33,7 +40,7 @@ export class IdentityClient
     });
   }
 
-  public get(identityId: string): Promise<IdentityProfile> {
+  public async get(identityId: string): Promise<IdentityProfile> {
     validateNonEmptyString(identityId, 'identityId');
     return this.request({
       method: 'GET',

@@ -38,7 +38,9 @@ describe('CI matrix includes Node 24', () => {
   it('CI matrix includes at least 2 Node versions', () => {
     const content = getCiContent();
     const nodeVersions = content?.match(/['"]?(\d+)['"]?/g) ?? [];
-    const uniqueVersions = new Set(nodeVersions.map((v) => v.replace(/['"]/g, '')));
+    const uniqueVersions = new Set(
+      nodeVersions.map((v) => v.replace(/['"]/g, '')),
+    );
     expect(uniqueVersions.size).toBeGreaterThanOrEqual(2);
   });
 });

@@ -38,7 +38,10 @@ describe('examples/quickstart.ts flow', () => {
 
         if (requestUrl.endsWith('/v1/wallets/provision')) {
           const rawBody = typeof init?.body === 'string' ? init.body : '{}';
-          const body = JSON.parse(rawBody) as { agentId: string; network: string };
+          const body = JSON.parse(rawBody) as {
+            agentId: string;
+            network: string;
+          };
 
           return Promise.resolve(
             new Response(
@@ -53,7 +56,8 @@ describe('examples/quickstart.ts flow', () => {
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
                 },
-                recoveryHint: 'Store recovery materials securely outside your runtime.',
+                recoveryHint:
+                  'Store recovery materials securely outside your runtime.',
               }),
               {
                 status: 200,
@@ -83,6 +87,8 @@ describe('examples/quickstart.ts flow', () => {
     expect(walletResult.wallet.address).toBe('GDEMOEXAMPLEADDRESS1234567890');
     expect(walletResult.wallet.agentId).toBe('agent_demo_123');
     expect(walletResult.wallet.network).toBe('stellar-testnet');
-    expect(walletResult.recoveryHint).toBe('Store recovery materials securely outside your runtime.');
+    expect(walletResult.recoveryHint).toBe(
+      'Store recovery materials securely outside your runtime.',
+    );
   });
 });

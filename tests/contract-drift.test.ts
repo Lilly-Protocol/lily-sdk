@@ -7,7 +7,12 @@ const ROOT = resolve(__dirname, '..');
 
 describe('Contract Drift Check', () => {
   it('CI workflow file exists and contains drift detection logic', () => {
-    const workflowPath = resolve(ROOT, '.github', 'workflows', 'contract-drift.yml');
+    const workflowPath = resolve(
+      ROOT,
+      '.github',
+      'workflows',
+      'contract-drift.yml',
+    );
     const content = readFileSync(workflowPath, 'utf-8');
 
     expect(content).toContain('npm run codegen');
@@ -26,11 +31,17 @@ describe('Contract Drift Check', () => {
 
   it('regenerating contracts produces no diff (no drift)', () => {
     // Run codegen and check that output matches committed file
-    const before = readFileSync(resolve(ROOT, 'src', 'generated', 'types.ts'), 'utf-8');
+    const before = readFileSync(
+      resolve(ROOT, 'src', 'generated', 'types.ts'),
+      'utf-8',
+    );
 
     execSync('npx tsx scripts/codegen.ts', { cwd: ROOT, stdio: 'pipe' });
 
-    const after = readFileSync(resolve(ROOT, 'src', 'generated', 'types.ts'), 'utf-8');
+    const after = readFileSync(
+      resolve(ROOT, 'src', 'generated', 'types.ts'),
+      'utf-8',
+    );
     expect(after).toBe(before);
   });
 });

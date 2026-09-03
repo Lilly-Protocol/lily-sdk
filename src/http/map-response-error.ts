@@ -122,24 +122,33 @@ export function mapResponseError(
   };
 
   if (status === 401) {
-    return new LilyAuthenticationError('Authentication failed for Lily Protocol API.', {
-      ...options,
-      code: 'AUTHENTICATION_ERROR',
-    });
+    return new LilyAuthenticationError(
+      'Authentication failed for Lily Protocol API.',
+      {
+        ...options,
+        code: 'AUTHENTICATION_ERROR',
+      },
+    );
   }
 
   if (status === 403) {
-    return new LilyAuthorizationError('Not authorized for this Lily Protocol resource.', {
-      ...options,
-      code: 'AUTHORIZATION_ERROR',
-    });
+    return new LilyAuthorizationError(
+      'Not authorized for this Lily Protocol resource.',
+      {
+        ...options,
+        code: 'AUTHORIZATION_ERROR',
+      },
+    );
   }
 
   if (status === 400 || status === 422) {
-    return new LilyValidationError('Lily Protocol API rejected the request as invalid.', {
-      ...options,
-      code: 'VALIDATION_ERROR',
-    });
+    return new LilyValidationError(
+      'Lily Protocol API rejected the request as invalid.',
+      {
+        ...options,
+        code: 'VALIDATION_ERROR',
+      },
+    );
   }
 
   if (status === 404 || status === 410) {

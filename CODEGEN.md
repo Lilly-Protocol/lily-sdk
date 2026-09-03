@@ -27,13 +27,13 @@ npx tsx scripts/codegen.ts path/to/custom-spec.yaml
 
 ## File Structure
 
-| Path | Purpose |
-|------|---------|
-| `openapi/lily-backend.yaml` | Vendored backend OpenAPI spec (source of truth) |
-| `scripts/codegen.ts` | Codegen script that wraps openapi-typescript |
-| `src/generated/types.ts` | Auto-generated types (DO NOT EDIT MANUALLY) |
-| `src/models/*` | Hand-written model interfaces (additive overrides) |
-| `src/types/contracts.ts` | Client contract interfaces with method signatures |
+| Path                        | Purpose                                            |
+| --------------------------- | -------------------------------------------------- |
+| `openapi/lily-backend.yaml` | Vendored backend OpenAPI spec (source of truth)    |
+| `scripts/codegen.ts`        | Codegen script that wraps openapi-typescript       |
+| `src/generated/types.ts`    | Auto-generated types (DO NOT EDIT MANUALLY)        |
+| `src/models/*`              | Hand-written model interfaces (additive overrides) |
+| `src/types/contracts.ts`    | Client contract interfaces with method signatures  |
 
 ## Dependencies
 

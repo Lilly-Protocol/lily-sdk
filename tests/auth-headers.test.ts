@@ -13,6 +13,7 @@ function makeConfig(
     defaultHeaders: {},
     userAgent: 'lily-sdk/test',
     fetch: globalThis.fetch,
+    toHeaders: () => ({}),
     ...overrides,
   };
 }

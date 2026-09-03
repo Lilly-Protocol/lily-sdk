@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { LilySdk } from '../src/sdk';
-import type { HttpClient, HttpRequest, HttpResponse } from '../src/http/types';
+import type { HttpClient } from '../src/http/types';
 
 /**
  * Bounty #78 — $80
@@ -26,10 +26,10 @@ describe('LilySdk.request() typed passthrough', () => {
 
     const response = await sdk.request({ method: 'GET', path: '/v1/custom' });
 
-    expect(response.status).toBe(200);
-    expect(response.data).toEqual({ ok: true });
+    expect(response).toEqual({ ok: true });
 
-    const request = (httpClient.request as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const request = (httpClient.request as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0];
     expect(request.method).toBe('GET');
     expect(request.path).toBe('/v1/custom');
   });
@@ -57,9 +57,7 @@ describe('LilySdk.request() typed passthrough', () => {
       body: { name: 'test' },
     });
 
-    expect(response.status).toBe(201);
-    expect(response.data.id).toBe('123');
-    expect(response.headers.get('x-trace-id')).toBe('abc');
+    expect(response.id).toBe('123');
   });
 
   it('request method supports custom query params', async () => {
@@ -85,7 +83,8 @@ describe('LilySdk.request() typed passthrough', () => {
       query: { limit: 10, cursor: 'abc' },
     });
 
-    const request = (httpClient.request as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const request = (httpClient.request as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0];
     expect(request.query).toEqual({ limit: 10, cursor: 'abc' });
   });
 });

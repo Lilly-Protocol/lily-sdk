@@ -15,7 +15,10 @@ export interface RequestLifecycleHooks {
    * Called after a successful response (2xx).
    * Receives the request and the response.
    */
-  afterResponse?: (request: HttpRequest, response: HttpResponse) => void | Promise<void>;
+  afterResponse?: (
+    request: HttpRequest,
+    response: HttpResponse,
+  ) => void | Promise<void>;
 
   /**
    * Called when an error occurs (non-2xx or network error).
@@ -27,7 +30,11 @@ export interface RequestLifecycleHooks {
    * Called when a retry is scheduled.
    * Receives the request, attempt number, and delay in ms.
    */
-  onRetry?: (request: HttpRequest, attempt: number, delayMs: number) => void | Promise<void>;
+  onRetry?: (
+    request: HttpRequest,
+    attempt: number,
+    delayMs: number,
+  ) => void | Promise<void>;
 }
 
 /**
@@ -35,7 +42,9 @@ export interface RequestLifecycleHooks {
  * Hooks are called in order. Errors in hooks are swallowed
  * to prevent them from disrupting the request flow.
  */
-export function composeHooks(...hookSets: RequestLifecycleHooks[]): RequestLifecycleHooks {
+export function composeHooks(
+  ...hookSets: RequestLifecycleHooks[]
+): RequestLifecycleHooks {
   return {
     async beforeRequest(request: HttpRequest) {
       for (const hooks of hookSets) {

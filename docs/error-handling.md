@@ -16,7 +16,13 @@ LilySdkError (base)
 ## Catching by Type
 
 ```typescript
-import { LilySdk, isLilySdkError, LilyApiError, LilyTransportError, LilyConfigError } from 'lily-sdk';
+import {
+  LilySdk,
+  isLilySdkError,
+  LilyApiError,
+  LilyTransportError,
+  LilyConfigError,
+} from 'lily-sdk';
 
 try {
   const payment = await sdk.payments.get('pay_123');

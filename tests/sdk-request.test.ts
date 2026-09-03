@@ -8,7 +8,6 @@ class MockHttpClient implements HttpClient {
     this.response = response;
   }
   public request<TResponse>(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _req: HttpRequest,
   ): Promise<HttpResponse<TResponse>> {
     return Promise.resolve(this.response as HttpResponse<TResponse>);

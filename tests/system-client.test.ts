@@ -5,24 +5,25 @@ import type { HealthStatus, ServiceInfo } from '../src/models';
 import type { ResolvedLilySdkConfig } from '../src/config/types';
 import { LilyValidationError } from '../src/errors/sdk-error';
 
-function createMockConfig(options: {
-  validateResponses?: boolean;
-  fetch?: typeof globalThis.fetch;
-} = {}): ResolvedLilySdkConfig {
+function createMockConfig(
+  options: {
+    validateResponses?: boolean;
+    fetch?: typeof globalThis.fetch;
+  } = {},
+): ResolvedLilySdkConfig {
   return {
     baseUrl: new URL('https://api.lily.dev'),
     timeoutMs: 5000,
     retry: {
-      maxAttempts: 3,
-      initialDelayMs: 500,
-      maxDelayMs: 5000,
-      backoffFactor: 2,
+      retries: 3,
+      retryDelayMs: 500,
       retryableStatusCodes: [429, 500, 502, 503, 504],
     },
     defaultHeaders: {},
     userAgent: 'lily-sdk-test',
     fetch: options.fetch ?? vi.fn(),
     validateResponses: options.validateResponses ?? false,
+    toHeaders: () => ({}),
   };
 }
 
@@ -118,11 +119,13 @@ describe('SystemClient', () => {
 
     it('throws LilyValidationError when response fails validation and validateResponses is true', async () => {
       const invalidPayload = { status: 'invalid_status', version: 123 };
-      const mockFetch = vi.fn().mockResolvedValue(
-        new Response(JSON.stringify(invalidPayload), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
+      const mockFetch = vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify(invalidPayload), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        ),
       );
 
       const config = createMockConfig({
@@ -131,7 +134,9 @@ describe('SystemClient', () => {
       });
 
       const validatingClient = new SystemClient(config);
-      await expect(validatingClient.health()).rejects.toThrow(LilyValidationError);
+      await expect(validatingClient.health()).rejects.toThrow(
+        LilyValidationError,
+      );
 
       try {
         await validatingClient.health();
@@ -142,12 +147,17 @@ describe('SystemClient', () => {
     });
 
     it('does not validate response when validateResponses is false in config', async () => {
-      const invalidPayload = { status: 'invalid_status_allowed', version: '1.0' };
-      const mockFetch = vi.fn().mockResolvedValue(
-        new Response(JSON.stringify(invalidPayload), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
+      const invalidPayload = {
+        status: 'invalid_status_allowed',
+        version: '1.0',
+      };
+      const mockFetch = vi.fn().mockImplementation(() =>
+        Promise.resolve(
+          new Response(JSON.stringify(invalidPayload), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        ),
       );
 
       const config = createMockConfig({
@@ -162,4 +172,3 @@ describe('SystemClient', () => {
     });
   });
 });
-

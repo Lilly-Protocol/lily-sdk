@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { LilyValidationError } from '../src/errors/sdk-error';
 import {
   validateExecutePaymentRequest,
   validateMemo,

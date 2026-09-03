@@ -26,11 +26,19 @@ describe('fetch-http-client abort signal', () => {
     const client = createFetchHttpClient(config);
 
     await expect(
-      client.request({ method: 'GET', path: '/test', signal: controller.signal }),
+      client.request({
+        method: 'GET',
+        path: '/test',
+        signal: controller.signal,
+      }),
     ).rejects.toThrow(LilyTransportError);
 
     try {
-      await client.request({ method: 'GET', path: '/test', signal: controller.signal });
+      await client.request({
+        method: 'GET',
+        path: '/test',
+        signal: controller.signal,
+      });
     } catch (err) {
       expect(err).toBeInstanceOf(LilyTransportError);
       expect((err as LilyTransportError).code).toBe('CANCELLED');
@@ -45,14 +53,21 @@ describe('fetch-http-client abort signal', () => {
     mockFetch.mockImplementation((_url: string, init: RequestInit) => {
       return new Promise((_resolve, reject) => {
         init.signal?.addEventListener('abort', () => {
-          const err = new DOMException('The operation was aborted.', 'AbortError');
+          const err = new DOMException(
+            'The operation was aborted.',
+            'AbortError',
+          );
           reject(err);
         });
       });
     });
 
     const client = createFetchHttpClient(config);
-    const promise = client.request({ method: 'GET', path: '/test', signal: controller.signal });
+    const promise = client.request({
+      method: 'GET',
+      path: '/test',
+      signal: controller.signal,
+    });
 
     // Allow microtasks to set up listeners
     await new Promise((r) => setTimeout(r, 10));
@@ -61,7 +76,11 @@ describe('fetch-http-client abort signal', () => {
     await expect(promise).rejects.toThrow(LilyTransportError);
 
     try {
-      await client.request({ method: 'GET', path: '/test', signal: controller.signal });
+      await client.request({
+        method: 'GET',
+        path: '/test',
+        signal: controller.signal,
+      });
     } catch (err) {
       expect(err).toBeInstanceOf(LilyTransportError);
       expect((err as LilyTransportError).code).toBe('CANCELLED');
@@ -74,7 +93,10 @@ describe('fetch-http-client abort signal', () => {
     mockFetch.mockImplementation((_url: string, init: RequestInit) => {
       return new Promise((_resolve, reject) => {
         init.signal?.addEventListener('abort', () => {
-          const err = new DOMException('The operation was aborted.', 'AbortError');
+          const err = new DOMException(
+            'The operation was aborted.',
+            'AbortError',
+          );
           reject(err);
         });
       });
@@ -107,7 +129,11 @@ describe('fetch-http-client abort signal', () => {
     });
 
     const client = createFetchHttpClient(config);
-    await client.request({ method: 'GET', path: '/test', signal: controller.signal });
+    await client.request({
+      method: 'GET',
+      path: '/test',
+      signal: controller.signal,
+    });
 
     expect(removeSpy).toHaveBeenCalledWith('abort', expect.any(Function));
   });

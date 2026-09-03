@@ -1,9 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import type { ResolvedLilySdkConfig } from '../src/config/types';
-import { LilyApiError, LilyAuthenticationError, LilyTransportError } from '../src/errors/sdk-error';
+import {
+  LilyApiError,
+  LilyAuthenticationError,
+  LilyTransportError,
+} from '../src/errors/sdk-error';
 
-function makeConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): ResolvedLilySdkConfig {
+function makeConfig(
+  overrides: Partial<ResolvedLilySdkConfig> = {},
+): ResolvedLilySdkConfig {
   return {
     baseUrl: new URL('https://api.example.com'),
     apiKey: 'test-key',
@@ -18,17 +24,19 @@ function makeConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): ResolvedLil
 }
 
 function jsonResponse(body: unknown, status = 200) {
-  return () => new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  });
+  return () =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'content-type': 'application/json' },
+    });
 }
 
 function textResponse(body: string, status = 200) {
-  return () => new Response(body, {
-    status,
-    headers: { 'content-type': 'text/plain' },
-  });
+  return () =>
+    new Response(body, {
+      status,
+      headers: { 'content-type': 'text/plain' },
+    });
 }
 
 function emptyResponse(status: number) {
@@ -51,9 +59,14 @@ describe('fetch-http-client coverage matrix', () => {
     config.fetch = vi.fn().mockImplementation(jsonResponse({ ok: true }));
     const client = createFetchHttpClient(config);
 
-    await client.request({ method: 'GET', path: 'health', query: { v: 1, empty: undefined } });
+    await client.request({
+      method: 'GET',
+      path: 'health',
+      query: { v: 1, empty: undefined },
+    });
 
-    const calledUrl = config.fetch.mock.calls[0][0] as URL;
+    const calledUrl = (config.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as URL;
     expect(calledUrl.pathname).toBe('/health');
     expect(calledUrl.searchParams.get('v')).toBe('1');
     expect(calledUrl.searchParams.has('empty')).toBe(false);
@@ -64,13 +77,19 @@ describe('fetch-http-client coverage matrix', () => {
     const client = createFetchHttpClient(config);
 
     await client.request({ method: 'POST', path: '/a', body: undefined });
-    expect(config.fetch.mock.calls[0][1].body).toBeUndefined();
+    expect(
+      (config.fetch as ReturnType<typeof vi.fn>).mock.calls[0]![1].body,
+    ).toBeUndefined();
 
     await client.request({ method: 'POST', path: '/b', body: null });
-    expect(config.fetch.mock.calls[1][1].body).toBeUndefined();
+    expect(
+      (config.fetch as ReturnType<typeof vi.fn>).mock.calls[1]![1].body,
+    ).toBeUndefined();
 
     await client.request({ method: 'POST', path: '/c', body: { x: 1 } });
-    expect(config.fetch.mock.calls[2][1].body).toBe('{"x":1}');
+    expect(
+      (config.fetch as ReturnType<typeof vi.fn>).mock.calls[2]![1].body,
+    ).toBe('{"x":1}');
   });
 
   it('parseResponse returns null for 204, text for non-json, json for application/json', async () => {
@@ -91,16 +110,18 @@ describe('fetch-http-client coverage matrix', () => {
 
   it('retries on retryable status codes for safe methods and exhausts to LilyApiError', async () => {
     config.retry.retries = 2;
-    config.fetch = vi.fn().mockImplementation(jsonResponse({ err: 'fail' }, 500));
+    config.fetch = vi
+      .fn()
+      .mockImplementation(jsonResponse({ err: 'fail' }, 500));
     const client = createFetchHttpClient(config);
 
     const promise = client.request({ method: 'GET', path: '/fail' });
     const assertion = expect(promise).rejects.toBeInstanceOf(LilyApiError);
-    
+
     // Advance timers for each retry delay
     await vi.advanceTimersByTimeAsync(1);
     await vi.advanceTimersByTimeAsync(2);
-    
+
     // Ensure all pending promises settle before asserting
     await vi.runAllTimersAsync();
 
@@ -112,18 +133,25 @@ describe('fetch-http-client coverage matrix', () => {
     config.fetch = vi.fn().mockImplementation(jsonResponse({}, 500));
     const client = createFetchHttpClient(config);
 
-    await expect(client.request({ method: 'POST', path: '/p' })).rejects.toBeInstanceOf(LilyApiError);
+    await expect(
+      client.request({ method: 'POST', path: '/p' }),
+    ).rejects.toBeInstanceOf(LilyApiError);
     expect(config.fetch).toHaveBeenCalledTimes(1);
   });
 
   it('throws LilyAuthenticationError on 401/403 without retry', async () => {
-    config.fetch = vi.fn()
+    config.fetch = vi
+      .fn()
       .mockImplementationOnce(jsonResponse({}, 401))
       .mockImplementationOnce(jsonResponse({}, 403));
     const client = createFetchHttpClient(config);
 
-    await expect(client.request({ method: 'GET', path: '/auth' })).rejects.toBeInstanceOf(LilyAuthenticationError);
-    await expect(client.request({ method: 'GET', path: '/forbidden' })).rejects.toBeInstanceOf(LilyAuthenticationError);
+    await expect(
+      client.request({ method: 'GET', path: '/auth' }),
+    ).rejects.toBeInstanceOf(LilyAuthenticationError);
+    await expect(
+      client.request({ method: 'GET', path: '/forbidden' }),
+    ).rejects.toBeInstanceOf(LilyAuthenticationError);
     expect(config.fetch).toHaveBeenCalledTimes(2);
   });
 
@@ -133,11 +161,12 @@ describe('fetch-http-client coverage matrix', () => {
     const client = createFetchHttpClient(config);
 
     const promise = client.request({ method: 'GET', path: '/net' });
-    const assertion = expect(promise).rejects.toBeInstanceOf(LilyTransportError);
-    
+    const assertion =
+      expect(promise).rejects.toBeInstanceOf(LilyTransportError);
+
     // Advance timer for retry delay
     await vi.advanceTimersByTimeAsync(1);
-    
+
     // Settle remaining microtasks/promises
     await vi.runAllTimersAsync();
 
@@ -148,10 +177,13 @@ describe('fetch-http-client coverage matrix', () => {
   it('wraps AbortError as TIMEOUT transport error', async () => {
     const abortErr = new Error('aborted');
     abortErr.name = 'AbortError';
+    config.retry.retries = 0;
     config.fetch = vi.fn().mockRejectedValue(abortErr);
     const client = createFetchHttpClient(config);
 
-    await expect(client.request({ method: 'GET', path: '/timeout' })).rejects.toMatchObject({
+    await expect(
+      client.request({ method: 'GET', path: '/timeout' }),
+    ).rejects.toMatchObject({
       code: 'TIMEOUT',
     });
   });
@@ -160,7 +192,9 @@ describe('fetch-http-client coverage matrix', () => {
     config.fetch = vi.fn().mockRejectedValue(new Error('fail'));
     const client = createFetchHttpClient(config);
 
-    await expect(client.request({ method: 'POST', path: '/post-net' })).rejects.toBeInstanceOf(LilyTransportError);
+    await expect(
+      client.request({ method: 'POST', path: '/post-net' }),
+    ).rejects.toBeInstanceOf(LilyTransportError);
     expect(config.fetch).toHaveBeenCalledTimes(1);
   });
 });

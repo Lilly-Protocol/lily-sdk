@@ -1,14 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import { resolveLilySdkConfig } from '../src/config/resolve-config';
-import { LilyTransportError, LilyApiError } from '../src/errors/sdk-error';
+import { LilyApiError } from '../src/errors/sdk-error';
 import type { LilySdkConfig } from '../src/config/types';
 
 describe('Retry-After header honored on 429', () => {
   it('retries after the delay specified in Retry-After header', async () => {
-    const sleepSpy = vi.fn().mockResolvedValue(undefined);
     let callCount = 0;
-    const mockFetch = vi.fn(async (url: string, init: RequestInit) => {
+    const mockFetch = vi.fn(async (_url: string, _init: RequestInit) => {
       callCount++;
       if (callCount === 1) {
         return new Response('{"error":"rate limited"}', {
@@ -37,7 +36,7 @@ describe('Retry-After header honored on 429', () => {
 
   it('does not retry POST on 429', async () => {
     let callCount = 0;
-    const mockFetch = vi.fn(async (url: string, init: RequestInit) => {
+    const mockFetch = vi.fn(async (_url: string, _init: RequestInit) => {
       callCount++;
       return new Response('{"error":"rate limited"}', {
         status: 429,
@@ -62,7 +61,7 @@ describe('Retry-After header honored on 429', () => {
 
   it('retries on 503 with Retry-After', async () => {
     let callCount = 0;
-    const mockFetch = vi.fn(async (url: string, init: RequestInit) => {
+    const mockFetch = vi.fn(async (_url: string, _init: RequestInit) => {
       callCount++;
       if (callCount === 1) {
         return new Response('{"error":"unavailable"}', {
@@ -90,7 +89,7 @@ describe('Retry-After header honored on 429', () => {
   });
 
   it('throws LilyApiError after exhausting retries', async () => {
-    const mockFetch = vi.fn(async (url: string, init: RequestInit) => {
+    const mockFetch = vi.fn(async (_url: string, _init: RequestInit) => {
       return new Response('{"error":"rate limited"}', {
         status: 429,
         headers: { 'content-type': 'application/json', 'retry-after': '0' },

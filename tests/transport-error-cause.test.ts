@@ -19,7 +19,10 @@ describe('LilyTransportError cause propagation', () => {
     const networkError = new Error('ECONNREFUSED');
     globalThis.fetch = vi.fn(() => Promise.reject(networkError));
 
-    const config = resolveLilySdkConfig({ baseUrl: 'https://api.example.com', apiKey: 'test-key' });
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.example.com',
+      apiKey: 'test-key',
+    });
     const client = createFetchHttpClient(config);
     const request: HttpRequest = { method: 'GET', path: '/v1/resource' };
 
@@ -36,7 +39,10 @@ describe('LilyTransportError cause propagation', () => {
   });
 
   it('propagates timeout error as cause on LilyTransportError', async () => {
-    const abortError = new DOMException('The operation was aborted.', 'AbortError');
+    const abortError = new DOMException(
+      'The operation was aborted.',
+      'AbortError',
+    );
     globalThis.fetch = vi.fn(() => Promise.reject(abortError));
 
     const config = resolveLilySdkConfig({

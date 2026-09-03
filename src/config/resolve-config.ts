@@ -16,9 +16,30 @@ const DEFAULT_RETRY_POLICY: RetryPolicy = {
   retryableStatusCodes: [408, 409, 425, 429, 500, 502, 503, 504],
 };
 
+const KNOWN_CONFIG_KEYS: readonly string[] = [
+  'baseUrl',
+  'apiKey',
+  'authToken',
+  'timeoutMs',
+  'retry',
+  'defaultHeaders',
+  'userAgent',
+  'fetch',
+  'validateResponses',
+];
+
 export function resolveLilySdkConfig(
   config: LilySdkConfig,
 ): ResolvedLilySdkConfig {
+  const unknownKeys = Object.keys(config).filter(
+    (key) => !KNOWN_CONFIG_KEYS.includes(key),
+  );
+  if (unknownKeys.length > 0) {
+    console.warn(
+      `[lily-sdk] Ignoring unknown config keys: ${unknownKeys.join(', ')}`,
+    );
+  }
+
   const baseUrl = resolveBaseUrl(config.baseUrl);
 
   if (
@@ -67,7 +88,9 @@ export function resolveLilySdkConfig(
     userAgent: config.userAgent ?? DEFAULT_USER_AGENT,
     fetch: fetchImpl,
     ...(resolvedApiKey !== undefined ? { apiKey: resolvedApiKey } : {}),
-    ...(resolvedAuthToken !== undefined ? { authToken: resolvedAuthToken } : {}),
+    ...(resolvedAuthToken !== undefined
+      ? { authToken: resolvedAuthToken }
+      : {}),
     validateResponses,
     toHeaders: () => ({
       accept: 'application/json',
@@ -84,9 +107,7 @@ export function resolveLilySdkConfig(
 function resolveBaseUrl(explicit: string | URL | undefined): URL {
   const raw =
     explicit ??
-    (typeof process !== 'undefined'
-      ? process.env.LILY_API_URL
-      : undefined);
+    (typeof process !== 'undefined' ? process.env.LILY_API_URL : undefined);
 
   if (raw === undefined) {
     throw new LilyConfigError('`baseUrl` is required.');
@@ -136,7 +157,9 @@ function resolveRetryPolicy(
     policy?.retryableStatusCodes ?? DEFAULT_RETRY_POLICY.retryableStatusCodes;
 
   if (!Number.isInteger(retries) || retries < 0) {
-    throw new LilyConfigError('`retry.retries` must be a non-negative integer.');
+    throw new LilyConfigError(
+      '`retry.retries` must be a non-negative integer.',
+    );
   }
 
   if (!Number.isFinite(retryDelayMs) || retryDelayMs < 0) {

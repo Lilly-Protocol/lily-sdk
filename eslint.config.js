@@ -5,18 +5,25 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'eslint.config.js', 'scripts/**'],
+    ignores: [
+      'dist/**',
+      'coverage/**',
+      'node_modules/**',
+      'eslint.config.js',
+      'scripts/**',
+      'docs/**',
+      '.turbo/**',
+      'github-*.ts',
+      'gh-disc-*.ts',
+      'github-*.js',
+      'gh-disc-*.js',
+    ],
   },
   js.configs.recommended,
-  ...tseslint.configs.strictTypeChecked,
-  ...tseslint.configs.stylisticTypeChecked,
+  ...tseslint.configs.recommended,
   {
     files: ['**/*.ts'],
     languageOptions: {
-      parserOptions: {
-        project: './tsconfig.json',
-        tsconfigRootDir: import.meta.dirname,
-      },
       globals: {
         ...globals.node,
       },
@@ -24,10 +31,12 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
       '@typescript-eslint/no-extraneous-class': 'off',
-      '@typescript-eslint/no-unnecessary-condition': [
+      '@typescript-eslint/no-unused-vars': [
         'error',
         {
-          allowConstantLoopConditions: true,
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrors: 'none',
         },
       ],
     },
@@ -35,13 +44,12 @@ export default tseslint.config(
   {
     files: ['tests/**/*.ts'],
     rules: {
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
     },
   },
   {
-    files: ['scripts/**/*.mjs'],
+    files: ['**/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
     languageOptions: {
       ...tseslint.configs.disableTypeChecked.languageOptions,

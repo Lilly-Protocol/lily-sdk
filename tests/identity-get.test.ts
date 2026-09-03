@@ -31,7 +31,8 @@ describe('IdentityClient.get', () => {
 
     expect(result.id).toBe('ident-abc');
     expect(mockClient.request).toHaveBeenCalledTimes(1);
-    const callArg = (mockClient.request as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const callArg = (mockClient.request as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0];
     expect(callArg.method).toBe('GET');
     expect(callArg.path).toBe('/v1/identity/ident-abc');
   });
@@ -42,7 +43,8 @@ describe('IdentityClient.get', () => {
 
     await client.get('ident/with spaces');
 
-    const callArg = (mockClient.request as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const callArg = (mockClient.request as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0];
     expect(callArg.path).toBe('/v1/identity/ident%2Fwith%20spaces');
   });
 });

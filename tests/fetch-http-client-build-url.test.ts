@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import type { ResolvedLilySdkConfig } from '../src/config/types';
 
-function createConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): ResolvedLilySdkConfig {
+function createConfig(
+  overrides: Partial<ResolvedLilySdkConfig> = {},
+): ResolvedLilySdkConfig {
   return {
     baseUrl: new URL('https://api.lily.test/'),
     timeoutMs: 2_000,
@@ -15,6 +17,7 @@ function createConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): ResolvedL
     defaultHeaders: {},
     userAgent: 'lily-sdk/test',
     fetch: globalThis.fetch,
+    toHeaders: () => ({}),
     ...overrides,
   };
 }
@@ -27,13 +30,17 @@ describe('buildUrl — query serialization and value encoding', () => {
     let capturedUrl: URL | undefined;
     const fetchSpy = (_input: URL | RequestInfo, _init?: RequestInit) => {
       capturedUrl = _input as URL;
-      return Promise.resolve(new Response('{}', {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }));
+      return Promise.resolve(
+        new Response('{}', {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
     };
 
-    const client = createFetchHttpClient(createConfig({ fetch: fetchSpy as any }));
+    const client = createFetchHttpClient(
+      createConfig({ fetch: fetchSpy as any }),
+    );
     await client.request({
       method: 'GET',
       path: '/v1/agents',
@@ -48,13 +55,17 @@ describe('buildUrl — query serialization and value encoding', () => {
     let capturedUrl: URL | undefined;
     const fetchSpy = (_input: URL | RequestInfo, _init?: RequestInit) => {
       capturedUrl = _input as URL;
-      return Promise.resolve(new Response('{}', {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }));
+      return Promise.resolve(
+        new Response('{}', {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
     };
 
-    const client = createFetchHttpClient(createConfig({ fetch: fetchSpy as any }));
+    const client = createFetchHttpClient(
+      createConfig({ fetch: fetchSpy as any }),
+    );
     await client.request({
       method: 'GET',
       path: '/v1/agents',
@@ -69,13 +80,17 @@ describe('buildUrl — query serialization and value encoding', () => {
     let capturedUrl: URL | undefined;
     const fetchSpy = (_input: URL | RequestInfo, _init?: RequestInit) => {
       capturedUrl = _input as URL;
-      return Promise.resolve(new Response('{}', {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }));
+      return Promise.resolve(
+        new Response('{}', {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
     };
 
-    const client = createFetchHttpClient(createConfig({ fetch: fetchSpy as any }));
+    const client = createFetchHttpClient(
+      createConfig({ fetch: fetchSpy as any }),
+    );
     await client.request({
       method: 'GET',
       path: '/v1/agents',
@@ -90,13 +105,17 @@ describe('buildUrl — query serialization and value encoding', () => {
     let capturedUrl: URL | undefined;
     const fetchSpy = (_input: URL | RequestInfo, _init?: RequestInit) => {
       capturedUrl = _input as URL;
-      return Promise.resolve(new Response('{}', {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }));
+      return Promise.resolve(
+        new Response('{}', {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
     };
 
-    const client = createFetchHttpClient(createConfig({ fetch: fetchSpy as any }));
+    const client = createFetchHttpClient(
+      createConfig({ fetch: fetchSpy as any }),
+    );
     await client.request({
       method: 'GET',
       path: '/v1/agents',
@@ -112,33 +131,43 @@ describe('buildUrl — query serialization and value encoding', () => {
     let capturedUrl: URL | undefined;
     const fetchSpy = (_input: URL | RequestInfo, _init?: RequestInit) => {
       capturedUrl = _input as URL;
-      return Promise.resolve(new Response('{}', {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }));
+      return Promise.resolve(
+        new Response('{}', {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
     };
 
-    const client = createFetchHttpClient(createConfig({ fetch: fetchSpy as any }));
+    const client = createFetchHttpClient(
+      createConfig({ fetch: fetchSpy as any }),
+    );
     await client.request({
       method: 'GET',
       path: '/v1/agents',
       query: { search: 'hello world & foo=bar' },
     });
 
-    expect(capturedUrl!.searchParams.get('search')).toBe('hello world & foo=bar');
+    expect(capturedUrl!.searchParams.get('search')).toBe(
+      'hello world & foo=bar',
+    );
   });
 
   it('handles empty query object', async () => {
     let capturedUrl: URL | undefined;
     const fetchSpy = (_input: URL | RequestInfo, _init?: RequestInit) => {
       capturedUrl = _input as URL;
-      return Promise.resolve(new Response('{}', {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }));
+      return Promise.resolve(
+        new Response('{}', {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
     };
 
-    const client = createFetchHttpClient(createConfig({ fetch: fetchSpy as any }));
+    const client = createFetchHttpClient(
+      createConfig({ fetch: fetchSpy as any }),
+    );
     await client.request({
       method: 'GET',
       path: '/v1/system/health',
@@ -152,13 +181,17 @@ describe('buildUrl — query serialization and value encoding', () => {
     let capturedUrl: URL | undefined;
     const fetchSpy = (_input: URL | RequestInfo, _init?: RequestInit) => {
       capturedUrl = _input as URL;
-      return Promise.resolve(new Response('{}', {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }));
+      return Promise.resolve(
+        new Response('{}', {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
     };
 
-    const client = createFetchHttpClient(createConfig({ fetch: fetchSpy as any }));
+    const client = createFetchHttpClient(
+      createConfig({ fetch: fetchSpy as any }),
+    );
     await client.request({
       method: 'GET',
       path: '/v1/system/health',
@@ -171,16 +204,20 @@ describe('buildUrl — query serialization and value encoding', () => {
     let capturedUrl: URL | undefined;
     const fetchSpy = (_input: URL | RequestInfo, _init?: RequestInit) => {
       capturedUrl = _input as URL;
-      return Promise.resolve(new Response('{}', {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }));
+      return Promise.resolve(
+        new Response('{}', {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
     };
 
-    const client = createFetchHttpClient(createConfig({
-      baseUrl: new URL('https://api.lily.test/'),
-      fetch: fetchSpy as any,
-    }));
+    const client = createFetchHttpClient(
+      createConfig({
+        baseUrl: new URL('https://api.lily.test/'),
+        fetch: fetchSpy as any,
+      }),
+    );
     await client.request({
       method: 'GET',
       path: '/v1/wallets/w-1',

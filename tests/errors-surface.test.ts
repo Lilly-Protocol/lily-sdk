@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import * as errors from '../src/errors/sdk-error';
+import * as errors from '../src/errors';
 
 describe('error exports surface', () => {
   it('does not export unused LilyValidationError', () => {
-    expect(Object.prototype.hasOwnProperty.call(errors, 'LilyValidationError')).toBe(false);
+    expect(
+      Object.prototype.hasOwnProperty.call(errors, 'LilyValidationError'),
+    ).toBe(false);
   });
 
   it('exports core error classes', () => {

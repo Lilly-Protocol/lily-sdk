@@ -66,7 +66,14 @@ export interface MoneyAmount {
   amount: string;
 }
 
-export type ResourceStatus = 'pending' | 'active' | 'inactive' | 'failed' | 'paused';
+export type ResourceStatus =
+  | 'pending'
+  | 'active'
+  | 'inactive'
+  | 'failed'
+  | 'paused';
+
+const DECIMAL_AMOUNT_PATTERN = /^\d+(\.\d+)?$/;
 
 /**
  * Normalizes a decimal string amount to exactly two decimal places.
@@ -74,8 +81,19 @@ export type ResourceStatus = 'pending' | 'active' | 'inactive' | 'failed' | 'pau
  * Leading zeros are stripped and the fractional part is truncated (not
  * rounded) to two digits and padded with trailing zeros, e.g.
  * `'0075.5'` becomes `'75.50'`. The input object is not mutated.
+ *
+ * Throws a `RangeError` when the amount is not a base-10 decimal string
+ * (e.g. exponential notation like `'1e-5'` or a JavaScript number).
  */
 export function normalizeMoneyAmount(input: MoneyAmount): MoneyAmount {
+  if (
+    typeof input.amount !== 'string' ||
+    !DECIMAL_AMOUNT_PATTERN.test(input.amount)
+  ) {
+    throw new RangeError(
+      `MoneyAmount.amount must be a base-10 decimal string, got ${JSON.stringify(input.amount)}.`,
+    );
+  }
   const [wholeRaw = '', fractionRaw = ''] = input.amount.split('.');
   const whole = wholeRaw.replace(/^0+(?=\d)/, '');
   const fraction = fractionRaw.slice(0, 2).padEnd(2, '0');

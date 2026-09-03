@@ -1,19 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import { resolveLilySdkConfig } from '../src/config/resolve-config';
-import { LilyApiError, LilyAuthenticationError, LilyTransportError } from '../src/errors/sdk-error';
+import {
+  LilyApiError,
+  LilyAuthenticationError,
+  LilyTransportError,
+} from '../src/errors/sdk-error';
 
 describe('transport error request metadata', () => {
-  const config = resolveLilySdkConfig({ baseUrl: 'https://api.example.com' });
+  let config: ReturnType<typeof resolveLilySdkConfig>;
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     fetchMock = vi.fn();
-    (config as any).fetch = fetchMock;
+    config = {
+      ...resolveLilySdkConfig({ baseUrl: 'https://api.example.com' }),
+      fetch: fetchMock,
+    } as ReturnType<typeof resolveLilySdkConfig>;
   });
 
   it('attaches request info to authentication errors', async () => {
-    fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 }));
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 }),
+    );
     const client = createFetchHttpClient(config);
 
     try {
@@ -31,11 +40,17 @@ describe('transport error request metadata', () => {
   });
 
   it('attaches request info to api errors', async () => {
-    fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: 'bad request' }), { status: 400 }));
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ error: 'bad request' }), { status: 400 }),
+    );
     const client = createFetchHttpClient(config);
 
     try {
-      await client.request({ method: 'GET', path: '/agents', query: { limit: 10 } });
+      await client.request({
+        method: 'GET',
+        path: '/agents',
+        query: { limit: 10 },
+      });
       expect.fail('should have thrown');
     } catch (err) {
       expect(err).toBeInstanceOf(LilyApiError);
@@ -63,9 +78,9 @@ describe('transport error request metadata', () => {
 
     const client = createFetchHttpClient({ ...config, timeoutMs: 20 });
     const promise = client.request({ method: 'DELETE', path: '/wallets/w1' });
-    
+
     await expect(promise).rejects.toBeInstanceOf(LilyTransportError);
-    
+
     try {
       await promise;
     } catch (err) {
@@ -81,7 +96,10 @@ describe('transport error request metadata', () => {
 
   it('attaches request info to network errors', async () => {
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
-    const client = createFetchHttpClient({ ...config, retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] } });
+    const client = createFetchHttpClient({
+      ...config,
+      retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
+    });
 
     try {
       await client.request({ method: 'PUT', path: '/identity/profile' });

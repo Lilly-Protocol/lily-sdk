@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import * as http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
-import { LilyApiError, LilyAuthenticationError } from '../src/errors/sdk-error';
+import { LilyAuthenticationError } from '../src/errors/sdk-error';
 
 let server: http.Server;
 let baseUrl: URL;
@@ -69,6 +69,9 @@ describe('end-to-end transport against real node:http server', () => {
       defaultHeaders: {},
       userAgent: 'lily-sdk/e2e-test',
       fetch: globalThis.fetch,
+      toHeaders() {
+        return {};
+      },
     });
 
     const response = await httpClient.request<{
@@ -92,6 +95,9 @@ describe('end-to-end transport against real node:http server', () => {
       defaultHeaders: {},
       userAgent: 'lily-sdk/e2e-test',
       fetch: globalThis.fetch,
+      toHeaders() {
+        return {};
+      },
     });
 
     const response = await httpClient.request({
@@ -111,6 +117,9 @@ describe('end-to-end transport against real node:http server', () => {
       defaultHeaders: {},
       userAgent: 'lily-sdk/e2e-test',
       fetch: globalThis.fetch,
+      toHeaders() {
+        return {};
+      },
     });
 
     await expect(
@@ -126,6 +135,9 @@ describe('end-to-end transport against real node:http server', () => {
       defaultHeaders: {},
       userAgent: 'lily-sdk/e2e-test',
       fetch: globalThis.fetch,
+      toHeaders() {
+        return {};
+      },
     });
 
     const response = await httpClient.request<string>({
@@ -139,7 +151,6 @@ describe('end-to-end transport against real node:http server', () => {
 
   it('retries on 429 and succeeds when server recovers', async () => {
     let callCount = 0;
-    const originalServer = server;
 
     // Create a separate server that fails once then succeeds
     const retryServer = http.createServer((_req, res) => {

@@ -87,8 +87,12 @@ export interface NewFeatureClientContract {
 Create request/response types in `src/models/new-feature.ts` and export them from `src/models/index.ts`:
 
 ```ts
-export interface CreateRequest { /* ... */ }
-export interface CreateResponse { /* ... */ }
+export interface CreateRequest {
+  /* ... */
+}
+export interface CreateResponse {
+  /* ... */
+}
 ```
 
 ### 3. Implement via BaseClient
@@ -99,7 +103,10 @@ Create `src/clients/new-feature-client.ts` extending `BaseClient`:
 import { BaseClient } from './base-client';
 import type { NewFeatureClientContract } from '../types/contracts';
 
-export class NewFeatureClient extends BaseClient implements NewFeatureClientContract {
+export class NewFeatureClient
+  extends BaseClient
+  implements NewFeatureClientContract
+{
   async list(params?: ListParams) {
     return this.request({ method: 'GET', path: '/new-feature', query: params });
   }

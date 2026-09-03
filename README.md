@@ -2,7 +2,7 @@
 
 ## Security
 
-Please see [SECURITY.md](SECURITY.md) for supported versions and private vulnerability reporting through GitHub Security Advisories. Do not file public issues for security-sensitive reports.
+Please see [SECURITY.md](./SECURITY.md) for supported versions and private vulnerability reporting through GitHub Security Advisories. Do not file public issues for security-sensitive reports.
 
 [![CI](https://github.com/lily-protocol/lily-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/lily-protocol/lily-sdk/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)

@@ -16,10 +16,7 @@ import type {
   CreateAgentRequest,
   Agent,
 } from '../src/models/agent';
-import type {
-  ExecutePaymentRequest,
-  PaymentQuoteRequest,
-} from '../src/models/payment';
+import type { ExecutePaymentRequest } from '../src/models/payment';
 import type {
   ResolveIdentityRequest,
   IdentityProfile,
@@ -110,7 +107,7 @@ describe('public API type-level tests', () => {
 
     it('ResourceStatus is a union of known literals', () => {
       expectTypeOf<ResourceStatus>().toEqualTypeOf<
-        'pending' | 'active' | 'inactive' | 'failed'
+        'pending' | 'active' | 'inactive' | 'failed' | 'paused'
       >();
     });
 

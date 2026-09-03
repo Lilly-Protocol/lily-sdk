@@ -37,8 +37,8 @@ describe('packageManager and engines.npm pinning', () => {
     const pmVersion = pkg.packageManager?.replace('npm@', '') ?? '';
     const npmRange = pkg.engines?.npm ?? '';
     if (npmRange.startsWith('>=')) {
-      const minVersion = npmRange.replace('>=', '').split('.')[0];
-      const pmMajor = pmVersion.split('.')[0];
+      const minVersion = npmRange.replace('>=', '').split('.')[0] ?? '';
+      const pmMajor = pmVersion.split('.')[0] ?? '';
       expect(parseInt(pmMajor)).toBeGreaterThanOrEqual(parseInt(minVersion));
     }
   });

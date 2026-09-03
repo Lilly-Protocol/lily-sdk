@@ -10,7 +10,7 @@ beforeAll(() => {
     Promise.resolve({
       ok: true,
       json: () => Promise.resolve({ data: 'stubbed response' }),
-    } as Response)
+    } as Response),
   ) as jest.Mock;
 });
 
@@ -20,7 +20,12 @@ afterAll(() => {
 
 describe('quickstart.ts flow', () => {
   it('executes without error and uses fetch', async () => {
-    const quickstartPath = path.join(__dirname, '..', 'examples', 'quickstart.ts');
+    const quickstartPath = path.join(
+      __dirname,
+      '..',
+      'examples',
+      'quickstart.ts',
+    );
     const quickstartCode = fs.readFileSync(quickstartPath, 'utf8');
 
     // Evaluate the quickstart code in a context with required globals

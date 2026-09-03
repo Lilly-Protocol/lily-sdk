@@ -1,16 +1,27 @@
 import { describe, it, expect } from 'vitest';
-import { LilyApiError, LilyAuthenticationError, LilyTransportError, LilySdkError, isLilySdkError } from '../src/errors/sdk-error';
+import {
+  LilyApiError,
+  LilyAuthenticationError,
+  LilyTransportError,
+  LilySdkError,
+  isLilySdkError,
+} from '../src/errors/sdk-error';
 
 describe('Error mapping 4xx/5xx (issue #7)', () => {
   it('LilyApiError is thrown for 4xx/5xx responses', () => {
-    const error = new LilyApiError('Server error', { code: 'API_ERROR', statusCode: 500 });
+    const error = new LilyApiError('Server error', {
+      code: 'API_ERROR',
+      statusCode: 500,
+    });
     expect(error).toBeInstanceOf(LilySdkError);
     expect(error.statusCode).toBe(500);
     expect(error.code).toBe('API_ERROR');
   });
 
   it('LilyAuthenticationError is thrown for 401/403', () => {
-    const error = new LilyAuthenticationError('Unauthorized', { statusCode: 401 });
+    const error = new LilyAuthenticationError('Unauthorized', {
+      statusCode: 401,
+    });
     expect(error).toBeInstanceOf(LilySdkError);
     expect(error.statusCode).toBe(401);
   });

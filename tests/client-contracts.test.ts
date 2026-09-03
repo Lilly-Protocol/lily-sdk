@@ -15,7 +15,12 @@ import type { HttpClient } from '../src/http/types';
 
 function createMockHttpClient(): HttpClient {
   return {
-    request: () => Promise.resolve({ status: 200, headers: new Headers(), data: {} as never }),
+    request: () =>
+      Promise.resolve({
+        status: 200,
+        headers: new Headers(),
+        data: {} as never,
+      }),
   };
 }
 
@@ -29,26 +34,34 @@ describe('client contract conformance', () => {
   });
 
   it('WalletClient satisfies WalletClientContract', () => {
-    const client: WalletClientContract = new WalletClient(createMockHttpClient());
+    const client: WalletClientContract = new WalletClient(
+      createMockHttpClient(),
+    );
     expect(typeof client.provision).toBe('function');
     expect(typeof client.get).toBe('function');
   });
 
   it('PaymentClient satisfies PaymentClientContract', () => {
-    const client: PaymentClientContract = new PaymentClient(createMockHttpClient());
+    const client: PaymentClientContract = new PaymentClient(
+      createMockHttpClient(),
+    );
     expect(typeof client.quote).toBe('function');
     expect(typeof client.execute).toBe('function');
     expect(typeof client.get).toBe('function');
   });
 
   it('IdentityClient satisfies IdentityClientContract', () => {
-    const client: IdentityClientContract = new IdentityClient(createMockHttpClient());
+    const client: IdentityClientContract = new IdentityClient(
+      createMockHttpClient(),
+    );
     expect(typeof client.resolve).toBe('function');
     expect(typeof client.verify).toBe('function');
   });
 
   it('SystemClient satisfies SystemClientContract', () => {
-    const client: SystemClientContract = new SystemClient(createMockHttpClient());
+    const client: SystemClientContract = new SystemClient(
+      createMockHttpClient(),
+    );
     expect(typeof client.health).toBe('function');
     expect(typeof client.info).toBe('function');
   });

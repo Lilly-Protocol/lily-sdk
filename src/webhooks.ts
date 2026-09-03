@@ -17,9 +17,7 @@ export function verifyWebhookSignature(
     return false;
   }
 
-  const expected = createHmac('sha256', secret)
-    .update(payload)
-    .digest('hex');
+  const expected = createHmac('sha256', secret).update(payload).digest('hex');
 
   const expectedBuf = Buffer.from(expected, 'hex');
   const providedBuf = Buffer.from(signature, 'hex');

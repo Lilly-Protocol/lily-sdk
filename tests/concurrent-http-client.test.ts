@@ -15,22 +15,21 @@ describe('concurrent http client stress test', () => {
     const requestCount = 10;
     let callIndex = 0;
 
-    const fetchSpy = vi.fn(async (_input: URL | RequestInfo, init?: RequestInit) => {
-      const index = callIndex++;
-      await new Promise((resolve) => setTimeout(resolve, (index + 1) * 10));
+    const fetchSpy = vi.fn<typeof globalThis.fetch>(
+      async (_input: URL | RequestInfo, init?: RequestInit) => {
+        const index = callIndex++;
+        await new Promise((resolve) => setTimeout(resolve, (index + 1) * 10));
 
-      if (init?.signal?.aborted) {
-        throw new Error('Aborted');
-      }
+        if (init?.signal?.aborted) {
+          throw new Error('Aborted');
+        }
 
-      return new Response(
-        JSON.stringify({ id: index, status: 'ok' }),
-        {
+        return new Response(JSON.stringify({ id: index, status: 'ok' }), {
           status: 200,
           headers: { 'content-type': 'application/json' },
-        },
-      );
-    });
+        });
+      },
+    );
 
     const httpClient = createFetchHttpClient({
       baseUrl: new URL('https://api.lily.test/'),
@@ -39,6 +38,9 @@ describe('concurrent http client stress test', () => {
       defaultHeaders: {},
       userAgent: 'lily-sdk/test',
       fetch: fetchSpy,
+      toHeaders() {
+        return {};
+      },
     });
 
     const promises = Array.from({ length: requestCount }, (_, i) =>
@@ -67,9 +69,10 @@ describe('concurrent http client stress test', () => {
     const attemptsPerRequest: number[] = [];
     let callIndex = 0;
 
-    const fetchSpy = vi.fn(async () => {
+    const fetchSpy = vi.fn<typeof globalThis.fetch>(async () => {
       const currentCall = callIndex++;
-      attemptsPerRequest[currentCall] = (attemptsPerRequest[currentCall] ?? 0) + 1;
+      attemptsPerRequest[currentCall] =
+        (attemptsPerRequest[currentCall] ?? 0) + 1;
 
       const isFirstAttempt = currentCall < 3;
 
@@ -95,6 +98,9 @@ describe('concurrent http client stress test', () => {
       defaultHeaders: {},
       userAgent: 'lily-sdk/test',
       fetch: fetchSpy,
+      toHeaders() {
+        return {};
+      },
     });
 
     const promises = Array.from({ length: 3 }, () =>

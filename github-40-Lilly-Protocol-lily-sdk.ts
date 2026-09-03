@@ -10,7 +10,7 @@ export class LilyTransportError extends Error {
         value: options.cause,
         enumerable: false,
         writable: true,
-        configurable: true
+        configurable: true,
       });
     }
     // Ensure proper stack trace capture
@@ -26,8 +26,10 @@ import { LilyTransportError } from '../LilyTransportError';
 describe('LilyTransportError', () => {
   it('should propagate cause correctly', () => {
     const originalError = new Error('original error');
-    const wrappedError = new LilyTransportError('transport failed', { cause: originalError });
-    
+    const wrappedError = new LilyTransportError('transport failed', {
+      cause: originalError,
+    });
+
     expect(wrappedError.cause).toBe(originalError);
     expect(wrappedError.message).toBe('transport failed');
     expect(wrappedError.name).toBe('LilyTransportError');
@@ -35,7 +37,7 @@ describe('LilyTransportError', () => {
 
   it('should handle missing cause gracefully', () => {
     const error = new LilyTransportError('no cause provided');
-    
+
     expect(error.cause).toBeUndefined();
     expect(error.message).toBe('no cause provided');
   });

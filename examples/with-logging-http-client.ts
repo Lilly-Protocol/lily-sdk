@@ -7,7 +7,6 @@
  * Run: npx tsx examples/with-logging-http-client.ts
  */
 import { LilySdk } from '../src/sdk';
-import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import type { HttpClient, HttpRequest, HttpResponse } from '../src/http/types';
 
 /**
@@ -63,7 +62,7 @@ async function main(): Promise<void> {
   //   const inner = createFetchHttpClient(resolveLilySdkConfig(config));
   //   const loggingClient = createLoggingHttpClient(inner);
   //   const sdk = new LilySdk(config, loggingClient);
-  const loggingClient = createLoggingHttpClient(sdk.config as any);
+  const _loggingClient = createLoggingHttpClient(sdk.http);
 
   console.log('Checking system health with logging...\n');
 

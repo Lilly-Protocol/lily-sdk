@@ -157,7 +157,9 @@ export function createFetchHttpClient(
                 ? 'Request cancelled by caller while calling Lily Protocol API.'
                 : 'Request timed out while calling Lily Protocol API.',
               {
-                code: externallyAborted ? 'CANCELLED' : LILY_ERROR_CODES.TIMEOUT,
+                code: externallyAborted
+                  ? 'CANCELLED'
+                  : LILY_ERROR_CODES.TIMEOUT,
                 cause: error,
                 request: requestMetadata(request, url),
               },
@@ -226,30 +228,6 @@ export function buildUrl(
   return url;
 }
 
-function normalizeHeaders(init?: HttpHeaders): Record<string, string> {
-  const result: Record<string, string> = {};
-
-  if (!init) {
-    return result;
-  }
-
-  if (init instanceof Headers) {
-    init.forEach((value, key) => {
-      result[key] = value;
-    });
-    return result;
-  }
-
-  if (Array.isArray(init)) {
-    for (const [key, value] of init) {
-      result[key] = value;
-    }
-    return result;
-  }
-
-  return { ...init };
-}
-
 function buildHeaders(
   config: ResolvedLilySdkConfig,
   requestHeaders?: HttpHeaders,
@@ -258,12 +236,10 @@ function buildHeaders(
     accept: 'application/json',
     'content-type': 'application/json',
     'user-agent': config.userAgent,
-    ...config.toHeaders?.(),
     ...config.defaultHeaders,
+    ...requestHeaders,
     ...resolveAuthHeaders(config),
   };
-
-  Object.assign(headers, normalizeHeaders(requestHeaders));
 
   return headers;
 }
@@ -271,10 +247,6 @@ function buildHeaders(
 function serializeBody(body: unknown): BodyInit | undefined {
   if (body === undefined || body === null) {
     return undefined;
-  }
-
-  if (typeof body === 'string') {
-    return body;
   }
 
   return JSON.stringify(body);

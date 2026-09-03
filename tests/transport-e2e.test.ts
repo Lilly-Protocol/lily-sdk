@@ -49,7 +49,9 @@ describe('transport end-to-end against real node:http server', () => {
     });
 
     await new Promise<void>((resolve) => {
-      server.listen(0, '127.0.0.1', () => { resolve(); });
+      server.listen(0, '127.0.0.1', () => {
+        resolve();
+      });
     });
 
     const address = server.address() as AddressInfo;
@@ -76,6 +78,9 @@ describe('transport end-to-end against real node:http server', () => {
       defaultHeaders: {},
       userAgent: 'lily-sdk/e2e',
       fetch: globalThis.fetch,
+      toHeaders() {
+        return {};
+      },
     });
 
     const response = await client.request({ method: 'GET', path: '/v1/json' });
@@ -92,6 +97,9 @@ describe('transport end-to-end against real node:http server', () => {
       defaultHeaders: {},
       userAgent: 'lily-sdk/e2e',
       fetch: globalThis.fetch,
+      toHeaders() {
+        return {};
+      },
     });
 
     const response = await client.request({
@@ -111,6 +119,9 @@ describe('transport end-to-end against real node:http server', () => {
       defaultHeaders: {},
       userAgent: 'lily-sdk/e2e',
       fetch: globalThis.fetch,
+      toHeaders() {
+        return {};
+      },
     });
 
     await expect(
@@ -126,6 +137,9 @@ describe('transport end-to-end against real node:http server', () => {
       defaultHeaders: {},
       userAgent: 'lily-sdk/e2e',
       fetch: globalThis.fetch,
+      toHeaders() {
+        return {};
+      },
     });
 
     const response = await client.request({ method: 'GET', path: '/v1/text' });

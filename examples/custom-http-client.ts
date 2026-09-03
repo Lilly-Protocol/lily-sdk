@@ -15,10 +15,14 @@ function createLoggingHttpClient(inner: HttpClient): HttpClient {
       const start = performance.now();
       try {
         const response = await inner.request<TResponse, TRequest>(request);
-        console.log(`[HTTP] ${request.method} ${request.path} → ${response.status} (${Math.round(performance.now() - start)}ms)`);
+        console.log(
+          `[HTTP] ${request.method} ${request.path} → ${response.status} (${Math.round(performance.now() - start)}ms)`,
+        );
         return response;
       } catch (error) {
-        console.error(`[HTTP] ${request.method} ${request.path} → ERROR (${Math.round(performance.now() - start)}ms)`);
+        console.error(
+          `[HTTP] ${request.method} ${request.path} → ERROR (${Math.round(performance.now() - start)}ms)`,
+        );
         throw error;
       }
     },

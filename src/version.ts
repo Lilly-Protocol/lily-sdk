@@ -5,4 +5,3 @@ export const VERSION = SDK_VERSION;
 declare global {
   const __LILY_SDK_VERSION__: string;
 }
-

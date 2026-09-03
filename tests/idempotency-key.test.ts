@@ -34,7 +34,7 @@ describe('Idempotency-Key header from ExecutePaymentRequest', () => {
       headers: { 'idempotency-key': 'idem-123' },
     });
 
-    const headers = calls[0].headers as Record<string, string>;
+    const headers = calls[0]!.headers as Record<string, string>;
     expect(headers['idempotency-key']).toBe('idem-123');
   });
 
@@ -66,7 +66,7 @@ describe('Idempotency-Key header from ExecutePaymentRequest', () => {
       },
     });
 
-    const headers = calls[0].headers as Record<string, string>;
+    const headers = calls[0]!.headers as Record<string, string>;
     expect(headers['idempotency-key']).toBeUndefined();
   });
 });

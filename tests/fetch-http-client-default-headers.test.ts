@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import type { ResolvedLilySdkConfig } from '../src/config/types';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 
-function createConfig(overrides: Record<string, unknown> = {}) {
+function createConfig(
+  overrides: Record<string, unknown> = {},
+): ResolvedLilySdkConfig {
   return {
     baseUrl: new URL('https://api.lily.test/'),
     timeoutMs: 2_000,
@@ -13,9 +16,9 @@ function createConfig(overrides: Record<string, unknown> = {}) {
     },
     defaultHeaders: {},
     userAgent: 'lily-sdk/test',
-    fetch: vi.fn(),
+    fetch: vi.fn<typeof globalThis.fetch>(),
     ...overrides,
-  };
+  } as unknown as ResolvedLilySdkConfig;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -33,10 +36,15 @@ describe('fetch-http-client — defaultHeaders merging', () => {
       return Promise.resolve(jsonResponse({}));
     };
 
-    const client = createFetchHttpClient(createConfig({
-      defaultHeaders: { 'X-Custom-Header': 'custom-value', 'X-Trace-Id': 'abc123' },
-      fetch: fetchSpy,
-    }));
+    const client = createFetchHttpClient(
+      createConfig({
+        defaultHeaders: {
+          'X-Custom-Header': 'custom-value',
+          'X-Trace-Id': 'abc123',
+        },
+        fetch: fetchSpy,
+      }),
+    );
 
     await client.request({
       method: 'GET',
@@ -55,10 +63,12 @@ describe('fetch-http-client — defaultHeaders merging', () => {
       return Promise.resolve(jsonResponse({}));
     };
 
-    const client = createFetchHttpClient(createConfig({
-      userAgent: 'my-agent/1.0',
-      fetch: fetchSpy,
-    }));
+    const client = createFetchHttpClient(
+      createConfig({
+        userAgent: 'my-agent/1.0',
+        fetch: fetchSpy,
+      }),
+    );
 
     await client.request({
       method: 'GET',
@@ -78,10 +88,12 @@ describe('fetch-http-client — defaultHeaders merging', () => {
       return Promise.resolve(jsonResponse({}));
     };
 
-    const client = createFetchHttpClient(createConfig({
-      apiKey: 'my-api-key',
-      fetch: fetchSpy,
-    }));
+    const client = createFetchHttpClient(
+      createConfig({
+        apiKey: 'my-api-key',
+        fetch: fetchSpy,
+      }),
+    );
 
     await client.request({
       method: 'GET',
@@ -99,10 +111,12 @@ describe('fetch-http-client — defaultHeaders merging', () => {
       return Promise.resolve(jsonResponse({}));
     };
 
-    const client = createFetchHttpClient(createConfig({
-      authToken: 'my-token',
-      fetch: fetchSpy,
-    }));
+    const client = createFetchHttpClient(
+      createConfig({
+        authToken: 'my-token',
+        fetch: fetchSpy,
+      }),
+    );
 
     await client.request({
       method: 'GET',
@@ -120,10 +134,12 @@ describe('fetch-http-client — defaultHeaders merging', () => {
       return Promise.resolve(jsonResponse({}));
     };
 
-    const client = createFetchHttpClient(createConfig({
-      defaultHeaders: { 'X-Override-Me': 'default' },
-      fetch: fetchSpy,
-    }));
+    const client = createFetchHttpClient(
+      createConfig({
+        defaultHeaders: { 'X-Override-Me': 'default' },
+        fetch: fetchSpy,
+      }),
+    );
 
     await client.request({
       method: 'GET',
@@ -142,10 +158,12 @@ describe('fetch-http-client — defaultHeaders merging', () => {
       return Promise.resolve(jsonResponse({}));
     };
 
-    const client = createFetchHttpClient(createConfig({
-      defaultHeaders: { 'X-Default': 'keep' },
-      fetch: fetchSpy,
-    }));
+    const client = createFetchHttpClient(
+      createConfig({
+        defaultHeaders: { 'X-Default': 'keep' },
+        fetch: fetchSpy,
+      }),
+    );
 
     await client.request({
       method: 'GET',

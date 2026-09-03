@@ -4,17 +4,12 @@ import { PaymentClient } from './clients/payment-client';
 import { SystemClient } from './clients/system-client';
 import { WalletClient } from './clients/wallet-client';
 import { resolveLilySdkConfig } from './config/resolve-config';
-import type {
-  LilySdkConfig,
-  ResolvedLilySdkConfig,
-} from './config/types';
+import type { LilySdkConfig, ResolvedLilySdkConfig } from './config/types';
 import { createFetchHttpClient } from './http/fetch-http-client';
-import type {
-  HttpClient,
-  HttpRequest,
-  HttpResponse,
-} from './http/types';
+import type { HttpClient, HttpRequest } from './http/types';
 import { SDK_VERSION } from './version';
+
+export const DEFAULT_API_URL = 'https://api.lilyprotocol.com';
 
 export class LilySdk {
   public static readonly version: string = SDK_VERSION;
@@ -59,9 +54,9 @@ export class LilySdk {
     const baseUrl =
       options?.baseUrl ??
       (typeof process !== 'undefined'
-        ? process.env.LILY_API_URL ?? process.env.LILY_BASE_URL
+        ? (process.env.LILY_API_URL ?? process.env.LILY_BASE_URL)
         : undefined) ??
-      'https://api.lilyprotocol.org';
+      DEFAULT_API_URL;
 
     if (!baseUrl) {
       throw new Error(
@@ -90,12 +85,15 @@ export class LilySdk {
 
   /**
    * Sends a typed request using the SDK's shared HttpClient and returns the
-   * full HttpResponse, mirroring the raw transport API.
+   * parsed response data, mirroring the client method API.
    */
   public async request<TResponse, TRequest = unknown>(
     request: HttpRequest<TRequest>,
-  ): Promise<HttpResponse<TResponse>> {
-    return this.httpClient.request<TResponse, TRequest>(request);
+  ): Promise<TResponse> {
+    const response = await this.httpClient.request<TResponse, TRequest>(
+      request,
+    );
+    return response.data;
   }
 
   /**

@@ -9,5 +9,5 @@ coverage:
         informational: false
 
 comment:
-  layout: "reach,diff,flags,files"
+  layout: 'reach,diff,flags,files'
   require_changes: true

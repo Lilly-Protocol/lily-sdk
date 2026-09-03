@@ -4,31 +4,46 @@ import type { LilySdkConfig } from '../src/config/types';
 
 describe('config deep-freeze', () => {
   it('freezes the resolved config object', () => {
-    const config: LilySdkConfig = { baseUrl: 'https://api.lily.dev', apiKey: 'k' };
+    const config: LilySdkConfig = {
+      baseUrl: 'https://api.lily.dev',
+      apiKey: 'k',
+    };
     const resolved = resolveLilySdkConfig(config);
     expect(Object.isFrozen(resolved)).toBe(true);
   });
 
   it('freezes the retry policy', () => {
-    const config: LilySdkConfig = { baseUrl: 'https://api.lily.dev', apiKey: 'k' };
+    const config: LilySdkConfig = {
+      baseUrl: 'https://api.lily.dev',
+      apiKey: 'k',
+    };
     const resolved = resolveLilySdkConfig(config);
     expect(Object.isFrozen(resolved.retry)).toBe(true);
   });
 
   it('freezes the defaultHeaders', () => {
-    const config: LilySdkConfig = { baseUrl: 'https://api.lily.dev', apiKey: 'k' };
+    const config: LilySdkConfig = {
+      baseUrl: 'https://api.lily.dev',
+      apiKey: 'k',
+    };
     const resolved = resolveLilySdkConfig(config);
     expect(Object.isFrozen(resolved.defaultHeaders)).toBe(true);
   });
 
   it('freezes retryableStatusCodes array', () => {
-    const config: LilySdkConfig = { baseUrl: 'https://api.lily.dev', apiKey: 'k' };
+    const config: LilySdkConfig = {
+      baseUrl: 'https://api.lily.dev',
+      apiKey: 'k',
+    };
     const resolved = resolveLilySdkConfig(config);
     expect(Object.isFrozen(resolved.retry.retryableStatusCodes)).toBe(true);
   });
 
   it('throws in strict mode when mutating config', () => {
-    const config: LilySdkConfig = { baseUrl: 'https://api.lily.dev', apiKey: 'k' };
+    const config: LilySdkConfig = {
+      baseUrl: 'https://api.lily.dev',
+      apiKey: 'k',
+    };
     const resolved = resolveLilySdkConfig(config);
     expect(() => {
       'use strict';
@@ -37,7 +52,10 @@ describe('config deep-freeze', () => {
   });
 
   it('throws when mutating retry policy', () => {
-    const config: LilySdkConfig = { baseUrl: 'https://api.lily.dev', apiKey: 'k' };
+    const config: LilySdkConfig = {
+      baseUrl: 'https://api.lily.dev',
+      apiKey: 'k',
+    };
     const resolved = resolveLilySdkConfig(config);
     expect(() => {
       'use strict';
@@ -46,7 +64,10 @@ describe('config deep-freeze', () => {
   });
 
   it('throws when mutating defaultHeaders', () => {
-    const config: LilySdkConfig = { baseUrl: 'https://api.lily.dev', apiKey: 'k' };
+    const config: LilySdkConfig = {
+      baseUrl: 'https://api.lily.dev',
+      apiKey: 'k',
+    };
     const resolved = resolveLilySdkConfig(config);
     expect(() => {
       'use strict';
@@ -55,7 +76,10 @@ describe('config deep-freeze', () => {
   });
 
   it('throws when mutating retryableStatusCodes', () => {
-    const config: LilySdkConfig = { baseUrl: 'https://api.lily.dev', apiKey: 'k' };
+    const config: LilySdkConfig = {
+      baseUrl: 'https://api.lily.dev',
+      apiKey: 'k',
+    };
     const resolved = resolveLilySdkConfig(config);
     expect(() => {
       'use strict';

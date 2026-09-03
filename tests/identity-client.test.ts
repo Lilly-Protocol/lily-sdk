@@ -2,7 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { IdentityClient } from '../src/clients/identity-client';
 import { LilyValidationError } from '../src/errors/sdk-error';
 import type { HttpClient, HttpResponse } from '../src/http/types';
-import type { IdentityProfile, ResolveIdentityRequest, VerifyIdentityRequest, VerificationResult } from '../src/models';
+import type {
+  IdentityProfile,
+  ResolveIdentityRequest,
+  VerifyIdentityRequest,
+  VerificationResult,
+} from '../src/models';
 
 function createMockHttpClient(responseData: unknown = {}): HttpClient {
   return {
@@ -63,12 +68,16 @@ describe('IdentityClient', () => {
     });
 
     it('throws LilyValidationError when no resolver key is provided', async () => {
-      await expect(client.resolve({})).rejects.toBeInstanceOf(LilyValidationError);
+      await expect(client.resolve({})).rejects.toBeInstanceOf(
+        LilyValidationError,
+      );
       expect(httpClient.request).not.toHaveBeenCalled();
     });
 
     it('throws LilyValidationError when resolver key is empty', async () => {
-      await expect(client.resolve({ agentId: '   ' })).rejects.toBeInstanceOf(LilyValidationError);
+      await expect(client.resolve({ agentId: '   ' })).rejects.toBeInstanceOf(
+        LilyValidationError,
+      );
       expect(httpClient.request).not.toHaveBeenCalled();
     });
 
@@ -113,7 +122,9 @@ describe('IdentityClient', () => {
 
   describe('get', () => {
     it('throws LilyValidationError for empty identityId', async () => {
-      await expect(client.get('   ')).rejects.toBeInstanceOf(LilyValidationError);
+      await expect(client.get('   ')).rejects.toBeInstanceOf(
+        LilyValidationError,
+      );
       expect(httpClient.request).not.toHaveBeenCalled();
     });
   });

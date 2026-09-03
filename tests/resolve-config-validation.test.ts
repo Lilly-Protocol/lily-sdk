@@ -6,17 +6,27 @@ import type { LilySdkConfig } from '../src/config/types';
 
 describe('resolveLilySdkConfig — validation branches', () => {
   it('throws when baseUrl is missing', () => {
-    expect(() => resolveLilySdkConfig({} as LilySdkConfig)).toThrow(LilyConfigError);
-    expect(() => resolveLilySdkConfig({} as LilySdkConfig)).toThrow('`baseUrl` is required');
+    expect(() => resolveLilySdkConfig({} as LilySdkConfig)).toThrow(
+      LilyConfigError,
+    );
+    expect(() => resolveLilySdkConfig({} as LilySdkConfig)).toThrow(
+      '`baseUrl` is required',
+    );
   });
 
   it('throws when baseUrl is not a valid URL', () => {
-    expect(() => resolveLilySdkConfig({ baseUrl: 'not-a-url' })).toThrow(LilyConfigError);
-    expect(() => resolveLilySdkConfig({ baseUrl: 'not-a-url' })).toThrow('valid absolute URL');
+    expect(() => resolveLilySdkConfig({ baseUrl: 'not-a-url' })).toThrow(
+      LilyConfigError,
+    );
+    expect(() => resolveLilySdkConfig({ baseUrl: 'not-a-url' })).toThrow(
+      'valid absolute URL',
+    );
   });
 
   it('throws when baseUrl is a relative URL', () => {
-    expect(() => resolveLilySdkConfig({ baseUrl: '/api' })).toThrow(LilyConfigError);
+    expect(() => resolveLilySdkConfig({ baseUrl: '/api' })).toThrow(
+      LilyConfigError,
+    );
   });
 
   it('throws when timeoutMs is not a positive number', () => {
@@ -27,38 +37,58 @@ describe('resolveLilySdkConfig — validation branches', () => {
       resolveLilySdkConfig({ baseUrl: 'https://api.lily.test', timeoutMs: -1 }),
     ).toThrow(LilyConfigError);
     expect(() =>
-      resolveLilySdkConfig({ baseUrl: 'https://api.lily.test', timeoutMs: NaN }),
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        timeoutMs: NaN,
+      }),
     ).toThrow(LilyConfigError);
     expect(() =>
-      resolveLilySdkConfig({ baseUrl: 'https://api.lily.test', timeoutMs: Infinity }),
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        timeoutMs: Infinity,
+      }),
     ).toThrow(LilyConfigError);
   });
 
   it('throws when retry.retries is not a non-negative integer', () => {
     expect(() =>
-      resolveLilySdkConfig({ baseUrl: 'https://api.lily.test', retry: { retries: -1 } }),
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        retry: { retries: -1 },
+      }),
     ).toThrow(LilyConfigError);
     expect(() =>
-      resolveLilySdkConfig({ baseUrl: 'https://api.lily.test', retry: { retries: 1.5 } }),
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        retry: { retries: 1.5 },
+      }),
     ).toThrow(LilyConfigError);
     expect(() =>
-      resolveLilySdkConfig({ baseUrl: 'https://api.lily.test', retry: { retries: 'two' as any } }),
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        retry: { retries: 'two' as any },
+      }),
     ).toThrow(LilyConfigError);
   });
 
   it('throws when retry.retryDelayMs is negative', () => {
     expect(() =>
-      resolveLilySdkConfig({ baseUrl: 'https://api.lily.test', retry: { retryDelayMs: -1 } }),
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        retry: { retryDelayMs: -1 },
+      }),
     ).toThrow(LilyConfigError);
     expect(() =>
-      resolveLilySdkConfig({ baseUrl: 'https://api.lily.test', retry: { retryDelayMs: NaN } }),
+      resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        retry: { retryDelayMs: NaN },
+      }),
     ).toThrow(LilyConfigError);
   });
 
   it('throws when fetch is not available and not provided', () => {
     const originalFetch = globalThis.fetch;
-    // @ts-ignore
-    globalThis.fetch = undefined;
+    globalThis.fetch = undefined as any;
 
     expect(() =>
       resolveLilySdkConfig({ baseUrl: 'https://api.lily.test' }),
@@ -89,7 +119,9 @@ describe('resolveLilySdkConfig — validation branches', () => {
     expect(config.userAgent).toBe('lily-sdk/0.1.0');
     expect(config.retry.retries).toBe(2);
     expect(config.retry.retryDelayMs).toBe(250);
-    expect(config.retry.retryableStatusCodes).toEqual([408, 409, 425, 429, 500, 502, 503, 504]);
+    expect(config.retry.retryableStatusCodes).toEqual([
+      408, 409, 425, 429, 500, 502, 503, 504,
+    ]);
   });
 
   it('normalizes baseUrl by ensuring trailing slash', () => {

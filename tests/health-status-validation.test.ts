@@ -41,7 +41,9 @@ describe('validateHealthStatus', () => {
       ['boolean', false],
       ['object', {}],
     ])('throws when status is %s', (_label, value) => {
-      expect(() => validateHealthStatus({ status: value })).toThrow(LilyValidationError);
+      expect(() => validateHealthStatus({ status: value })).toThrow(
+        LilyValidationError,
+      );
       try {
         validateHealthStatus({ status: value });
       } catch (err) {
@@ -51,23 +53,23 @@ describe('validateHealthStatus', () => {
       }
     });
 
-    it.each([
-      'healthy',
-      'unknown',
-      'UP',
-      'DOWN',
-      'ready',
-      '',
-    ])('throws when status is an unrecognized string "%s"', (status) => {
-      expect(() => validateHealthStatus({ status })).toThrow(LilyValidationError);
-      try {
-        validateHealthStatus({ status });
-      } catch (err) {
-        const valErr = err as LilyValidationError;
-        expect(valErr.code).toBe('VALIDATION_ERROR');
-        expect(valErr.message).toBe('HealthStatus.status must be one of: ok, degraded, down');
-      }
-    });
+    it.each(['healthy', 'unknown', 'UP', 'DOWN', 'ready', ''])(
+      'throws when status is an unrecognized string "%s"',
+      (status) => {
+        expect(() => validateHealthStatus({ status })).toThrow(
+          LilyValidationError,
+        );
+        try {
+          validateHealthStatus({ status });
+        } catch (err) {
+          const valErr = err as LilyValidationError;
+          expect(valErr.code).toBe('VALIDATION_ERROR');
+          expect(valErr.message).toBe(
+            'HealthStatus.status must be one of: ok, degraded, down',
+          );
+        }
+      },
+    );
   });
 
   describe('version field validation', () => {
@@ -77,13 +79,17 @@ describe('validateHealthStatus', () => {
       ['object', {}],
       ['array', ['1.0.0']],
     ])('throws when version is present but is %s', (_label, version) => {
-      expect(() => validateHealthStatus({ status: 'ok', version })).toThrow(LilyValidationError);
+      expect(() => validateHealthStatus({ status: 'ok', version })).toThrow(
+        LilyValidationError,
+      );
       try {
         validateHealthStatus({ status: 'ok', version });
       } catch (err) {
         const valErr = err as LilyValidationError;
         expect(valErr.code).toBe('VALIDATION_ERROR');
-        expect(valErr.message).toBe('HealthStatus.version must be a string if present');
+        expect(valErr.message).toBe(
+          'HealthStatus.version must be a string if present',
+        );
       }
     });
   });
@@ -95,13 +101,17 @@ describe('validateHealthStatus', () => {
       ['object', {}],
       ['null', null],
     ])('throws when uptime is present but is %s', (_label, uptime) => {
-      expect(() => validateHealthStatus({ status: 'ok', uptime })).toThrow(LilyValidationError);
+      expect(() => validateHealthStatus({ status: 'ok', uptime })).toThrow(
+        LilyValidationError,
+      );
       try {
         validateHealthStatus({ status: 'ok', uptime });
       } catch (err) {
         const valErr = err as LilyValidationError;
         expect(valErr.code).toBe('VALIDATION_ERROR');
-        expect(valErr.message).toBe('HealthStatus.uptime must be a number if present');
+        expect(valErr.message).toBe(
+          'HealthStatus.uptime must be a number if present',
+        );
       }
     });
   });

@@ -11,7 +11,9 @@ export class SystemClient extends BaseClient implements SystemClientContract {
   public constructor(httpClientOrConfig: HttpClient | ResolvedLilySdkConfig) {
     super(httpClientOrConfig);
     if ('validateResponses' in httpClientOrConfig) {
-      this.validateResponses = (httpClientOrConfig as ResolvedLilySdkConfig).validateResponses ?? false;
+      this.validateResponses =
+        (httpClientOrConfig as ResolvedLilySdkConfig).validateResponses ??
+        false;
     } else {
       this.validateResponses = false;
     }

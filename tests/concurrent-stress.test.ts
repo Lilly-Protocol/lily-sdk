@@ -6,24 +6,29 @@ describe('concurrent request isolation', () => {
     const callLog: number[] = [];
     let callIndex = 0;
 
-    const fetchSpy = vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
-      const myIndex = callIndex++;
-      callLog.push(myIndex);
+    const fetchSpy = vi.fn<typeof globalThis.fetch>(
+      (_input: URL | RequestInfo) => {
+        const myIndex = callIndex++;
+        callLog.push(myIndex);
 
-      // Simulate variable latency to stress-test timeout/abort isolation
-      const delay = Math.floor(Math.random() * 50);
+        // Simulate variable latency to stress-test timeout/abort isolation
+        const delay = Math.floor(Math.random() * 50);
 
-      return new Promise<Response>((resolve) => {
-        setTimeout(() => {
-          resolve(
-            new Response(JSON.stringify({ requestId: myIndex, status: 'ok' }), {
-              status: 200,
-              headers: { 'content-type': 'application/json' },
-            }),
-          );
-        }, delay);
-      });
-    });
+        return new Promise<Response>((resolve) => {
+          setTimeout(() => {
+            resolve(
+              new Response(
+                JSON.stringify({ requestId: myIndex, status: 'ok' }),
+                {
+                  status: 200,
+                  headers: { 'content-type': 'application/json' },
+                },
+              ),
+            );
+          }, delay);
+        });
+      },
+    );
 
     const httpClient = createFetchHttpClient({
       baseUrl: new URL('https://api.lily.test/'),
@@ -32,6 +37,9 @@ describe('concurrent request isolation', () => {
       defaultHeaders: {},
       userAgent: 'lily-sdk/test',
       fetch: fetchSpy,
+      toHeaders() {
+        return {};
+      },
     });
 
     const concurrency = 20;
@@ -62,27 +70,29 @@ describe('concurrent request isolation', () => {
   it('isolates retry state across concurrent failing requests', async () => {
     const attemptCounts: Record<string, number> = {};
 
-    const fetchSpy = vi.fn((input: URL | RequestInfo) => {
-      const path = new URL(input.toString()).pathname;
-      attemptCounts[path] = (attemptCounts[path] ?? 0) + 1;
+    const fetchSpy = vi.fn<typeof globalThis.fetch>(
+      (input: URL | RequestInfo) => {
+        const path = new URL(input.toString()).pathname;
+        attemptCounts[path] = (attemptCounts[path] ?? 0) + 1;
 
-      // First 2 attempts fail with 503, third succeeds
-      if (attemptCounts[path]! < 3) {
+        // First 2 attempts fail with 503, third succeeds
+        if (attemptCounts[path]! < 3) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ error: 'unavailable' }), {
+              status: 503,
+              headers: { 'content-type': 'application/json' },
+            }),
+          );
+        }
+
         return Promise.resolve(
-          new Response(JSON.stringify({ error: 'unavailable' }), {
-            status: 503,
+          new Response(JSON.stringify({ path, attempt: attemptCounts[path] }), {
+            status: 200,
             headers: { 'content-type': 'application/json' },
           }),
         );
-      }
-
-      return Promise.resolve(
-        new Response(JSON.stringify({ path, attempt: attemptCounts[path] }), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        }),
-      );
-    });
+      },
+    );
 
     const httpClient = createFetchHttpClient({
       baseUrl: new URL('https://api.lily.test/'),
@@ -91,6 +101,9 @@ describe('concurrent request isolation', () => {
       defaultHeaders: {},
       userAgent: 'lily-sdk/test',
       fetch: fetchSpy,
+      toHeaders() {
+        return {};
+      },
     });
 
     const paths = ['/v1/a', '/v1/b', '/v1/c', '/v1/d', '/v1/e'];
@@ -120,17 +133,19 @@ describe('concurrent request isolation', () => {
   it('does not leak AbortControllers on concurrent timeout-free requests', async () => {
     const abortSignals: AbortSignal[] = [];
 
-    const fetchSpy = vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
-      if (init?.signal) {
-        abortSignals.push(init.signal);
-      }
-      return Promise.resolve(
-        new Response(JSON.stringify({ ok: true }), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        }),
-      );
-    });
+    const fetchSpy = vi.fn<typeof globalThis.fetch>(
+      (_input: URL | RequestInfo, init?: RequestInit) => {
+        if (init?.signal) {
+          abortSignals.push(init.signal);
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        );
+      },
+    );
 
     const httpClient = createFetchHttpClient({
       baseUrl: new URL('https://api.lily.test/'),
@@ -139,6 +154,9 @@ describe('concurrent request isolation', () => {
       defaultHeaders: {},
       userAgent: 'lily-sdk/test',
       fetch: fetchSpy,
+      toHeaders() {
+        return {};
+      },
     });
 
     const concurrency = 10;

@@ -22,7 +22,10 @@ describe('examples TypeScript config', () => {
   });
 
   it('examples/tsconfig.json is valid JSON', () => {
-    const config = JSON.parse(readFileSync(tsconfigPath, 'utf8')) as Record<string, unknown>;
+    const config = JSON.parse(readFileSync(tsconfigPath, 'utf8')) as Record<
+      string,
+      unknown
+    >;
     expect(typeof config).toBe('object');
   });
 

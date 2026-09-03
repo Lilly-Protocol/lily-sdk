@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { LilySdk } from "../src/sdk.js";
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { LilySdk } from '../src/sdk.js';
 
-describe("LilySdk.create() factory (issue #115)", () => {
+describe('LilySdk.create() factory (issue #115)', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
@@ -12,42 +12,44 @@ describe("LilySdk.create() factory (issue #115)", () => {
     process.env = originalEnv;
   });
 
-  it("uses explicit options over environment variables", () => {
-    process.env.LILY_API_URL = "https://env.example.com";
-    process.env.LILY_API_KEY = "env-key";
+  it('uses explicit options over environment variables', () => {
+    process.env.LILY_API_URL = 'https://env.example.com';
+    process.env.LILY_API_KEY = 'env-key';
 
     const sdk = LilySdk.create({
-      baseUrl: "https://explicit.example.com",
-      apiKey: "explicit-key",
+      baseUrl: 'https://explicit.example.com',
+      apiKey: 'explicit-key',
     });
 
-    expect(sdk.config.baseUrl.toString()).toBe("https://explicit.example.com/");
-    expect(sdk.config.apiKey).toBe("explicit-key");
+    expect(sdk.config.baseUrl.toString()).toBe('https://explicit.example.com/');
+    expect(sdk.config.apiKey).toBe('explicit-key');
   });
 
-  it("falls back to LILY_API_URL and LILY_API_KEY env vars", () => {
-    process.env.LILY_API_URL = "https://fallback.example.com";
-    process.env.LILY_API_KEY = "fallback-key";
+  it('falls back to LILY_API_URL and LILY_API_KEY env vars', () => {
+    process.env.LILY_API_URL = 'https://fallback.example.com';
+    process.env.LILY_API_KEY = 'fallback-key';
 
     const sdk = LilySdk.create();
 
-    expect(sdk.config.baseUrl.toString()).toBe("https://fallback.example.com/");
-    expect(sdk.config.apiKey).toBe("fallback-key");
+    expect(sdk.config.baseUrl.toString()).toBe('https://fallback.example.com/');
+    expect(sdk.config.apiKey).toBe('fallback-key');
   });
 
-  it("throws when neither options nor env provide baseUrl", () => {
+  it('falls back to DEFAULT_API_URL when no options or env are set', () => {
     delete process.env.LILY_API_URL;
 
-    expect(() => LilySdk.create()).toThrow(/baseUrl is required/i);
+    const sdk = LilySdk.create();
+
+    expect(sdk.config.baseUrl.toString()).toBe('https://api.lilyprotocol.com/');
   });
 
-  it("works with only apiKey in config and baseUrl in env", () => {
-    process.env.LILY_API_URL = "https://mixed.example.com";
+  it('works with only apiKey in config and baseUrl in env', () => {
+    process.env.LILY_API_URL = 'https://mixed.example.com';
     delete process.env.LILY_API_KEY;
 
-    const sdk = LilySdk.create({ apiKey: "mixed-key" });
+    const sdk = LilySdk.create({ apiKey: 'mixed-key' });
 
-    expect(sdk.config.baseUrl.toString()).toBe("https://mixed.example.com/");
-    expect(sdk.config.apiKey).toBe("mixed-key");
+    expect(sdk.config.baseUrl.toString()).toBe('https://mixed.example.com/');
+    expect(sdk.config.apiKey).toBe('mixed-key');
   });
 });

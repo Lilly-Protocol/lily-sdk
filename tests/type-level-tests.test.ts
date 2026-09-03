@@ -1,46 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import type {
-  LilySdkConfig,
-  ResolvedLilySdkConfig,
-} from '../src/config/types';
-import type {
-  HttpClient,
-  HttpRequest,
-  HttpResponse,
-  HttpMethod,
-  HttpHeaders,
-  RetryPolicy,
-} from '../src/http/types';
+import type { LilySdkConfig } from '../src/config/types';
+import { resolveLilySdkConfig } from '../src/config/resolve-config';
+import type { HttpRequest, HttpMethod } from '../src/http/types';
 import type {
   Agent,
   CreateAgentRequest,
-  UpdateAgentRequest,
-  ListAgentsQuery,
-  Wallet,
-  ProvisionWalletRequest,
-  WalletProvisioningResult,
-  Payment,
-  PaymentQuote,
-  PaymentQuoteRequest,
-  ExecutePaymentRequest,
-  IdentityProfile,
-  ResolveIdentityRequest,
-  VerifyIdentityRequest,
-  VerificationResult,
-  HealthStatus,
-  ServiceInfo,
-  PaginationQuery,
   MoneyAmount,
-  AuditMetadata,
   ResourceStatus,
 } from '../src/models';
-import type {
-  AgentClientContract,
-  WalletClientContract,
-  PaymentClientContract,
-  IdentityClientContract,
-  SystemClientContract,
-} from '../src/types/contracts';
+import type { AgentClientContract } from '../src/types/contracts';
 import type { RequestLifecycleHooks } from '../src/http/lifecycle-hooks';
 import type { CursorPage } from '../src/pagination';
 
@@ -77,17 +45,15 @@ describe('Type-level tests for public API (issue #90)', () => {
   });
 
   it('ResolvedLilySdkConfig is fully readonly', () => {
-    const config: ResolvedLilySdkConfig = {
-      baseUrl: new URL('https://api.example.com/'),
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.example.com/',
       timeoutMs: 10000,
-      retry: { retries: 2, retryDelayMs: 250, retryableStatusCodes: [429] },
-      defaultHeaders: {},
-      userAgent: 'lily-sdk/0.1.0',
       fetch: globalThis.fetch,
-      toHeaders: () => ({}),
-    } as ResolvedLilySdkConfig;
-    // @ts-expect-error - should be readonly
-    // config.timeoutMs = 5000;
+    });
+    expect(Object.isFrozen(config)).toBe(true);
+    expect(() => {
+      (config as { timeoutMs: number }).timeoutMs = 5000;
+    }).toThrow(TypeError);
     expect(config.timeoutMs).toBe(10000);
   });
 
@@ -157,7 +123,13 @@ describe('Type-level tests for public API (issue #90)', () => {
   });
 
   it('ResourceStatus is union of valid statuses', () => {
-    const statuses: ResourceStatus[] = ['pending', 'active', 'inactive', 'failed'];
-    expect(statuses).toHaveLength(4);
+    const statuses: ResourceStatus[] = [
+      'pending',
+      'active',
+      'inactive',
+      'failed',
+      'paused',
+    ];
+    expect(statuses).toHaveLength(5);
   });
 });

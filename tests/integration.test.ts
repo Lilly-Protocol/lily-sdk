@@ -93,14 +93,22 @@ describe('Integration: local HTTP server', () => {
       authToken: 'bearer-token-xyz',
     });
 
-    const result = await sdk.wallets.provision({ label: 'main' });
+    const result = await sdk.wallets.provision({
+      agentId: 'test-agent',
+      network: 'stellar-testnet',
+    });
 
     expect(result).toEqual({ walletId: 'test-wallet-123' });
     expect(lastRequest).not.toBeNull();
     expect(lastRequest!.method).toBe('POST');
     expect(lastRequest!.url).toBe('/v1/wallets/provision');
-    expect(lastRequest!.headers['authorization']).toBe('Bearer bearer-token-xyz');
+    expect(lastRequest!.headers['authorization']).toBe(
+      'Bearer bearer-token-xyz',
+    );
     expect(lastRequest!.headers['content-type']).toBe('application/json');
-    expect(lastRequest!.body).toEqual({ label: 'main' });
+    expect(lastRequest!.body).toEqual({
+      agentId: 'test-agent',
+      network: 'stellar-testnet',
+    });
   });
 });

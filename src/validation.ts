@@ -27,7 +27,7 @@ export function validateNonEmptyString(
 
 export function validateMoneyAmount(
   amount: MoneyAmount,
-  context: string,
+  context = 'MoneyAmount',
 ): void {
   if (!amount || typeof amount !== 'object') {
     throw new LilyValidationError(`${context}: \`amount\` is required.`);
@@ -73,7 +73,7 @@ export function validateMoneyAmount(
   }
 }
 
-export function validateMemo(memo: unknown, context: string): void {
+export function validateMemo(memo: unknown, context = 'Payment'): void {
   if (memo === undefined || memo === null) {
     return;
   }

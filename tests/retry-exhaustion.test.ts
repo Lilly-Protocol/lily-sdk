@@ -5,13 +5,14 @@ import { createFetchHttpClient } from '../src/http/fetch-http-client';
 
 describe('retry exhaustion', () => {
   it('retries retries + 1 times and throws LilyApiError with the final status code', async () => {
-    const fetchSpy = vi.fn((_input: URL | RequestInfo, _init?: RequestInit) =>
-      Promise.resolve(
-        new Response(JSON.stringify({ error: 'unavailable' }), {
-          status: 503,
-          headers: { 'content-type': 'application/json' },
-        }),
-      ),
+    const fetchSpy = vi.fn<typeof globalThis.fetch>(
+      (_input: URL | RequestInfo, _init?: RequestInit) =>
+        Promise.resolve(
+          new Response(JSON.stringify({ error: 'unavailable' }), {
+            status: 503,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
     );
 
     const httpClient = createFetchHttpClient({
@@ -25,6 +26,9 @@ describe('retry exhaustion', () => {
       defaultHeaders: {},
       userAgent: 'lily-sdk/test',
       fetch: fetchSpy,
+      toHeaders() {
+        return {};
+      },
     });
 
     await expect(

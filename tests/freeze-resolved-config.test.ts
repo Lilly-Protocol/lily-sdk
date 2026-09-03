@@ -27,7 +27,8 @@ describe('resolveLilySdkConfig deep freeze', () => {
 
     expect(() => {
       'use strict';
-      (resolved.defaultHeaders as unknown as Record<string, string>)['x-new'] = 'hacked';
+      (resolved.defaultHeaders as unknown as Record<string, string>)['x-new'] =
+        'hacked';
     }).toThrow(TypeError);
 
     // Verify values remain stable

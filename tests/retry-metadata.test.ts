@@ -2,7 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import type { ResolvedLilySdkConfig } from '../src/config/types';
 
-function makeConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): ResolvedLilySdkConfig {
+function makeConfig(
+  overrides: Partial<ResolvedLilySdkConfig> = {},
+): ResolvedLilySdkConfig {
   return {
     baseUrl: new URL('https://api.example.com'),
     apiKey: 'test-key',
@@ -16,7 +18,11 @@ function makeConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): ResolvedLil
   } as unknown as ResolvedLilySdkConfig;
 }
 
-function mockResponse(status: number, ok: boolean, body: Record<string, unknown>) {
+function mockResponse(
+  status: number,
+  ok: boolean,
+  body: Record<string, unknown>,
+) {
   const jsonStr = JSON.stringify(body);
   return {
     ok,
@@ -29,7 +35,9 @@ function mockResponse(status: number, ok: boolean, body: Record<string, unknown>
 
 describe('HttpResponse retry metadata', () => {
   it('returns attempts=1 and retried=false on first-try success', async () => {
-    const mockFetch = vi.fn().mockResolvedValue(mockResponse(200, true, { ok: true }));
+    const mockFetch = vi
+      .fn()
+      .mockResolvedValue(mockResponse(200, true, { ok: true }));
     const config = makeConfig({ fetch: mockFetch });
     const client = createFetchHttpClient(config);
 
@@ -42,8 +50,11 @@ describe('HttpResponse retry metadata', () => {
   });
 
   it('returns attempts>1 and retried=true after successful retry', async () => {
-    const mockFetch = vi.fn()
-      .mockResolvedValueOnce(mockResponse(429, false, { error: 'rate limited' }))
+    const mockFetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        mockResponse(429, false, { error: 'rate limited' }),
+      )
       .mockResolvedValueOnce(mockResponse(200, true, { ok: true }));
     const config = makeConfig({ fetch: mockFetch });
     const client = createFetchHttpClient(config);
