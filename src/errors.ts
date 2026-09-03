@@ -1,4 +1,5 @@
 export {
+  LILY_ERROR_CODES,
   LilyApiError,
   LilyAuthenticationError,
   LilyAuthorizationError,
@@ -9,6 +10,5 @@ export {
   LilySdkError,
   LilyServerError,
   LilyTransportError,
-  LilyValidationError,
 } from './errors/sdk-error';
-export type { LilyErrorOptions } from './errors/sdk-error';
+export type { LilyErrorCode } from './errors/sdk-error';
