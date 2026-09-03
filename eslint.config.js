@@ -5,7 +5,7 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'eslint.config.js'],
+    ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'eslint.config.js', 'scripts/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
@@ -38,6 +38,16 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+  {
+    files: ['scripts/**/*.mjs'],
+    ...tseslint.configs.disableTypeChecked,
+    languageOptions: {
+      ...tseslint.configs.disableTypeChecked.languageOptions,
+      globals: {
+        ...globals.node,
+      },
     },
   },
   eslintConfigPrettier,
