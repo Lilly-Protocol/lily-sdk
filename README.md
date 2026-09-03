@@ -257,6 +257,7 @@ The transport uses `API_ERROR`, `AUTHENTICATION_ERROR`, `TIMEOUT`, and
 - `LilySdk` composes a shared transport with focused domain clients instead of exposing a single massive client surface. The resolved `HttpClient` is also available as `sdk.http` for one-off raw requests that must reuse the SDK's transport and config.
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
 - The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.
+- Timed-out GET, PUT, and DELETE requests use the configured retry budget; non-idempotent requests fail immediately on timeout.
 
 ## Changelog
 
