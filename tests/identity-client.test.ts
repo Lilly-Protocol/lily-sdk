@@ -1,71 +1,120 @@
-import { describe, expect, it, vi } from 'vitest';
-
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { IdentityClient } from '../src/clients/identity-client';
-import type {
-  ResolveIdentityRequest,
-  VerificationResult,
-} from '../src/models/identity';
-import { createMockHttpClient } from './helpers/mock-http-client';
+import { LilyValidationError } from '../src/errors/sdk-error';
+import type { HttpClient, HttpResponse } from '../src/http/types';
+import type { IdentityProfile, ResolveIdentityRequest, VerifyIdentityRequest, VerificationResult } from '../src/models';
+
+function createMockHttpClient(responseData: unknown = {}): HttpClient {
+  return {
+    request: vi.fn().mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      data: responseData,
+    } as HttpResponse),
+  };
+}
+
+const mockIdentity: IdentityProfile = {
+  id: 'id-1',
+  agentId: 'agent-1',
+  displayName: 'Test Identity',
+  stellarAddress: 'GABC...',
+  domain: 'example.com',
+  status: 'active',
+  verificationLevel: 'enhanced',
+  createdAt: '2024-01-01T00:00:00Z',
+  updatedAt: '2024-01-01T00:00:00Z',
+};
+
+const mockVerification: VerificationResult = {
+  identityId: 'id-1',
+  verified: true,
+  verifiedAt: '2024-01-01T01:00:00Z',
+};
 
 describe('IdentityClient', () => {
-  it.each<[string, ResolveIdentityRequest]>([
-    ['agent ID', { agentId: 'agent_123' }],
-    ['Stellar address', { stellarAddress: 'GABC123' }],
-    ['domain', { domain: 'agent.example' }],
-  ])('resolves an identity by %s', async (_resolver, input) => {
-    const profile = {
-      id: 'identity_123',
-      agentId: 'agent_123',
-      displayName: 'Test Agent',
-      status: 'active' as const,
-      verificationLevel: 'basic' as const,
-      createdAt: '2025-01-01T00:00:00.000Z',
-      updatedAt: '2025-01-01T00:00:00.000Z',
-    };
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
+  let httpClient: HttpClient;
+  let client: IdentityClient;
+
+  beforeEach(() => {
+    httpClient = createMockHttpClient();
+    client = new IdentityClient(httpClient);
+  });
+
+  describe('resolve', () => {
+    it('sends POST /v1/identity/resolve with the input body and returns the profile', async () => {
+      const input: ResolveIdentityRequest = {
+        agentId: 'agent-1',
+      };
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
         status: 200,
         headers: new Headers(),
-        data: profile,
-      }),
-    );
-    const client = new IdentityClient(createMockHttpClient(requestSpy));
+        data: mockIdentity,
+      } as HttpResponse);
 
-    await expect(client.resolve(input)).resolves.toBe(profile);
-    expect(requestSpy).toHaveBeenCalledOnce();
-    expect(requestSpy).toHaveBeenCalledWith({
-      method: 'POST',
-      path: '/v1/identity/resolve',
-      body: input,
+      const result = await client.resolve(input);
+
+      expect(result).toEqual(mockIdentity);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'POST',
+        path: '/v1/identity/resolve',
+        body: input,
+      });
+    });
+
+    it('throws LilyValidationError when no resolver key is provided', async () => {
+      await expect(client.resolve({})).rejects.toBeInstanceOf(LilyValidationError);
+      expect(httpClient.request).not.toHaveBeenCalled();
+    });
+
+    it('throws LilyValidationError when resolver key is empty', async () => {
+      await expect(client.resolve({ agentId: '   ' })).rejects.toBeInstanceOf(LilyValidationError);
+      expect(httpClient.request).not.toHaveBeenCalled();
+    });
+
+    it('throws LilyValidationError when more than one resolver key is provided', async () => {
+      await expect(
+        client.resolve({ agentId: 'agent-1', stellarAddress: 'GABC...' }),
+      ).rejects.toBeInstanceOf(LilyValidationError);
+      expect(httpClient.request).not.toHaveBeenCalled();
     });
   });
 
-  it('verifies an identity with its challenge and Stellar signature', async () => {
-    const input = {
-      identityId: 'identity_123',
-      challenge: 'challenge-to-sign',
-      signature: 'stellar-signature',
-    };
-    const result: VerificationResult = {
-      identityId: input.identityId,
-      verified: true,
-      verifiedAt: '2025-01-01T00:00:00.000Z',
-    };
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
+  describe('verify', () => {
+    it('sends POST /v1/identity/verify with the input body and returns the result', async () => {
+      const input: VerifyIdentityRequest = {
+        identityId: 'id-1',
+        challenge: 'test-challenge',
+        signature: 'test-signature',
+      };
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
         status: 200,
         headers: new Headers(),
-        data: result,
-      }),
-    );
-    const client = new IdentityClient(createMockHttpClient(requestSpy));
+        data: mockVerification,
+      } as HttpResponse);
 
-    await expect(client.verify(input)).resolves.toBe(result);
-    expect(requestSpy).toHaveBeenCalledOnce();
-    expect(requestSpy).toHaveBeenCalledWith({
-      method: 'POST',
-      path: '/v1/identity/verify',
-      body: input,
+      const result = await client.verify(input);
+
+      expect(result.verified).toBe(true);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'POST',
+        path: '/v1/identity/verify',
+        body: input,
+      });
+    });
+
+    it('throws LilyValidationError for empty required fields', async () => {
+      await expect(
+        client.verify({ identityId: '', challenge: 'c', signature: 's' }),
+      ).rejects.toBeInstanceOf(LilyValidationError);
+      expect(httpClient.request).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('get', () => {
+    it('throws LilyValidationError for empty identityId', async () => {
+      await expect(client.get('   ')).rejects.toBeInstanceOf(LilyValidationError);
+      expect(httpClient.request).not.toHaveBeenCalled();
     });
   });
 });
