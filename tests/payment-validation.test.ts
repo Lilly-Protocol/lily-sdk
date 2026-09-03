@@ -5,16 +5,26 @@ import {
   validateMoneyAmount,
 } from '../src/validation';
 
+// Realistic Stellar mainnet G-address fixture used by tests below. Matches
+// the G[A-Z2-7]{55} pattern enforced by validateMoneyAmount for issued assets.
+const USDC_ISSUER = 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
+
 describe('validateMoneyAmount Stellar constraints', () => {
   it('accepts amount with exactly 7 fractional digits', () => {
     expect(() =>
-      validateMoneyAmount({ assetCode: 'USDC', amount: '10.1234567' }, 'test'),
+      validateMoneyAmount(
+        { assetCode: 'USDC', assetIssuer: USDC_ISSUER, amount: '10.1234567' },
+        'test',
+      ),
     ).not.toThrow();
   });
 
   it('rejects amount with 8 fractional digits', () => {
     expect(() =>
-      validateMoneyAmount({ assetCode: 'USDC', amount: '10.12345678' }, 'test'),
+      validateMoneyAmount(
+        { assetCode: 'USDC', assetIssuer: USDC_ISSUER, amount: '10.12345678' },
+        'test',
+      ),
     ).toThrow(/at most 7 fractional digits/);
   });
 
@@ -32,14 +42,88 @@ describe('validateMoneyAmount Stellar constraints', () => {
 
   it('rejects negative amount', () => {
     expect(() =>
-      validateMoneyAmount({ assetCode: 'USDC', amount: '-5' }, 'test'),
+      validateMoneyAmount(
+        { assetCode: 'USDC', assetIssuer: USDC_ISSUER, amount: '-5' },
+        'test',
+      ),
     ).toThrow(/non-negative decimal/);
   });
 
   it('rejects scientific notation', () => {
     expect(() =>
-      validateMoneyAmount({ assetCode: 'USDC', amount: '1e3' }, 'test'),
+      validateMoneyAmount(
+        { assetCode: 'USDC', assetIssuer: USDC_ISSUER, amount: '1e3' },
+        'test',
+      ),
     ).toThrow(/non-negative decimal/);
+  });
+});
+
+describe('validateMoneyAmount native vs. issued asset rules (#438)', () => {
+  it('rejects native XLM with an assetIssuer', () => {
+    expect(() =>
+      validateMoneyAmount(
+        {
+          assetCode: 'XLM',
+          assetIssuer: USDC_ISSUER,
+          amount: '10.0',
+        },
+        'test',
+      ),
+    ).toThrow(/native asset `XLM` must not have an `assetIssuer`/);
+  });
+
+  it('rejects issued asset (USDC) without an assetIssuer', () => {
+    expect(() =>
+      validateMoneyAmount({ assetCode: 'USDC', amount: '100.0' }, 'test'),
+    ).toThrow(/issued asset `USDC` requires an `assetIssuer`/);
+  });
+
+  it('accepts native XLM with no assetIssuer', () => {
+    expect(() =>
+      validateMoneyAmount({ assetCode: 'XLM', amount: '5.0' }, 'test'),
+    ).not.toThrow();
+  });
+
+  it('accepts issued asset (USDC) with a valid G-address assetIssuer', () => {
+    expect(() =>
+      validateMoneyAmount(
+        {
+          assetCode: 'USDC',
+          assetIssuer: USDC_ISSUER,
+          amount: '100.0',
+        },
+        'test',
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects issued asset whose assetIssuer is not a valid Stellar G-address', () => {
+    expect(() =>
+      validateMoneyAmount(
+        {
+          assetCode: 'USDC',
+          assetIssuer: 'not-a-valid-g-address',
+          amount: '100.0',
+        },
+        'test',
+      ),
+    ).toThrow(/Stellar public key/);
+  });
+
+  it('error message names the violated rule for XLM-with-issuer', () => {
+    expect(() =>
+      validateMoneyAmount(
+        { assetCode: 'XLM', assetIssuer: USDC_ISSUER, amount: '1.0' },
+        'test',
+      ),
+    ).toThrow(/XLM/);
+  });
+
+  it('error message names the violated rule for issued-without-issuer', () => {
+    expect(() =>
+      validateMoneyAmount({ assetCode: 'USDC', amount: '1.0' }, 'test'),
+    ).toThrow(/USDC/);
   });
 });
 
@@ -83,7 +167,11 @@ describe('validateExecutePaymentRequest with memo and MoneyAmount', () => {
       validateExecutePaymentRequest({
         fromWalletId: 'wallet-1',
         toAddress: 'GABC...',
-        amount: { assetCode: 'USDC', amount: '10.50' },
+        amount: {
+          assetCode: 'USDC',
+          assetIssuer: USDC_ISSUER,
+          amount: '10.50',
+        },
         memo: 'payment ref',
       }),
     ).not.toThrow();
@@ -94,7 +182,11 @@ describe('validateExecutePaymentRequest with memo and MoneyAmount', () => {
       validateExecutePaymentRequest({
         fromWalletId: 'wallet-1',
         toAddress: 'GABC...',
-        amount: { assetCode: 'USDC', amount: '10.50' },
+        amount: {
+          assetCode: 'USDC',
+          assetIssuer: USDC_ISSUER,
+          amount: '10.50',
+        },
         memo: 'x'.repeat(29),
       }),
     ).toThrow(/memo/);
@@ -105,7 +197,11 @@ describe('validateExecutePaymentRequest with memo and MoneyAmount', () => {
       validateExecutePaymentRequest({
         fromWalletId: 'wallet-1',
         toAddress: 'GABC...',
-        amount: { assetCode: 'USDC', amount: '10.12345678' },
+        amount: {
+          assetCode: 'USDC',
+          assetIssuer: USDC_ISSUER,
+          amount: '10.12345678',
+        },
       }),
     ).toThrow(/fractional digits/);
   });

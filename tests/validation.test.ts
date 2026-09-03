@@ -9,6 +9,8 @@ import {
   validateResolveIdentityRequest,
 } from '../src/validation';
 
+const USDC_ISSUER = 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
+
 describe('validateNonEmptyString', () => {
   it('accepts non-empty strings', () => {
     expect(() => validateNonEmptyString('abc', 'field')).not.toThrow();
@@ -39,7 +41,10 @@ describe('validateNonEmptyString', () => {
 describe('validateMoneyAmount', () => {
   it('accepts valid MoneyAmount', () => {
     expect(() =>
-      validateMoneyAmount({ assetCode: 'USDC', amount: '10.50' }, 'test'),
+      validateMoneyAmount(
+        { assetCode: 'USDC', assetIssuer: USDC_ISSUER, amount: '10.50' },
+        'test',
+      ),
     ).not.toThrow();
   });
 
@@ -63,13 +68,19 @@ describe('validateMoneyAmount', () => {
 
   it('rejects negative amount', () => {
     expect(() =>
-      validateMoneyAmount({ assetCode: 'USDC', amount: '-5' }, 'test'),
+      validateMoneyAmount(
+        { assetCode: 'USDC', assetIssuer: USDC_ISSUER, amount: '-5' },
+        'test',
+      ),
     ).toThrow(/amount/);
   });
 
   it('rejects scientific notation amount', () => {
     expect(() =>
-      validateMoneyAmount({ assetCode: 'USDC', amount: '1e3' }, 'test'),
+      validateMoneyAmount(
+        { assetCode: 'USDC', assetIssuer: USDC_ISSUER, amount: '1e3' },
+        'test',
+      ),
     ).toThrow(/amount/);
   });
 
@@ -116,7 +127,11 @@ describe('validateExecutePaymentRequest', () => {
       validateExecutePaymentRequest({
         fromWalletId: 'wallet-1',
         toAddress: 'GABC...',
-        amount: { assetCode: 'USDC', amount: '10.00' },
+        amount: {
+          assetCode: 'USDC',
+          assetIssuer: USDC_ISSUER,
+          amount: '10.00',
+        },
       }),
     ).not.toThrow();
   });
@@ -126,7 +141,7 @@ describe('validateExecutePaymentRequest', () => {
       validateExecutePaymentRequest({
         fromWalletId: '',
         toAddress: 'GABC...',
-        amount: { assetCode: 'USDC', amount: '10' },
+        amount: { assetCode: 'USDC', assetIssuer: USDC_ISSUER, amount: '10' },
       }),
     ).toThrow(/fromWalletId/);
   });
