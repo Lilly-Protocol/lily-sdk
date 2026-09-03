@@ -13,6 +13,8 @@ import type {
   HttpRequest,
   HttpResponse,
 } from './types';
+import type { RequestLifecycleHooks } from './lifecycle-hooks';
+import { composeHooks } from './lifecycle-hooks';
 
 export function createFetchHttpClient(
   config: ResolvedLilySdkConfig,
