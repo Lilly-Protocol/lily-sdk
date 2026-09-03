@@ -6,6 +6,11 @@ import type {
   UpdateAgentRequest,
 } from '../models';
 import type { AgentClientContract } from '../types/contracts';
+import {
+  validateCreateAgentRequest,
+  validateNonEmptyString,
+  validateUpdateAgentRequest,
+} from '../validation';
 import { BaseClient } from './base-client';
 
 export class AgentClient extends BaseClient implements AgentClientContract {
@@ -19,14 +24,16 @@ export class AgentClient extends BaseClient implements AgentClientContract {
     });
   }
 
-  public get(agentId: string): Promise<Agent> {
+  public async get(agentId: string): Promise<Agent> {
+    validateNonEmptyString(agentId, 'agentId');
     return this.request({
       method: 'GET',
       path: `/v1/agents/${encodePathSegment(agentId)}`,
     });
   }
 
-  public create(input: CreateAgentRequest): Promise<Agent> {
+  public async create(input: CreateAgentRequest): Promise<Agent> {
+    validateCreateAgentRequest(input);
     return this.request({
       method: 'POST',
       path: '/v1/agents',
@@ -34,7 +41,12 @@ export class AgentClient extends BaseClient implements AgentClientContract {
     });
   }
 
-  public update(agentId: string, input: UpdateAgentRequest): Promise<Agent> {
+  public async update(
+    agentId: string,
+    input: UpdateAgentRequest,
+  ): Promise<Agent> {
+    validateNonEmptyString(agentId, 'agentId');
+    validateUpdateAgentRequest(input);
     return this.request({
       method: 'PATCH',
       path: `/v1/agents/${encodePathSegment(agentId)}`,
@@ -42,7 +54,8 @@ export class AgentClient extends BaseClient implements AgentClientContract {
     });
   }
 
-  public delete(agentId: string): Promise<void> {
+  public async delete(agentId: string): Promise<void> {
+    validateNonEmptyString(agentId, 'agentId');
     return this.request({
       method: 'DELETE',
       path: `/v1/agents/${encodePathSegment(agentId)}`,

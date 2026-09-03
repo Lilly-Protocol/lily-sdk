@@ -5,6 +5,8 @@ import type {
   PaymentQuoteRequest,
 } from './models/payment';
 import type { ResolveIdentityRequest } from './models/identity';
+import type { CreateAgentRequest, UpdateAgentRequest } from './models/agent';
+import type { ProvisionWalletRequest } from './models/wallet';
 
 const NON_EMPTY_STRING_PATTERN = /\S/;
 const DECIMAL_AMOUNT_PATTERN = /^\d+(\.\d+)?$/;
@@ -153,4 +155,117 @@ export function validatePaymentQuoteRequest(
   validateNonEmptyString(request.fromWalletId, 'fromWalletId');
   validateNonEmptyString(request.toAddress, 'toAddress');
   validateMoneyAmount(request.amount, 'PaymentQuoteRequest');
+}
+
+export function validateNetwork(network: unknown, context: string): void {
+  if (network !== 'stellar-testnet' && network !== 'stellar-mainnet') {
+    throw new LilyValidationError(
+      `${context}: \`network\` must be 'stellar-testnet' or 'stellar-mainnet'. Got ${JSON.stringify(network)}.`,
+    );
+  }
+}
+
+export function validateProvisionWalletRequest(
+  request: ProvisionWalletRequest,
+): void {
+  if (!request || typeof request !== 'object') {
+    throw new LilyValidationError(
+      'ProvisionWalletRequest: payload is required.',
+    );
+  }
+  validateNonEmptyString(request.agentId, 'agentId');
+  validateNetwork(request.network, 'ProvisionWalletRequest');
+  if (request.fundingAsset !== undefined && request.fundingAsset !== null) {
+    if (typeof request.fundingAsset !== 'object') {
+      throw new LilyValidationError(
+        'ProvisionWalletRequest: `fundingAsset` must be an object.',
+      );
+    }
+    validateNonEmptyString(
+      request.fundingAsset.assetCode,
+      'fundingAsset.assetCode',
+    );
+    validateNonEmptyString(request.fundingAsset.amount, 'fundingAsset.amount');
+    if (!DECIMAL_AMOUNT_PATTERN.test(request.fundingAsset.amount)) {
+      throw new LilyValidationError(
+        'ProvisionWalletRequest: `fundingAsset.amount` must be a non-negative decimal string.',
+      );
+    }
+  }
+}
+
+export function validateCreateAgentRequest(request: CreateAgentRequest): void {
+  if (!request || typeof request !== 'object') {
+    throw new LilyValidationError('CreateAgentRequest: payload is required.');
+  }
+  validateNonEmptyString(request.name, 'name');
+  validateNetwork(request.network, 'CreateAgentRequest');
+  if (request.capabilities !== undefined && request.capabilities !== null) {
+    if (
+      !Array.isArray(request.capabilities) ||
+      request.capabilities.some(
+        (c) => typeof c !== 'string' || !NON_EMPTY_STRING_PATTERN.test(c),
+      )
+    ) {
+      throw new LilyValidationError(
+        'CreateAgentRequest: `capabilities` must be an array of non-empty strings.',
+      );
+    }
+  }
+  if (
+    request.description !== undefined &&
+    request.description !== null &&
+    typeof request.description !== 'string'
+  ) {
+    throw new LilyValidationError(
+      'CreateAgentRequest: `description` must be a string when provided.',
+    );
+  }
+  if (
+    request.metadata !== undefined &&
+    request.metadata !== null &&
+    (typeof request.metadata !== 'object' || Array.isArray(request.metadata))
+  ) {
+    throw new LilyValidationError(
+      'CreateAgentRequest: `metadata` must be an object when provided.',
+    );
+  }
+}
+
+export function validateUpdateAgentRequest(request: UpdateAgentRequest): void {
+  if (!request || typeof request !== 'object') {
+    throw new LilyValidationError('UpdateAgentRequest: payload is required.');
+  }
+  if (request.name !== undefined && request.name !== null) {
+    validateNonEmptyString(request.name, 'name');
+  }
+  if (request.capabilities !== undefined && request.capabilities !== null) {
+    if (
+      !Array.isArray(request.capabilities) ||
+      request.capabilities.some(
+        (c) => typeof c !== 'string' || !NON_EMPTY_STRING_PATTERN.test(c),
+      )
+    ) {
+      throw new LilyValidationError(
+        'UpdateAgentRequest: `capabilities` must be an array of non-empty strings.',
+      );
+    }
+  }
+  if (request.status !== undefined && request.status !== null) {
+    const validStatuses = ['pending', 'active', 'inactive', 'failed', 'paused'];
+    if (!validStatuses.includes(request.status)) {
+      throw new LilyValidationError(
+        `UpdateAgentRequest: \`status\` must be one of ${validStatuses.join(', ')}.`,
+      );
+    }
+  }
+  if (
+    request.description !== undefined &&
+    request.description !== null &&
+    typeof request.description !== 'string'
+  ) {
+    throw new LilyValidationError(
+      'UpdateAgentRequest: `description` must be a string when provided.',
+    );
+  }
 }
