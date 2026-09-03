@@ -142,4 +142,34 @@ describe('resolveLilySdkConfig — validation branches', () => {
 
     expect(config.authToken).toBe('test-token');
   });
+
+  it('does not throw when process is undefined and no credentials are passed', () => {
+    const originalProcess = globalThis.process;
+    vi.stubGlobal('process', undefined);
+
+    try {
+      const config = resolveLilySdkConfig({ baseUrl: 'https://api.lily.test' }) as any;
+      expect(config.baseUrl).toBeInstanceOf(URL);
+      expect(config.apiKey).toBeUndefined();
+      expect(config.authToken).toBeUndefined();
+    } finally {
+      vi.stubGlobal('process', originalProcess);
+    }
+  });
+
+  it('reads env vars when process is defined', () => {
+    const originalApiKey = process.env.LILY_API_KEY;
+    const originalAuthToken = process.env.LILY_AUTH_TOKEN;
+    process.env.LILY_API_KEY = 'env-key';
+    process.env.LILY_AUTH_TOKEN = 'env-token';
+
+    try {
+      const config = resolveLilySdkConfig({ baseUrl: 'https://api.lily.test' }) as any;
+      expect(config.apiKey).toBe('env-key');
+      expect(config.authToken).toBe('env-token');
+    } finally {
+      process.env.LILY_API_KEY = originalApiKey;
+      process.env.LILY_AUTH_TOKEN = originalAuthToken;
+    }
+  });
 });
