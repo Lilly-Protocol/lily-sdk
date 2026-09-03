@@ -2,8 +2,10 @@ import type { RetryPolicy } from '../http/types';
 
 export interface LilySdkConfig {
   baseUrl?: string | URL;
-  apiKey?: string;
-  authToken?: string;
+  /** API key sent as `x-api-key` header. Pass `null` to explicitly clear inherited key in `withConfig`. */
+  apiKey?: string | null;
+  /** Bearer token sent as `Authorization` header. Pass `null` to explicitly clear inherited token in `withConfig`. */
+  authToken?: string | null;
   timeoutMs?: number;
   retry?: Partial<RetryPolicy>;
   defaultHeaders?: Record<string, string>;
