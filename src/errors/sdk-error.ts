@@ -121,5 +121,11 @@ export class LilySdkError extends Error {
 export class LilyConfigError extends LilySdkError {}
 export class LilyTransportError extends LilySdkError {}
 export class LilyAuthenticationError extends LilySdkError {}
+
+/**
+ * Any non-ok HTTP response. The subclasses below narrow it, so
+ * `catch (e) { if (e instanceof LilyApiError) ... }` keeps working for callers
+ * that only care that the API rejected the request.
+ */
 export class LilyApiError extends LilySdkError {}
 export class LilyValidationError extends LilySdkError {}

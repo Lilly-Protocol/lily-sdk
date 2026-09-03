@@ -78,6 +78,8 @@ export function createFetchHttpClient(
             };
           }
 
+          // Auth failures are terminal: retrying with the same credential just
+          // burns the budget. Checked before shouldRetry for that reason.
           if (response.status === 401 || response.status === 403) {
             throw new LilyAuthenticationError('Authentication failed for Lily Protocol API.', {
               code: LILY_ERROR_CODES.AUTHENTICATION_ERROR,
