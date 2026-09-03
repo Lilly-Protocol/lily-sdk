@@ -40,3 +40,4 @@ export { createFetchHttpClient } from './http/fetch-http-client';
 export * from './models';
 
 export { parseCursorPage, buildPaginationQuery, paginate, type CursorPage } from './pagination';
+export { verifyWebhookSignature, verifyWebhookJSON, parseWebhookHeader, verifyWebhookWithReplay } from './webhooks';

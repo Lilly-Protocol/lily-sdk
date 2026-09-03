@@ -58,8 +58,8 @@ describe('exports subpath resolves to a real file', () => {
     expect(pkg.exports).toHaveProperty('.');
   });
 
-  it("subpaths ./config, ./errors, ./http, ./models, ./types, and ./pagination are all defined", () => {
-    for (const sub of ['./config', './errors', './http', './models', './types', './pagination']) {
+  it("subpaths ./config, ./errors, ./http, ./models, ./types, ./pagination, and ./webhooks are all defined", () => {
+    for (const sub of ['./config', './errors', './http', './models', './types', './pagination', './webhooks']) {
       expect(pkg.exports).toHaveProperty(sub);
     }
   });

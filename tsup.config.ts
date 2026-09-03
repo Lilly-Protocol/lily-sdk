@@ -10,6 +10,7 @@ export default defineConfig([
       'src/http.ts',
       'src/models.ts',
       'src/types.ts',
+      'src/webhooks.ts',
     ],
     format: ['esm', 'cjs'],
     define: {
