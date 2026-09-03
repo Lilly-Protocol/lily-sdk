@@ -40,7 +40,7 @@ jobs:
         run: npm run build
 
       - name: Test
-        run: npm run test -- --coverage
+        run: npm run test
 
       - name: Bundle size check
         run: npm run size

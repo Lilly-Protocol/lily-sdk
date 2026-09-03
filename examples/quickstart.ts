@@ -1,4 +1,4 @@
-import { LilySdk } from '../src';
+import { LilySdk, LilyTransportError } from '../src';
 
 async function main(): Promise<void> {
   const sdk = new LilySdk({
@@ -18,4 +18,13 @@ async function main(): Promise<void> {
   console.log('Provisioned wallet:', wallet.wallet.id, wallet.wallet.address);
 }
 
-await main();
+main().catch((err) => {
+  if (err instanceof LilyTransportError) {
+    console.warn(
+      '⚠  Skipping example: API is unreachable.',
+      process.env.CI ? '(CI environment)' : '',
+    );
+    process.exit(0);
+  }
+  throw err;
+});
