@@ -117,3 +117,22 @@ jobs:
           fi
 
           echo "✅ npm pack contents verified successfully"
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run docs
+      - name: Check for uncommitted docs diff
+        run: |
+          if [ -n "$(git status --porcelain docs/api)" ]; then
+            echo "::error::Generated typedoc documentation under docs/api/ is out of sync with code. Please run 'npm run docs' locally and commit the changes."
+            git diff docs/api
+            exit 1
+          fi
