@@ -14,6 +14,20 @@ const MAX_MEMO_TEXT_LENGTH = 28;
 const MEMO_HEX_PATTERN = /^(?:[0-9a-fA-F]{2})*$/;
 const MAX_MEMO_HEX_LENGTH = 64;
 
+/**
+ * Stellar native asset code. XLM has no issuer; passing `assetIssuer` alongside
+ * it is documented as invalid in the SDK README and `MoneyAmount` model.
+ */
+const NATIVE_ASSET_CODE = 'XLM';
+
+/**
+ * Stellar public-key account IDs (G-addresses) used to identify asset issuers.
+ * They are 56 characters of base32 alphabet (A-Z, 2-7) and must start with 'G'.
+ * This matches the format documented for issued-asset `assetIssuer` values in
+ * the SDK README "Native vs. Issued Assets" section.
+ */
+const STELLAR_PUBLIC_KEY_PATTERN = /^G[A-Z2-7]{55}$/;
+
 export function validateNonEmptyString(
   value: unknown,
   fieldName: string,
@@ -70,6 +84,32 @@ export function validateMoneyAmount(
         `${context}: \`assetIssuer\` must be a non-empty string when provided.`,
       );
     }
+    if (!STELLAR_PUBLIC_KEY_PATTERN.test(amount.assetIssuer)) {
+      throw new LilyValidationError(
+        `${context}: \`assetIssuer\` must be a Stellar public key (G-address, 56 characters starting with "G"). Got ${amount.assetIssuer.length} characters.`,
+      );
+    }
+  }
+
+  // Native vs. issued-asset rules from the MoneyAmount model + README
+  // "Native vs. Issued Assets" section:
+  // - XLM (native) must omit assetIssuer; carrying one is invalid.
+  // - Non-XLM (issued) assets must carry an assetIssuer; omitting it is invalid.
+  if (
+    amount.assetCode === NATIVE_ASSET_CODE &&
+    amount.assetIssuer !== undefined
+  ) {
+    throw new LilyValidationError(
+      `${context}: native asset \`XLM\` must not have an \`assetIssuer\`. Issued assets are required to identify an anchor account; the native asset has none.`,
+    );
+  }
+  if (
+    amount.assetCode !== NATIVE_ASSET_CODE &&
+    amount.assetIssuer === undefined
+  ) {
+    throw new LilyValidationError(
+      `${context}: issued asset \`${amount.assetCode}\` requires an \`assetIssuer\` to identify the anchor account.`,
+    );
   }
 }
 

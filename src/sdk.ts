@@ -45,7 +45,11 @@ export class LilySdk {
    * - LILY_API_KEY
    * - LILY_AUTH_TOKEN
    *
-   * Throws if no baseUrl is provided and no env var is set.
+   * If no baseUrl is provided and no relevant environment variable is set,
+   * falls back to the built-in {@link DEFAULT_API_URL} constant
+   * (`https://api.lilyprotocol.com`). This method therefore never raises a
+   * "baseUrl is required" error; pass an empty options object to use the
+   * default endpoint.
    */
   public static create(
     options?: Partial<LilySdkConfig>,
@@ -57,12 +61,6 @@ export class LilySdk {
         ? (process.env.LILY_API_URL ?? process.env.LILY_BASE_URL)
         : undefined) ??
       DEFAULT_API_URL;
-
-    if (!baseUrl) {
-      throw new Error(
-        'baseUrl is required. Pass it in options or set the LILY_API_URL environment variable.',
-      );
-    }
 
     const apiKey =
       options?.apiKey ??

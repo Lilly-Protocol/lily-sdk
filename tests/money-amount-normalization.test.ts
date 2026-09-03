@@ -4,6 +4,8 @@ import type { HttpRequest } from '../src/http/types';
 import { LilySdk } from '../src/sdk';
 import { createMockHttpClient } from './helpers/mock-http-client';
 
+const BTC_ISSUER = 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
+
 describe('MoneyAmount decimal normalization', () => {
   const cases = ['1', '1.0', '01.5', '0.000001'] as const;
 
@@ -16,9 +18,9 @@ describe('MoneyAmount decimal normalization', () => {
           status: 200,
           headers: new Headers(),
           data: {
-            amount: { assetCode: 'BTC', amount },
+            amount: { assetCode: 'BTC', assetIssuer: BTC_ISSUER, amount },
             estimatedFee: {
-              assetCode: 'USD',
+              assetCode: 'XLM',
               amount: '0.5',
             },
             expiresAt: new Date(Date.now() + 60_000).toISOString(),
@@ -36,6 +38,7 @@ describe('MoneyAmount decimal normalization', () => {
         toAddress: 'addr_test',
         amount: {
           assetCode: 'BTC',
+          assetIssuer: BTC_ISSUER,
           amount,
         },
       });
@@ -55,7 +58,7 @@ describe('MoneyAmount decimal normalization', () => {
           data: {
             id: 'pay_test',
             status: 'pending',
-            amount: { assetCode: 'BTC', amount },
+            amount: { assetCode: 'BTC', assetIssuer: BTC_ISSUER, amount },
             createdAt: new Date().toISOString(),
           },
         });
@@ -71,6 +74,7 @@ describe('MoneyAmount decimal normalization', () => {
         toAddress: 'addr_test',
         amount: {
           assetCode: 'BTC',
+          assetIssuer: BTC_ISSUER,
           amount,
         },
       });
