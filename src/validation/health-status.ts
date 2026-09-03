@@ -1,14 +1,11 @@
 import { LilyValidationError } from '../errors/sdk-error';
+import type { HealthStatus } from '../models/system';
 
-export interface HealthStatusShape {
-  status: string;
-  version?: string;
-  uptime?: number;
-}
+export type HealthStatusShape = HealthStatus;
 
-const VALID_STATUSES = ['ok', 'degraded', 'down'];
+const VALID_STATUSES = ['ok', 'degraded', 'down'] as const;
 
-export function validateHealthStatus(data: unknown): HealthStatusShape {
+export function validateHealthStatus(data: unknown): HealthStatus {
   if (data === null || typeof data !== 'object') {
     throw new LilyValidationError('HealthStatus must be a non-null object', {
       code: 'VALIDATION_ERROR',
@@ -25,7 +22,7 @@ export function validateHealthStatus(data: unknown): HealthStatusShape {
     });
   }
 
-  if (!VALID_STATUSES.includes(obj.status)) {
+  if (!VALID_STATUSES.includes(obj.status as (typeof VALID_STATUSES)[number])) {
     throw new LilyValidationError(
       `HealthStatus.status must be one of: ${VALID_STATUSES.join(', ')}`,
       {
@@ -59,5 +56,51 @@ export function validateHealthStatus(data: unknown): HealthStatusShape {
     );
   }
 
-  return obj as unknown as HealthStatusShape;
+  if (obj.timestamp !== undefined && typeof obj.timestamp !== 'string') {
+    throw new LilyValidationError(
+      'HealthStatus.timestamp must be a string if present',
+      {
+        code: 'VALIDATION_ERROR',
+        details: { field: 'timestamp', received: obj.timestamp },
+      },
+    );
+  }
+
+  if (obj.checks !== undefined) {
+    if (
+      obj.checks === null ||
+      typeof obj.checks !== 'object' ||
+      Array.isArray(obj.checks)
+    ) {
+      throw new LilyValidationError(
+        'HealthStatus.checks must be an object if present',
+        {
+          code: 'VALIDATION_ERROR',
+          details: { field: 'checks', received: obj.checks },
+        },
+      );
+    }
+    for (const [key, checkVal] of Object.entries(
+      obj.checks as Record<string, unknown>,
+    )) {
+      if (
+        typeof checkVal !== 'string' ||
+        !VALID_STATUSES.includes(checkVal as (typeof VALID_STATUSES)[number])
+      ) {
+        throw new LilyValidationError(
+          `HealthStatus.checks["${key}"] must be one of: ${VALID_STATUSES.join(', ')}`,
+          {
+            code: 'VALIDATION_ERROR',
+            details: {
+              field: `checks.${key}`,
+              received: checkVal,
+              valid: VALID_STATUSES,
+            },
+          },
+        );
+      }
+    }
+  }
+
+  return obj as unknown as HealthStatus;
 }

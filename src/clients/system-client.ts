@@ -25,7 +25,7 @@ export class SystemClient extends BaseClient implements SystemClientContract {
       path: '/v1/system/health',
     });
     if (this.validateResponses) {
-      return validateHealthStatus(data) as unknown as HealthStatus;
+      return validateHealthStatus(data);
     }
     return data;
   }
