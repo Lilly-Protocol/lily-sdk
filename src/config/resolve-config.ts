@@ -107,7 +107,9 @@ export function resolveLilySdkConfig(
 function resolveBaseUrl(explicit: string | URL | undefined): URL {
   const raw =
     explicit ??
-    (typeof process !== 'undefined' ? process.env.LILY_API_URL : undefined);
+    (typeof process !== 'undefined'
+      ? (process.env.LILY_API_URL ?? process.env.LILY_BASE_URL)
+      : undefined);
 
   if (raw === undefined) {
     throw new LilyConfigError('`baseUrl` is required.');
