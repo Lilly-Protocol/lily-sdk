@@ -20,4 +20,23 @@ for (const [format, sdk] of [
     'function',
     `${format} exports LilySdkError`,
   );
+  assert.equal(
+    typeof sdk.parseCursorPage,
+    'function',
+    `${format} exports parseCursorPage`,
+  );
+  assert.equal(
+    typeof sdk.buildPaginationQuery,
+    'function',
+    `${format} exports buildPaginationQuery`,
+  );
+  assert.equal(
+    typeof sdk.paginate,
+    'function',
+    `${format} exports paginate`,
+  );
+  assert.ok(
+    sdk.CursorPage !== undefined,
+    `${format} exports CursorPage type`,
+  );
 }

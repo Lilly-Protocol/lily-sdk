@@ -59,7 +59,7 @@ describe('API report snapshot (issue #95)', () => {
   });
 
   it('all subpath .d.ts files exist', () => {
-    const subpaths = ['config.d.ts', 'errors.d.ts', 'http.d.ts', 'models.d.ts', 'types.d.ts'];
+    const subpaths = ['config.d.ts', 'errors.d.ts', 'http.d.ts', 'models.d.ts', 'types.d.ts', 'pagination.d.ts'];
     for (const file of subpaths) {
       const filePath = resolve(distDir, file);
       if (!existsSync(filePath)) continue; // skip if not built
