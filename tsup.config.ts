@@ -7,6 +7,7 @@ const commonEntry = [
   'src/errors.ts',
   'src/http.ts',
   'src/models.ts',
+  'src/testing.ts',
   'src/types.ts',
 ] as string[];
 

@@ -56,6 +56,9 @@
       "models": [
         "dist/models.d.ts"
       ],
+      "testing": [
+        "dist/testing.d.ts"
+      ],
       "types": [
         "dist/types.d.ts"
       ]
@@ -113,6 +116,16 @@
         "default": "./dist/models.cjs"
       }
     },
+    "./testing": {
+      "import": {
+        "types": "./dist/testing.d.ts",
+        "default": "./dist/testing.js"
+      },
+      "require": {
+        "types": "./dist/testing.d.cts",
+        "default": "./dist/testing.cjs"
+      }
+    },
     "./types": {
       "import": {
         "types": "./dist/types.d.ts",
@@ -146,7 +159,7 @@
     "test:watch": "vitest",
     "example": "tsx examples/quickstart.ts",
     "prepublishOnly": "npm run clean && npm run build && npm run test",
-    "docs": "typedoc --out docs/api --tsconfig tsconfig.docs.json --entryPoints src/index.ts src/config.ts src/errors.ts src/http.ts src/models.ts src/types.ts",
+    "docs": "typedoc --out docs/api --tsconfig tsconfig.docs.json --entryPoints src/index.ts src/config.ts src/errors.ts src/http.ts src/models.ts src/testing.ts src/types.ts",
     "release": "changeset publish",
     "version-packages": "changeset version"
   },
