@@ -1,8 +1,13 @@
 # Lily SDK
 
+## Security
+
+Please see [SECURITY.md](SECURITY.md) for vulnerability reporting and security policy.
+
 [![CI](https://github.com/lily-protocol/lily-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/lily-protocol/lily-sdk/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/typed-TypeScript-3178C6.svg)](https://www.typescriptlang.org/)
+[![Security Policy](https://img.shields.io/badge/security-policy-blue.svg)](./SECURITY.md)
 
 TypeScript-first SDK for integrating Lily Protocol's autonomous agent finance infrastructure into Node.js applications.
 
@@ -21,6 +26,17 @@ This repository is production-oriented foundation work. The public API, tooling,
 - Vitest test suite, ESLint, Prettier, and GitHub Actions CI
 - Contributor-ready project docs, issue templates, and example script
 
+## Browser Support
+
+The SDK ships a browser-compatible ESM build at `dist/browser/`. Bundlers that support the `browser` export condition (webpack, Vite, Rollup, esbuild) will automatically resolve to this build.
+
+```js
+// Browser bundlers resolve to dist/browser/index.js via the exports map
+import { LilySdk } from '@lily-protocol/sdk';
+```
+
+The browser build targets ES2022 and uses the native `fetch` API. Node.js-specific APIs are not included.
+
 ## Installation
 
 ```bash
@@ -32,6 +48,24 @@ For local development in this repository:
 ```bash
 npm install
 ```
+
+```bash
+npm install @lily-protocol/sdk
+```
+
+For local development in this repository:
+
+```bash
+npm install
+```
+
+## Requirements & Compatibility
+
+- **Node.js >= 20**: The SDK requires Node.js 20 or later. It relies on the built-in global `fetch`, `AbortController`, and DOM `Headers` APIs available natively from Node 20+.
+- **Global Fetch**: A standards-compliant `fetch` implementation must be available globally. If running in an environment without native fetch, provide a compatible polyfill via the `config.fetch` option when constructing the SDK.
+- **CI-Supported Versions**: Automated tests run against Node.js 20 and Node.js 22.
+- **Browser Considerations**: When using the SDK in browser environments, be aware of CORS restrictions and ensure that the `Headers` API is supported. The SDK does not include browser-specific polyfills; configure your bundler or runtime accordingly.
+- **Custom Fetch Fallback**: For unsupported runtimes (e.g., older Node versions or specialized environments), pass a custom fetch implementation through the SDK configuration to override the global default.
 
 ## Quick Start
 
@@ -115,6 +149,12 @@ sdk.payments.quote({
 });
 sdk.identity.resolve({ agentId: 'agent_123' });
 sdk.system.health();
+
+// Low-level escape hatch: the active HttpClient (injected or default)
+await sdk.http.request({
+  method: 'GET',
+  path: '/v1/system/health',
+});
 ```
 
 The root entrypoint also exposes the transport layer for custom clients and tests:
@@ -162,12 +202,23 @@ examples/        runnable local examples
 .github/         CI and contributor workflow templates
 ```
 
+## Testing
+
+| Command | Description |
+| --- | --- |
+| `npm test` | Run tests with coverage (default) |
+| `npm run test:unit` | Fast tests without coverage instrumentation |
+| `npm run test:coverage` | Explicit coverage run (same as `npm test`) |
+| `npm run test:watch` | Watch mode for development |
+
 ## Development
 
 ```bash
 npm install
 npm run lint
 npm run typecheck
+npm run test:unit
+npm run test:coverage
 npm run test
 npm run build
 ```
@@ -180,9 +231,13 @@ npm run example
 
 ## Design Notes
 
-- `LilySdk` composes a shared transport with focused domain clients instead of exposing a single massive client surface.
+- `LilySdk` composes a shared transport with focused domain clients instead of exposing a single massive client surface. The resolved `HttpClient` is also available as `sdk.http` for one-off raw requests that must reuse the SDK's transport and config.
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
 - The HTTP layer is intentionally small and swappable, which keeps backend integration work easy to test and contributor-friendly.
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for a full list of changes. The changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and is updated with every release.
 
 ## Roadmap Themes
 
@@ -190,6 +245,10 @@ npm run example
 - Pagination helpers and richer idempotency ergonomics
 - Webhook verification, observability hooks, and advanced auth flows
 - More complete Stellar asset and payment orchestration coverage
+
+## Security
+
+Please read [SECURITY.md](./SECURITY.md) for supported versions and how to report a vulnerability privately via GitHub Security Advisories. Do not file public issues for security-sensitive reports.
 
 ## Contributing
 
