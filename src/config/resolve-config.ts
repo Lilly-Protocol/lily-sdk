@@ -19,8 +19,11 @@ const DEFAULT_RETRY_POLICY: RetryPolicy = {
 export function resolveLilySdkConfig(
   config: LilySdkConfig,
 ): ResolvedLilySdkConfig {
-  if (!config.baseUrl) {
-    throw new LilyConfigError('`baseUrl` is required.');
+  const baseUrl = resolveBaseUrl(config.baseUrl);
+  if (!baseUrl) {
+    throw new LilyConfigError(
+      '`baseUrl` is required. Pass it in options or set the LILY_API_URL or LILY_BASE_URL environment variable.',
+    );
   }
 
   if (config.apiKey !== undefined) {
@@ -35,7 +38,7 @@ export function resolveLilySdkConfig(
     }
   }
 
-  const baseUrl = safeUrl(config.baseUrl);
+  const resolvedBaseUrl = safeUrl(baseUrl);
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const retry = Object.freeze(resolveRetryPolicy(config.retry));
   const fetchImpl = config.fetch ?? globalThis.fetch;
@@ -54,7 +57,7 @@ export function resolveLilySdkConfig(
   }
 
   return Object.freeze({
-    baseUrl,
+    baseUrl: resolvedBaseUrl,
     timeoutMs,
     retry: deepFreeze({
       retries: retry.retries,
@@ -70,6 +73,12 @@ export function resolveLilySdkConfig(
     ...(resolvedAuthToken ? { authToken: resolvedAuthToken } : {}),
     validateResponses,
   });
+}
+
+function resolveBaseUrl(
+  explicit: string | URL | undefined,
+): string | URL | undefined {
+  return explicit ?? process.env.LILY_API_URL ?? process.env.LILY_BASE_URL ?? undefined;
 }
 
 function resolveCredential(
