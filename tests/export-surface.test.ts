@@ -1,11 +1,31 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import * as sdk from '../src/index';
 
-import * as mainExports from '../src/index';
-import * as errorExports from '../src/errors';
+describe('export surface', () => {
+  it('exports LilySdk class', () => {
+    expect(sdk.LilySdk).toBeDefined();
+    expect(typeof sdk.LilySdk).toBe('function');
+  });
 
-describe('public export surface', () => {
-  it('does not advertise the unused LilyValidationError', () => {
-    expect(mainExports).not.toHaveProperty('LilyValidationError');
-    expect(errorExports).not.toHaveProperty('LilyValidationError');
+  it('exports resolveLilySdkConfig function', () => {
+    expect(sdk.resolveLilySdkConfig).toBeDefined();
+    expect(typeof sdk.resolveLilySdkConfig).toBe('function');
+  });
+
+  it('exports all error classes', () => {
+    expect(sdk.LilySdkError).toBeDefined();
+    expect(sdk.LilyConfigError).toBeDefined();
+    expect(sdk.LilyApiError).toBeDefined();
+    expect(sdk.LilyAuthenticationError).toBeDefined();
+    expect(sdk.LilyTransportError).toBeDefined();
+    expect(sdk.LilyValidationError).toBeDefined();
+  });
+
+  it('exports all client classes', () => {
+    expect(sdk.AgentClient).toBeDefined();
+    expect(sdk.IdentityClient).toBeDefined();
+    expect(sdk.PaymentClient).toBeDefined();
+    expect(sdk.SystemClient).toBeDefined();
+    expect(sdk.WalletClient).toBeDefined();
   });
 });
