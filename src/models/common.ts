@@ -95,23 +95,3 @@ export function normalizeMoneyAmount(input: MoneyAmount): MoneyAmount {
   const fraction = fractionRaw.slice(0, 2).padEnd(2, '0');
   return { ...input, amount: `${whole}.${fraction}` };
 }
-
-/**
- * Safely converts a numeric value to a fixed-decimal string suitable for MoneyAmount.
- *
- * Uses toFixed to avoid JavaScript floating-point artifacts
- * (e.g. 0.1 + 0.2 !== 0.3).
- *
- * @param value - The numeric value to convert
- * @param scale - Maximum decimal places (default: 7, matching Stellar precision)
- * @returns A clean base-10 decimal string
- */
-export function toAmountString(value: number, scale: number = 7): string {
-  if (!Number.isFinite(value)) {
-    throw new TypeError('toAmountString: value must be a finite number');
-  }
-  if (scale < 0 || !Number.isInteger(scale)) {
-    throw new TypeError('toAmountString: scale must be a non-negative integer');
-  }
-  return value.toFixed(scale);
-}
