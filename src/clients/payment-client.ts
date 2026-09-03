@@ -8,6 +8,7 @@ import type {
 import type { PaymentClientContract } from '../types/contracts';
 import {
   validateExecutePaymentRequest,
+  validateNonEmptyString,
   validatePaymentQuoteRequest,
 } from '../validation';
 import { BaseClient } from './base-client';
@@ -31,7 +32,8 @@ export class PaymentClient extends BaseClient implements PaymentClientContract {
     });
   }
 
-  public get(paymentId: string): Promise<Payment> {
+  public async get(paymentId: string): Promise<Payment> {
+    validateNonEmptyString(paymentId, 'paymentId');
     return this.request({
       method: 'GET',
       path: `/v1/payments/${encodePathSegment(paymentId)}`,
