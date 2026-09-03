@@ -117,7 +117,8 @@
     "test:watch": "vitest",
     "example": "tsx examples/quickstart.ts",
     "prepublishOnly": "npm run clean && npm run build && npm run test",
-    "docs": "typedoc --out docs/api --tsconfig tsconfig.docs.json --entryPoints src/index.ts src/config.ts src/errors.ts src/http.ts src/models.ts src/types.ts"
+    "docs": "typedoc --out docs/api --tsconfig tsconfig.docs.json --entryPoints src/index.ts src/config.ts src/errors.ts src/http.ts src/models.ts src/types.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.1",
