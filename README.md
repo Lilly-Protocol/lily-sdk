@@ -22,7 +22,7 @@ This repository is production-oriented foundation work. The public API, tooling,
 - Typed SDK constructor with strict configuration validation
 - Modular clients for agents, wallets, payments, identity, and system health
 - Reusable HTTP transport abstraction with auth header handling, timeouts, and retry scaffolding
-- ESM and CommonJS builds with emitted declaration files
+- Node.js ESM and CommonJS builds, a browser-targeted ESM build, and emitted declaration files
 - Vitest test suite, ESLint, Prettier, and GitHub Actions CI
 - Contributor-ready project docs, issue templates, and example script
 
@@ -42,6 +42,10 @@ The browser build targets ES2022 and uses the native `fetch` API. Node.js-specif
 ```bash
 npm install @lily-protocol/sdk
 ```
+
+### Browser support
+
+The SDK supports modern browsers with native `fetch`, `URL`, and `AbortController` APIs. Browser-aware bundlers select the dedicated `browser` export automatically; it is compiled as ES2022 without Node.js globals or built-ins. Keep API keys and other server-side credentials out of browser applications—only use credentials that are explicitly safe to expose to end users.
 
 For local development in this repository:
 
