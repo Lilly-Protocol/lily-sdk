@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { LilyTransportError } from '../src/errors/sdk-error';
+import { LilyConfigError, LilyTransportError } from '../src/errors/sdk-error';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import type { ResolvedLilySdkConfig } from '../src/config/types';
 
@@ -163,5 +163,95 @@ describe('request timeout', () => {
     await pending;
 
     expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  describe('per-request timeoutMs validation (issue #446)', () => {
+    it('rejects negative timeoutMs without dispatching request', async () => {
+      const fetchSpy = hangingFetch();
+      const httpClient = client({ fetch: fetchSpy });
+
+      await expect(
+        httpClient.request({
+          method: 'GET',
+          path: '/v1/system/health',
+          timeoutMs: -1,
+        }),
+      ).rejects.toBeInstanceOf(LilyConfigError);
+
+      await expect(
+        httpClient.request({
+          method: 'GET',
+          path: '/v1/system/health',
+          timeoutMs: -100,
+        }),
+      ).rejects.toThrow('`timeoutMs` must be a non-negative number.');
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('rejects NaN and non-finite timeoutMs without dispatching request', async () => {
+      const fetchSpy = hangingFetch();
+      const httpClient = client({ fetch: fetchSpy });
+
+      await expect(
+        httpClient.request({
+          method: 'GET',
+          path: '/v1/system/health',
+          timeoutMs: NaN,
+        }),
+      ).rejects.toBeInstanceOf(LilyConfigError);
+
+      await expect(
+        httpClient.request({
+          method: 'GET',
+          path: '/v1/system/health',
+          timeoutMs: Infinity,
+        }),
+      ).rejects.toBeInstanceOf(LilyConfigError);
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('rejects non-number timeoutMs without dispatching request', async () => {
+      const fetchSpy = hangingFetch();
+      const httpClient = client({ fetch: fetchSpy });
+
+      await expect(
+        httpClient.request({
+          method: 'GET',
+          path: '/v1/system/health',
+          timeoutMs: '1000' as any,
+        }),
+      ).rejects.toBeInstanceOf(LilyConfigError);
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('allows timeoutMs: 0 and disables timeout', async () => {
+      const fetchSpy = vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            // Settle after delay
+            setTimeout(() => {
+              resolve(
+                new Response(JSON.stringify({ status: 'ok' }), {
+                  status: 200,
+                  headers: { 'content-type': 'application/json' },
+                }),
+              );
+            }, 10);
+          }),
+      );
+
+      const httpClient = client({ fetch: fetchSpy, timeoutMs: 1 });
+      const res = await httpClient.request({
+        method: 'GET',
+        path: '/v1/system/health',
+        timeoutMs: 0,
+      });
+
+      expect(res.status).toBe(200);
+      expect(fetchSpy).toHaveBeenCalledOnce();
+    });
   });
 });
