@@ -171,4 +171,48 @@ describe('SystemClient', () => {
       expect(result).toEqual(invalidPayload);
     });
   });
+
+  describe('response validation with HttpClient and SystemClientOptions', () => {
+    it('validates health response when options { validateResponses: true } is provided', async () => {
+      const invalidPayload = { status: 'invalid_status' };
+      const http = createMockHttpClient(invalidPayload);
+      const validatingClient = new SystemClient(http, {
+        validateResponses: true,
+      });
+
+      await expect(validatingClient.health()).rejects.toThrow(
+        LilyValidationError,
+      );
+    });
+
+    it('validates health response when boolean true is passed as second argument', async () => {
+      const invalidPayload = { status: 'invalid_status' };
+      const http = createMockHttpClient(invalidPayload);
+      const validatingClient = new SystemClient(http, true);
+
+      await expect(validatingClient.health()).rejects.toThrow(
+        LilyValidationError,
+      );
+    });
+
+    it('returns raw payload when options { validateResponses: false } is provided', async () => {
+      const invalidPayload = { status: 'invalid_status' };
+      const http = createMockHttpClient(invalidPayload);
+      const nonValidatingClient = new SystemClient(http, {
+        validateResponses: false,
+      });
+
+      const result = await nonValidatingClient.health();
+      expect(result).toEqual(invalidPayload);
+    });
+
+    it('defaults to no validation when constructed with HttpClient only', async () => {
+      const invalidPayload = { status: 'invalid_status' };
+      const http = createMockHttpClient(invalidPayload);
+      const clientOnly = new SystemClient(http);
+
+      const result = await clientOnly.health();
+      expect(result).toEqual(invalidPayload);
+    });
+  });
 });

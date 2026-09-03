@@ -25,7 +25,10 @@ export type { LilyErrorCode } from './errors/sdk-error';
 export { AgentClient } from './clients/agent-client';
 export { IdentityClient } from './clients/identity-client';
 export { PaymentClient } from './clients/payment-client';
-export { SystemClient } from './clients/system-client';
+export {
+  SystemClient,
+  type SystemClientOptions,
+} from './clients/system-client';
 export { WalletClient } from './clients/wallet-client';
 export { BaseClient } from './clients/base-client';
 export type {
