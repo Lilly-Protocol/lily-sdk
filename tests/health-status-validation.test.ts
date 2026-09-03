@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { validateHealthStatus } from '../src/validation/health-status';
 import { LilyValidationError } from '../src/errors/sdk-error';
 
@@ -116,6 +116,72 @@ describe('validateHealthStatus', () => {
     });
   });
 
+  describe('timestamp field validation', () => {
+    it.each([
+      ['number', 123456],
+      ['boolean', true],
+      ['object', {}],
+      ['null', null],
+    ])('throws when timestamp is present but is %s', (_label, timestamp) => {
+      expect(() => validateHealthStatus({ status: 'ok', timestamp })).toThrow(
+        LilyValidationError,
+      );
+      try {
+        validateHealthStatus({ status: 'ok', timestamp });
+      } catch (err) {
+        const valErr = err as LilyValidationError;
+        expect(valErr.code).toBe('VALIDATION_ERROR');
+        expect(valErr.message).toBe(
+          'HealthStatus.timestamp must be a string if present',
+        );
+      }
+    });
+  });
+
+  describe('checks field validation', () => {
+    it.each([
+      ['string', 'all-good'],
+      ['number', 1],
+      ['boolean', true],
+      ['array', ['ok']],
+      ['null', null],
+    ])('throws when checks is present but is %s', (_label, checks) => {
+      expect(() => validateHealthStatus({ status: 'ok', checks })).toThrow(
+        LilyValidationError,
+      );
+      try {
+        validateHealthStatus({ status: 'ok', checks });
+      } catch (err) {
+        const valErr = err as LilyValidationError;
+        expect(valErr.code).toBe('VALIDATION_ERROR');
+        expect(valErr.message).toBe(
+          'HealthStatus.checks must be an object if present',
+        );
+      }
+    });
+
+    it('throws when a check value has an invalid status', () => {
+      expect(() =>
+        validateHealthStatus({
+          status: 'ok',
+          checks: { database: 'ok', redis: 'broken' },
+        }),
+      ).toThrow(LilyValidationError);
+      try {
+        validateHealthStatus({
+          status: 'ok',
+          checks: { database: 'ok', redis: 'broken' },
+        });
+      } catch (err) {
+        const valErr = err as LilyValidationError;
+        expect(valErr.code).toBe('VALIDATION_ERROR');
+        expect(valErr.message).toBe(
+          'HealthStatus.checks["redis"] must be one of: ok, degraded, down',
+        );
+      }
+    });
+  });
+
   describe('valid payloads', () => {
     it.each(['ok', 'degraded', 'down'] as const)(
       'passes and returns valid status "%s"',
@@ -136,11 +202,29 @@ describe('validateHealthStatus', () => {
       expect(result).toEqual(payload);
     });
 
+    it('passes with optional timestamp and checks (reconciled model)', () => {
+      const payload = {
+        status: 'ok',
+        version: '1.2.3',
+        uptime: 86400,
+        timestamp: '2026-09-03T11:00:00.000Z',
+        checks: {
+          database: 'ok',
+          cache: 'ok',
+          stellar: 'degraded',
+        } as const,
+      };
+      const result = validateHealthStatus(payload);
+      expect(result).toEqual(payload);
+    });
+
     it('passes when optional fields are explicitly undefined', () => {
       const payload = {
         status: 'degraded',
         version: undefined,
         uptime: undefined,
+        timestamp: undefined,
+        checks: undefined,
       };
       const result = validateHealthStatus(payload);
       expect(result).toEqual(payload);
