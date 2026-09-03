@@ -81,7 +81,15 @@ export function createFetchHttpClient(
             });
           }
 
-          if (shouldRetry(response.status, attempt, config.retry.retries, request.method)) {
+          if (
+            shouldRetry(
+              response.status,
+              attempt,
+              config.retry.retries,
+              config.retry.retryableStatusCodes,
+              request.method,
+            )
+          ) {
             clearTimeout(timeout);
             if (externalAbortHandler && request.signal) {
               request.signal.removeEventListener('abort', externalAbortHandler);
@@ -227,6 +235,7 @@ function shouldRetry(
   statusCode: number,
   attempt: number,
   maxRetries: number,
+  retryableStatusCodes: readonly number[],
   method: string,
 ): boolean {
   return (
