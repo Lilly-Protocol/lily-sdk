@@ -852,3 +852,21 @@ describe('client behavior', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
 });
+
+function createTestHttpClient(
+  fetch: typeof globalThis.fetch,
+  timeoutMs = 2_000,
+) {
+  return createFetchHttpClient({
+    baseUrl: new URL('https://api.lily.test/'),
+    timeoutMs,
+    retry: {
+      retries: 0,
+      retryDelayMs: 0,
+      retryableStatusCodes: [],
+    },
+    defaultHeaders: {},
+    userAgent: 'lily-sdk/test',
+    fetch,
+  });
+}
