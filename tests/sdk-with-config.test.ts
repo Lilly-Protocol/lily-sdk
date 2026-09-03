@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { LilySdk } from '../src/sdk';
+import type { HttpClient } from '../src/http/types';
 
 describe('LilySdk.withConfig', () => {
   it('creates a new instance with overridden baseUrl', () => {
@@ -38,5 +39,43 @@ describe('LilySdk.withConfig', () => {
     expect(tenantA.config.apiKey).toBe('tenant-a-key');
     expect(tenantB.config.apiKey).toBe('tenant-b-key');
     expect(base.config.apiKey).toBe('shared-key');
+  });
+
+  it('preserves an injected custom HttpClient across withConfig (issue #442)', async () => {
+    const requestSpy = vi.fn().mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      data: { status: 'ok' },
+    });
+    const customClient: HttpClient = {
+      request: requestSpy,
+    };
+
+    const parent = new LilySdk(
+      {
+        baseUrl: 'https://api.example.com',
+        apiKey: 'parent-key',
+      },
+      customClient,
+    );
+
+    const child = parent.withConfig({ apiKey: 'tenant2' });
+
+    expect(child.httpClient).toBe(customClient);
+    expect(child.http).toBe(customClient);
+
+    // Make a request from the child
+    await child.request({
+      method: 'GET',
+      path: '/v1/system/health',
+    });
+
+    expect(requestSpy).toHaveBeenCalledOnce();
+    expect(requestSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'GET',
+        path: '/v1/system/health',
+      }),
+    );
   });
 });

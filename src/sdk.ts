@@ -25,8 +25,11 @@ export class LilySdk {
   public readonly identity: IdentityClient;
   public readonly system: SystemClient;
 
+  private readonly customHttpClient?: HttpClient | undefined;
+
   public constructor(config?: Partial<LilySdkConfig>, httpClient?: HttpClient) {
     this.config = resolveLilySdkConfig(config ?? {});
+    this.customHttpClient = httpClient;
     this.httpClient = httpClient ?? createFetchHttpClient(this.config);
 
     this.agents = new AgentClient(this.httpClient);
@@ -99,6 +102,13 @@ export class LilySdk {
   /**
    * Creates a new LilySdk instance with merged configuration.
    * Useful for multi-tenant scenarios where credentials or baseUrl differ per tenant.
+   *
+   * If the parent `LilySdk` was constructed with an injected custom `HttpClient`
+   * (e.g. for logging, test mocks, or request recording), that client is preserved
+   * across child instances returned by `withConfig`.
+   *
+   * @param overrides - Partial configuration options to merge into the new instance.
+   * @returns A new `LilySdk` configured with the merged settings.
    */
   public withConfig(overrides: Partial<LilySdkConfig>): LilySdk {
     const merged: LilySdkConfig = {
@@ -126,6 +136,6 @@ export class LilySdk {
           : {}),
     };
 
-    return new LilySdk(merged);
+    return new LilySdk(merged, this.customHttpClient);
   }
 }
