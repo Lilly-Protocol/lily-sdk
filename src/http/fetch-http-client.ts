@@ -16,12 +16,15 @@ import type {
 
 export function createFetchHttpClient(
   config: ResolvedLilySdkConfig,
+  hooks?: RequestLifecycleHooks,
 ): HttpClient {
   return {
     async request<TResponse, TRequest = unknown>(
       request: HttpRequest<TRequest>,
     ): Promise<HttpResponse<TResponse>> {
+      const lifecycleHooks = composeHooks(hooks);
       const url = buildUrl(config.baseUrl, request.path, request.query);
+      await lifecycleHooks.beforeRequest?.(request);
       const body = serializeBody(request.body);
       const headers = buildHeaders(config, body, request.headers);
       const timeoutMs = request.timeoutMs ?? config.timeoutMs;
@@ -69,25 +72,29 @@ export function createFetchHttpClient(
             if (externalAbortHandler && request.signal) {
               request.signal.removeEventListener('abort', externalAbortHandler);
             }
-            return {
+            const httpResponse: HttpResponse<TResponse> = {
               status: response.status,
               headers: response.headers,
               data,
               attempts: attempt + 1,
               retried: attempt > 0,
             };
+            await lifecycleHooks.afterResponse?.(request, httpResponse);
+            return httpResponse;
           }
 
           // Auth failures are terminal: retrying with the same credential just
           // burns the budget. Checked before shouldRetry for that reason.
           if (response.status === 401 || response.status === 403) {
-            throw new LilyAuthenticationError('Authentication failed for Lily Protocol API.', {
+            const authError = new LilyAuthenticationError('Authentication failed for Lily Protocol API.', {
               code: LILY_ERROR_CODES.AUTHENTICATION_ERROR,
               statusCode: response.status,
               details: data,
               headers: Object.fromEntries(response.headers.entries()),
               request: { method: request.method, path: request.path, url: url.toString() },
             });
+            await lifecycleHooks.onError?.(request, authError);
+            throw authError;
           }
 
           if (
@@ -104,6 +111,7 @@ export function createFetchHttpClient(
               request.signal.removeEventListener('abort', externalAbortHandler);
             }
             attempt += 1;
+            await lifecycleHooks.onRetry?.(request, attempt, config.retry.retryDelayMs * attempt);
             await sleep(config.retry.retryDelayMs * attempt);
             continue;
           }
@@ -125,15 +133,18 @@ export function createFetchHttpClient(
             error instanceof LilyApiError ||
             error instanceof LilyAuthenticationError
           ) {
+            await lifecycleHooks.onError?.(request, error);
             throw error;
           }
 
           if (error instanceof Error && error.name === 'AbortError') {
-            throw new LilyTransportError('Request timed out while calling Lily Protocol API.', {
+            const timeoutError = new LilyTransportError('Request timed out while calling Lily Protocol API.', {
               code: LILY_ERROR_CODES.TIMEOUT,
               cause: error,
               request: { method: request.method, path: request.path, url: url.toString() },
             });
+            await lifecycleHooks.onError?.(request, timeoutError);
+            throw timeoutError;
           }
 
           if (
@@ -141,15 +152,18 @@ export function createFetchHttpClient(
             isRetryableTransportError(error, request.method)
           ) {
             attempt += 1;
+            await lifecycleHooks.onRetry?.(request, attempt, config.retry.retryDelayMs * attempt);
             await sleep(config.retry.retryDelayMs * attempt);
             continue;
           }
 
-          throw new LilyTransportError('Network error while calling Lily Protocol API.', {
+          const transportError = new LilyTransportError('Network error while calling Lily Protocol API.', {
             code: LILY_ERROR_CODES.TRANSPORT_ERROR,
             cause: error,
             request: { method: request.method, path: request.path, url: url.toString() },
           });
+          await lifecycleHooks.onError?.(request, transportError);
+          throw transportError;
         }
       }
     },
