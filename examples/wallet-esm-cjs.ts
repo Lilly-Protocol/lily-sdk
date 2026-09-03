@@ -18,10 +18,11 @@ async function main() {
   const wallets = await sdk.wallets.list();
   console.log('Wallets:', wallets);
 
-  // Create a payment to provision a wallet
-  const payment = await sdk.payments.create({
-    amount: '10.00',
-    currency: 'USD',
+  // Execute a payment
+  const payment = await sdk.payments.execute({
+    fromWalletId: 'wallet_demo_1',
+    toAddress: 'GD5F...DEMO...K4ZVN',
+    amount: { assetCode: 'XLM', amount: '10.00' },
   });
   console.log('Payment created:', payment);
 }

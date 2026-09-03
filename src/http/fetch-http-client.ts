@@ -4,6 +4,7 @@ import {
   LILY_ERROR_CODES,
   LilyApiError,
   LilyAuthenticationError,
+  LilySdkError,
   LilyTransportError,
   LilyValidationError,
 } from '../errors/sdk-error';
@@ -14,6 +15,8 @@ import type {
   HttpResponse,
 } from './types';
 
+const DEFAULT_RETRYABLE_STATUS_CODES = [408, 409, 425, 429, 500, 502, 503, 504];
+
 export function createFetchHttpClient(
   config: ResolvedLilySdkConfig,
 ): HttpClient {
@@ -23,36 +26,52 @@ export function createFetchHttpClient(
     ): Promise<HttpResponse<TResponse>> {
       const url = buildUrl(config.baseUrl, request.path, request.query);
       const body = serializeBody(request.body);
-      const headers = buildHeaders(config, body, request.headers);
+      const headers = buildHeaders(config, request.headers);
       const timeoutMs = request.timeoutMs ?? config.timeoutMs;
 
       let attempt = 0;
-      let externalAbortHandler: (() => void) | undefined;
 
       for (;;) {
         const controller = new AbortController();
+        let externallyAborted = false;
+        let onExternalAbort: (() => void) | undefined;
+
         if (request.signal) {
           if (request.signal.aborted) {
             throw new LilyTransportError('Request cancelled by caller.', {
               code: 'CANCELLED',
               cause: request.signal.reason ?? new Error('Aborted'),
+              request: requestMetadata(request, url),
             });
           }
-          externalAbortHandler = () => controller.abort(request.signal!.reason);
-          request.signal.addEventListener('abort', externalAbortHandler, { once: true });
-        }
-        const timeout = setTimeout(() => {
-          if (abortSource === undefined) {
-            abortSource = 'timeout';
-            controller.abort();
-          }
-        }, timeoutMs);
 
-        const body = serializeBody(request.body);
+          onExternalAbort = () => {
+            externallyAborted = true;
+            controller.abort(request.signal?.reason);
+          };
+          request.signal.addEventListener('abort', onExternalAbort, {
+            once: true,
+          });
+        }
+
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        if (timeoutMs > 0) {
+          timeout = setTimeout(() => controller.abort(), timeoutMs);
+        }
+
+        const cleanup = (): void => {
+          if (timeout !== undefined) {
+            clearTimeout(timeout);
+          }
+          if (request.signal && onExternalAbort) {
+            request.signal.removeEventListener('abort', onExternalAbort);
+          }
+        };
+
         const requestInit: RequestInit = {
           method: request.method,
           headers,
-          ...(controller ? { signal: controller.signal } : {}),
+          signal: controller.signal,
         };
 
         if (body !== undefined) {
@@ -65,10 +84,7 @@ export function createFetchHttpClient(
           const data = (await parseResponse(response)) as TResponse;
 
           if (response.ok) {
-            clearTimeout(timeout);
-            if (externalAbortHandler && request.signal) {
-              request.signal.removeEventListener('abort', externalAbortHandler);
-            }
+            cleanup();
             return {
               status: response.status,
               headers: response.headers,
@@ -81,12 +97,16 @@ export function createFetchHttpClient(
           // Auth failures are terminal: retrying with the same credential just
           // burns the budget. Checked before shouldRetry for that reason.
           if (response.status === 401 || response.status === 403) {
-            throw new LilyAuthenticationError('Authentication failed for Lily Protocol API.', {
-              code: LILY_ERROR_CODES.AUTHENTICATION_ERROR,
-              statusCode: response.status,
-              details: data,
-              request: { method: request.method, path: request.path, url: url.toString() },
-            });
+            cleanup();
+            throw new LilyAuthenticationError(
+              'Authentication failed for Lily Protocol API.',
+              {
+                code: LILY_ERROR_CODES.AUTHENTICATION_ERROR,
+                statusCode: response.status,
+                details: data,
+                request: requestMetadata(request, url),
+              },
+            );
           }
 
           if (
@@ -98,40 +118,50 @@ export function createFetchHttpClient(
               request.method,
             )
           ) {
-            clearTimeout(timeout);
-            if (externalAbortHandler && request.signal) {
-              request.signal.removeEventListener('abort', externalAbortHandler);
-            }
+            cleanup();
             attempt += 1;
             await sleep(config.retry.retryDelayMs * attempt);
             continue;
           }
 
+          cleanup();
           throw new LilyApiError('Lily Protocol API request failed.', {
             code: LILY_ERROR_CODES.API_ERROR,
             statusCode: response.status,
             details: data,
-            request: { method: request.method, path: request.path, url: url.toString() },
+            request: requestMetadata(request, url),
           });
         } catch (error) {
-          clearTimeout(timeout);
-          if (externalAbortHandler && request.signal) {
-            request.signal.removeEventListener('abort', externalAbortHandler);
-          }
+          cleanup();
 
-          if (
-            error instanceof LilyApiError ||
-            error instanceof LilyAuthenticationError
-          ) {
+          // LilySdkError instances (validation, auth, API) are definitive:
+          // they must never be retried or re-wrapped.
+          if (error instanceof LilySdkError) {
             throw error;
           }
 
           if (error instanceof Error && error.name === 'AbortError') {
-            throw new LilyTransportError('Request timed out while calling Lily Protocol API.', {
-              code: LILY_ERROR_CODES.TIMEOUT,
-              cause: error,
-              request: { method: request.method, path: request.path, url: url.toString() },
-            });
+            // External cancellation is never retried: the caller asked us to stop.
+            if (
+              !externallyAborted &&
+              attempt < config.retry.retries &&
+              isRetryableMethod(request.method)
+            ) {
+              attempt += 1;
+              await sleep(config.retry.retryDelayMs * attempt);
+              continue;
+            }
+
+            throw new LilyTransportError(
+              externallyAborted
+                ? 'Request cancelled by caller while calling Lily Protocol API.'
+                : 'Request timed out while calling Lily Protocol API.',
+              {
+                code: externallyAborted ? 'CANCELLED' : LILY_ERROR_CODES.TIMEOUT,
+                cause: error,
+                request: requestMetadata(request, url),
+              },
+            );
           }
 
           if (
@@ -143,14 +173,28 @@ export function createFetchHttpClient(
             continue;
           }
 
-          throw new LilyTransportError('Network error while calling Lily Protocol API.', {
-            code: LILY_ERROR_CODES.TRANSPORT_ERROR,
-            cause: error,
-            request: { method: request.method, path: request.path, url: url.toString() },
-          });
+          throw new LilyTransportError(
+            'Network error while calling Lily Protocol API.',
+            {
+              code: LILY_ERROR_CODES.TRANSPORT_ERROR,
+              cause: error,
+              request: requestMetadata(request, url),
+            },
+          );
         }
       }
     },
+  };
+}
+
+function requestMetadata(
+  request: HttpRequest,
+  url: URL,
+): { method: string; path: string; url: string } {
+  return {
+    method: request.method,
+    path: request.path,
+    url: url.toString(),
   };
 }
 
@@ -182,7 +226,7 @@ export function buildUrl(
   return url;
 }
 
-function normalizeHeaders(init?: HeadersInit): Record<string, string> {
+function normalizeHeaders(init?: HttpHeaders): Record<string, string> {
   const result: Record<string, string> = {};
 
   if (!init) {
@@ -208,17 +252,20 @@ function normalizeHeaders(init?: HeadersInit): Record<string, string> {
 
 function buildHeaders(
   config: ResolvedLilySdkConfig,
-  body: BodyInit | undefined,
   requestHeaders?: HttpHeaders,
 ): HttpHeaders {
-  return {
+  const headers: Record<string, string> = {
     accept: 'application/json',
+    'content-type': 'application/json',
     'user-agent': config.userAgent,
-    ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
+    ...config.toHeaders?.(),
     ...config.defaultHeaders,
     ...resolveAuthHeaders(config),
-    ...requestHeaders,
   };
+
+  Object.assign(headers, normalizeHeaders(requestHeaders));
+
+  return headers;
 }
 
 function serializeBody(body: unknown): BodyInit | undefined {
@@ -262,13 +309,14 @@ function shouldRetry(
   statusCode: number,
   attempt: number,
   maxRetries: number,
-  retryableStatusCodes: readonly number[],
+  retryableStatusCodes: readonly number[] | undefined,
   method: string,
 ): boolean {
+  const codes = retryableStatusCodes ?? DEFAULT_RETRYABLE_STATUS_CODES;
   return (
     isRetryableMethod(method) &&
     attempt < maxRetries &&
-    [408, 409, 425, 429, 500, 502, 503, 504].includes(statusCode)
+    codes.includes(statusCode)
   );
 }
 

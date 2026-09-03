@@ -67,3 +67,17 @@ export interface MoneyAmount {
 }
 
 export type ResourceStatus = 'pending' | 'active' | 'inactive' | 'failed' | 'paused';
+
+/**
+ * Normalizes a decimal string amount to exactly two decimal places.
+ *
+ * Leading zeros are stripped and the fractional part is truncated (not
+ * rounded) to two digits and padded with trailing zeros, e.g.
+ * `'0075.5'` becomes `'75.50'`. The input object is not mutated.
+ */
+export function normalizeMoneyAmount(input: MoneyAmount): MoneyAmount {
+  const [wholeRaw = '', fractionRaw = ''] = input.amount.split('.');
+  const whole = wholeRaw.replace(/^0+(?=\d)/, '');
+  const fraction = fractionRaw.slice(0, 2).padEnd(2, '0');
+  return { ...input, amount: `${whole}.${fraction}` };
+}

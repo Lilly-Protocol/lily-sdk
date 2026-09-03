@@ -1,4 +1,4 @@
-undefinedimport { AgentClient } from './clients/agent-client';
+import { AgentClient } from './clients/agent-client';
 import { IdentityClient } from './clients/identity-client';
 import { PaymentClient } from './clients/payment-client';
 import { SystemClient } from './clients/system-client';
@@ -6,20 +6,24 @@ import { WalletClient } from './clients/wallet-client';
 import { resolveLilySdkConfig } from './config/resolve-config';
 import type {
   LilySdkConfig,
-  LilySdkCreateOptions,
   ResolvedLilySdkConfig,
 } from './config/types';
 import { createFetchHttpClient } from './http/fetch-http-client';
-import type { HttpClient, HttpRequest } from './http/types';
-
-export const DEFAULT_API_URL = 'https://api.lilyprotocol.com';
+import type {
+  HttpClient,
+  HttpRequest,
+  HttpResponse,
+} from './http/types';
+import { SDK_VERSION } from './version';
 
 export class LilySdk {
   public static readonly version: string = SDK_VERSION;
 
   public readonly config: ResolvedLilySdkConfig;
-  private readonly httpClient: HttpClient;
-  public get http(): HttpClient { return this.httpClient; }
+  public readonly httpClient: HttpClient;
+  public get http(): HttpClient {
+    return this.httpClient;
+  }
   public readonly agents: AgentClient;
   public readonly wallets: WalletClient;
   public readonly payments: PaymentClient;
@@ -57,7 +61,7 @@ export class LilySdk {
       (typeof process !== 'undefined'
         ? process.env.LILY_API_URL ?? process.env.LILY_BASE_URL
         : undefined) ??
-      DEFAULT_API_URL;
+      'https://api.lilyprotocol.org';
 
     if (!baseUrl) {
       throw new Error(
@@ -85,14 +89,13 @@ export class LilySdk {
   }
 
   /**
-   * Sends a typed request using the SDK's shared HttpClient.
-   * Returns only the response data, mirroring BaseClient.request.
+   * Sends a typed request using the SDK's shared HttpClient and returns the
+   * full HttpResponse, mirroring the raw transport API.
    */
-  public async request<TResponse, TRequest = undefined>(
+  public async request<TResponse, TRequest = unknown>(
     request: HttpRequest<TRequest>,
-  ): Promise<TResponse> {
-    const response = await this.httpClient.request<TResponse, TRequest>(request);
-    return response.data;
+  ): Promise<HttpResponse<TResponse>> {
+    return this.httpClient.request<TResponse, TRequest>(request);
   }
 
   /**
@@ -103,51 +106,28 @@ export class LilySdk {
     const merged: LilySdkConfig = {
       baseUrl: overrides.baseUrl ?? String(this.config.baseUrl),
       timeoutMs: overrides.timeoutMs ?? this.config.timeoutMs,
-      retry: overrides.retry ?? this.config.retry,
-      defaultHeaders:
-        overrides.defaultHeaders ??
-        Object.fromEntries(Object.entries(this.config.defaultHeaders)),
+      retry: {
+        ...this.config.retry,
+        ...overrides.retry,
+      },
+      defaultHeaders: {
+        ...this.config.defaultHeaders,
+        ...overrides.defaultHeaders,
+      },
       userAgent: overrides.userAgent ?? this.config.userAgent,
       fetch: overrides.fetch ?? this.config.fetch,
+      ...(overrides.apiKey !== undefined
+        ? { apiKey: overrides.apiKey }
+        : this.config.apiKey !== undefined
+          ? { apiKey: this.config.apiKey }
+          : {}),
+      ...(overrides.authToken !== undefined
+        ? { authToken: overrides.authToken }
+        : this.config.authToken !== undefined
+          ? { authToken: this.config.authToken }
+          : {}),
     };
 
-    if (overrides.apiKey !== undefined) {
-      merged.apiKey = overrides.apiKey;
-    } else if (this.config.apiKey !== undefined) {
-      merged.apiKey = this.config.apiKey;
-    }
-
-    if (overrides.authToken !== undefined) {
-      merged.authToken = overrides.authToken;
-    } else if (this.config.authToken !== undefined) {
-      merged.authToken = this.config.authToken;
-    }
-
-    return new LilySdk(merged, this.httpClient);
-  }
-
-  /**
-   * Creates an independent SDK instance by merging overrides with this instance's config.
-   */
-  public withConfig(overrides: Partial<LilySdkConfig>): LilySdk {
-    return new LilySdk({
-      baseUrl: this.config.baseUrl.toString(),
-      timeoutMs: this.config.timeoutMs,
-      retry: this.config.retry,
-      defaultHeaders: this.config.defaultHeaders,
-      userAgent: this.config.userAgent,
-      fetch: this.config.fetch,
-      ...(this.config.apiKey ? { apiKey: this.config.apiKey } : {}),
-      ...(this.config.authToken ? { authToken: this.config.authToken } : {}),
-      ...overrides,
-      ...(overrides.retry
-        ? {
-            retry: {
-              ...this.config.retry,
-              ...overrides.retry,
-            },
-          }
-        : {}),
-    });
+    return new LilySdk(merged);
   }
 }

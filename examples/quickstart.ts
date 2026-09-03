@@ -2,8 +2,10 @@ import { LilySdk } from '../src';
 
 async function main(): Promise<void> {
   const sdk = new LilySdk({
-    baseUrl: process.env.LILY_API_URL,
-    apiKey: process.env.LILY_API_KEY,
+    baseUrl: process.env.LILY_API_URL ?? 'https://api.lilyprotocol.org',
+    ...(process.env.LILY_API_KEY !== undefined
+      ? { apiKey: process.env.LILY_API_KEY }
+      : {}),
   });
 
   const health = await sdk.system.health();

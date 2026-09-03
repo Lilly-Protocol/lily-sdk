@@ -17,8 +17,6 @@ export {
   LilyRateLimitError,
   LilyServerError,
   LilyTransportError,
-  LilyValidationError,
-  LILY_ERROR_CODES,
   isLilySdkError,
 } from './errors/sdk-error';
 export type { LilyErrorCode } from './errors/sdk-error';

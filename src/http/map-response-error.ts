@@ -114,10 +114,11 @@ export function mapResponseError(
   data: unknown,
   headers?: Headers,
 ): LilyApiError | LilyAuthenticationError | LilyValidationError {
+  const snippet = safeBodySnippet(data);
   const options: LilyErrorOptions = {
     statusCode: status,
     details: data,
-    bodySnippet: safeBodySnippet(data),
+    ...(snippet !== undefined ? { bodySnippet: snippet } : {}),
   };
 
   if (status === 401) {
@@ -156,10 +157,11 @@ export function mapResponseError(
   }
 
   if (status === 429) {
+    const retryAfter = retryAfterSeconds(headers);
     return new LilyRateLimitError('Lily Protocol API rate limit exceeded.', {
       ...options,
       code: 'RATE_LIMITED',
-      retryAfterSeconds: retryAfterSeconds(headers),
+      ...(retryAfter !== undefined ? { retryAfterSeconds: retryAfter } : {}),
     });
   }
 

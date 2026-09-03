@@ -1,7 +1,7 @@
 import type { RetryPolicy } from '../http/types';
 
 export interface LilySdkConfig {
-  baseUrl?: string;
+  baseUrl?: string | URL;
   apiKey?: string;
   authToken?: string;
   timeoutMs?: number;
@@ -17,11 +17,7 @@ export interface LilySdkCreateOptions extends Omit<LilySdkConfig, 'baseUrl'> {
   baseUrl?: string;
 }
 
-export type ResolvedRetryPolicy = Readonly<
-  Omit<RetryPolicy, 'retryableStatusCodes'> & {
-    retryableStatusCodes: readonly number[];
-  }
->;
+export interface ResolvedRetryPolicy extends RetryPolicy {}
 
 export interface ResolvedLilySdkConfig {
   readonly baseUrl: URL;
@@ -33,4 +29,9 @@ export interface ResolvedLilySdkConfig {
   readonly userAgent: string;
   readonly fetch: typeof globalThis.fetch;
   readonly validateResponses?: boolean;
+  /**
+   * Serializes the resolved auth credentials plus default headers into a
+   * plain header object. Returns a fresh object on every call.
+   */
+  toHeaders?(): Record<string, string>;
 }
