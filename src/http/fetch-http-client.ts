@@ -7,7 +7,6 @@ import {
   LilySdkError,
   LilyTransportError,
   LilyValidationError,
-  type LilyRequestMetadata,
 } from '../errors/sdk-error';
 import type {
   HttpClient,
@@ -258,7 +257,7 @@ function serializeBody(body: unknown): BodyInit | undefined {
 
 async function parseResponse(
   response: Response,
-  request: LilyRequestMetadata,
+  request: { method: string; path: string; url: string },
 ): Promise<unknown> {
   if (response.status === 204) {
     return null;
