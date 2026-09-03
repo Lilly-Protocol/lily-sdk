@@ -62,8 +62,9 @@ export function resolveLilySdkConfig(
       retryableStatusCodes: retry.retryableStatusCodes,
     }),
     defaultHeaders: Object.freeze({
+
       ...config.defaultHeaders,
-    },
+    }),
     userAgent: config.userAgent ?? DEFAULT_USER_AGENT,
     fetch: fetchImpl,
     ...(resolvedApiKey ? { apiKey: resolvedApiKey } : {}),
@@ -187,7 +188,7 @@ function resolveRetryPolicy(
     retries,
     retryDelayMs,
     retryableStatusCodes: [...retryableStatusCodes],
-  };
+  });
 }
 
 function deepFreeze<T>(value: T): T {
