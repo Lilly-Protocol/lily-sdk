@@ -21,7 +21,8 @@ export function createFetchHttpClient(
       request: HttpRequest<TRequest>,
     ): Promise<HttpResponse<TResponse>> {
       const url = buildUrl(config.baseUrl, request.path, request.query);
-      const headers = buildHeaders(config, request.headers);
+      const body = serializeBody(request.body);
+      const headers = buildHeaders(config, body, request.headers);
       const timeoutMs = request.timeoutMs ?? config.timeoutMs;
 
       let attempt = 0;
@@ -198,12 +199,13 @@ function normalizeHeaders(init?: HeadersInit): Record<string, string> {
 
 function buildHeaders(
   config: ResolvedLilySdkConfig,
+  body: BodyInit | undefined,
   requestHeaders?: HttpHeaders,
 ): HttpHeaders {
   return {
     accept: 'application/json',
-    'content-type': 'application/json',
     'user-agent': config.userAgent,
+    ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
     ...config.defaultHeaders,
     ...resolveAuthHeaders(config),
     ...requestHeaders,
