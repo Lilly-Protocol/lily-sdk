@@ -76,16 +76,35 @@ export type ResourceStatus =
 const DECIMAL_AMOUNT_PATTERN = /^\d+(\.\d+)?$/;
 
 /**
- * Normalizes a decimal string amount to exactly two decimal places.
+ * Options for {@link normalizeMoneyAmount}.
+ */
+export interface NormalizeMoneyAmountOptions {
+  /**
+   * Explicit fractional scale (0-7).
+   * When omitted, formats whole and single-digit decimals to 2 decimal places,
+   * while preserving up to 7 decimal places for sub-cent amounts without precision loss.
+   */
+  scale?: number;
+}
+
+/**
+ * Normalizes a decimal string amount.
  *
- * Leading zeros are stripped and the fractional part is truncated (not
- * rounded) to two digits and padded with trailing zeros, e.g.
- * `'0075.5'` becomes `'75.50'`. The input object is not mutated.
+ * Leading zeros are stripped. By default, formats whole and single-digit decimals
+ * to at least 2 decimal places (e.g. `'100'` -> `'100.00'`, `'50.5'` -> `'50.50'`),
+ * while preserving up to 7 decimal places for Stellar sub-cent amounts (e.g. `'0.0000001'`),
+ * ensuring non-zero fractions are never silently dropped or zeroed out.
+ *
+ * If an explicit `scale` is provided (either as an options object or number),
+ * the fraction is truncated/padded to that scale.
  *
  * Throws a `RangeError` when the amount is not a base-10 decimal string
- * (e.g. exponential notation like `'1e-5'` or a JavaScript number).
+ * or when `scale` is outside the allowed [0, 7] range.
  */
-export function normalizeMoneyAmount(input: MoneyAmount): MoneyAmount {
+export function normalizeMoneyAmount(
+  input: MoneyAmount,
+  options?: NormalizeMoneyAmountOptions | number,
+): MoneyAmount {
   if (
     typeof input.amount !== 'string' ||
     !DECIMAL_AMOUNT_PATTERN.test(input.amount)
@@ -94,8 +113,27 @@ export function normalizeMoneyAmount(input: MoneyAmount): MoneyAmount {
       `MoneyAmount.amount must be a base-10 decimal string, got ${JSON.stringify(input.amount)}.`,
     );
   }
+
+  const explicitScale = typeof options === 'number' ? options : options?.scale;
+  if (
+    explicitScale !== undefined &&
+    (!Number.isInteger(explicitScale) || explicitScale < 0 || explicitScale > 7)
+  ) {
+    throw new RangeError('scale must be an integer between 0 and 7.');
+  }
+
   const [wholeRaw = '', fractionRaw = ''] = input.amount.split('.');
-  const whole = wholeRaw.replace(/^0+(?=\d)/, '');
-  const fraction = fractionRaw.slice(0, 2).padEnd(2, '0');
+  const whole = wholeRaw.replace(/^0+(?=\d)/, '') || '0';
+
+  if (explicitScale !== undefined) {
+    if (explicitScale === 0) {
+      return { ...input, amount: whole };
+    }
+    const fraction = fractionRaw.slice(0, explicitScale).padEnd(explicitScale, '0');
+    return { ...input, amount: `${whole}.${fraction}` };
+  }
+
+  const targetScale = Math.min(7, Math.max(2, fractionRaw.length));
+  const fraction = fractionRaw.slice(0, targetScale).padEnd(Math.max(2, targetScale), '0');
   return { ...input, amount: `${whole}.${fraction}` };
 }
