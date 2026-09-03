@@ -4,9 +4,15 @@ import { PaymentClient } from './clients/payment-client';
 import { SystemClient } from './clients/system-client';
 import { WalletClient } from './clients/wallet-client';
 import { resolveLilySdkConfig } from './config/resolve-config';
-import type { LilySdkConfig, ResolvedLilySdkConfig } from './config/types';
+import type {
+  LilySdkConfig,
+  LilySdkCreateOptions,
+  ResolvedLilySdkConfig,
+} from './config/types';
 import { createFetchHttpClient } from './http/fetch-http-client';
 import type { HttpClient, HttpRequest } from './http/types';
+
+const DEFAULT_API_URL = 'https://api.lilyprotocol.com';
 
 export class LilySdk {
   public readonly config: ResolvedLilySdkConfig;

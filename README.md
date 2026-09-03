@@ -72,11 +72,9 @@ npm install
 ```ts
 import { LilySdk } from '@lily-protocol/sdk';
 
-const sdk = new LilySdk({
-  baseUrl: 'https://api.lilyprotocol.com',
-  authToken: process.env.LILY_AUTH_TOKEN,
-  apiKey: process.env.LILY_API_KEY,
-});
+// Uses https://api.lilyprotocol.com by default and reads LILY_API_URL,
+// LILY_API_KEY, and LILY_AUTH_TOKEN from the environment when present.
+const sdk = LilySdk.create();
 
 const health = await sdk.system.health();
 const wallet = await sdk.wallets.provision({
