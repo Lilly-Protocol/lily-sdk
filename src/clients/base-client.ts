@@ -50,6 +50,10 @@ export abstract class BaseClient {
     }
   }
 
+  protected buildPath(...segments: string[]): string {
+    return `/${segments.map((segment) => encodeURIComponent(segment)).join('/')}`;
+  }
+
   protected async request<TResponse, TRequest = undefined>(
     request: HttpRequest<TRequest>,
   ): Promise<TResponse> {
