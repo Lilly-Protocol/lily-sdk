@@ -170,6 +170,34 @@ describe('resolveLilySdkConfig', () => {
       }),
     ).toThrow('`retry.retryDelayMs` must be a non-negative number.');
   });
+
+  describe('validateResponses', () => {
+    it('defaults validateResponses to true when not provided', () => {
+      const config = resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+      });
+      expect(config.validateResponses).toBe(true);
+    });
+
+    it('preserves validateResponses: false when explicitly provided', () => {
+      const config = resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+        validateResponses: false,
+      });
+      expect(config.validateResponses).toBe(false);
+    });
+
+    it('preserves validateResponses: true when explicitly provided', () => {
+      const config = resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+        validateResponses: true,
+      });
+      expect(config.validateResponses).toBe(true);
+    });
+  });
 });
 
 it('throws when retry.retries is not an integer', () => {

@@ -10,10 +10,11 @@ class RecordingHttpClient implements HttpClient {
     request: HttpRequest<TRequest>,
   ): Promise<HttpResponse<TResponse>> {
     this.calls.push(request as HttpRequest<unknown>);
+    const data = request.path === '/v1/system/health' ? { status: 'ok' } : {};
     return {
       status: 200,
       headers: new Headers(),
-      data: {} as TResponse,
+      data: data as TResponse,
     };
   }
 }

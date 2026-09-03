@@ -39,4 +39,32 @@ describe('LilySdk.withConfig', () => {
     expect(tenantB.config.apiKey).toBe('tenant-b-key');
     expect(base.config.apiKey).toBe('shared-key');
   });
+
+  it('preserves validateResponses setting across reconfigurations', () => {
+    const baseFalse = new LilySdk({
+      baseUrl: 'https://api.example.com',
+      validateResponses: false,
+    });
+    const derivedFalse = baseFalse.withConfig({ apiKey: 'new-key' });
+    expect(derivedFalse.config.validateResponses).toBe(false);
+
+    const baseTrue = new LilySdk({
+      baseUrl: 'https://api.example.com',
+      validateResponses: true,
+    });
+    const derivedTrue = baseTrue.withConfig({ apiKey: 'new-key' });
+    expect(derivedTrue.config.validateResponses).toBe(true);
+  });
+
+  it('allows overriding validateResponses in withConfig', () => {
+    const base = new LilySdk({
+      baseUrl: 'https://api.example.com',
+      validateResponses: false,
+    });
+    const derived = base.withConfig({ validateResponses: true });
+    expect(derived.config.validateResponses).toBe(true);
+
+    const backToFalse = derived.withConfig({ validateResponses: false });
+    expect(backToFalse.config.validateResponses).toBe(false);
+  });
 });
