@@ -67,11 +67,7 @@ export interface MoneyAmount {
 }
 
 export type ResourceStatus =
-  | 'pending'
-  | 'active'
-  | 'inactive'
-  | 'failed'
-  | 'paused';
+  'pending' | 'active' | 'inactive' | 'failed' | 'paused';
 
 const DECIMAL_AMOUNT_PATTERN = /^\d+(\.\d+)?$/;
 
@@ -112,10 +108,10 @@ export function normalizeMoneyAmount(input: MoneyAmount): MoneyAmount {
  */
 export function toAmountString(value: number, scale: number = 7): string {
   if (!Number.isFinite(value)) {
-    throw new TypeError("toAmountString: value must be a finite number");
+    throw new TypeError('toAmountString: value must be a finite number');
   }
   if (scale < 0 || !Number.isInteger(scale)) {
-    throw new TypeError("toAmountString: scale must be a non-negative integer");
+    throw new TypeError('toAmountString: scale must be a non-negative integer');
   }
   return value.toFixed(scale);
 }
