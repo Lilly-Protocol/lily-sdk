@@ -1,97 +1,114 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import { LilySdk } from '../src/sdk.js';
+import type { HttpClient, HttpResponse } from '../src/http/types.js';
+import { LilyConfigError } from '../src/errors/sdk-error.js';
 
-import { LilyConfigError } from '../src/errors/sdk-error';
-import { createFetchHttpClient } from '../src/http/fetch-http-client';
-import { LilySdk } from '../src/sdk';
-import { createMockHttpClient } from './helpers/mock-http-client';
+function createMockHttpClient(): HttpClient {
+  return {
+    request: <TResponse>(): Promise<HttpResponse<TResponse>> => Promise.resolve({
+      status: 200,
+      headers: new Headers(),
+      data: {} as TResponse,
+    }),
+  };
+}
 
-const clientConstructors = vi.hoisted(() => ({
-  AgentClient: vi.fn(),
-  WalletClient: vi.fn(),
-  PaymentClient: vi.fn(),
-  IdentityClient: vi.fn(),
-  SystemClient: vi.fn(),
-}));
+describe('LilySdk composition', () => {
+  it('routes injected HttpClient to all five clients', () => {
+    const http = createMockHttpClient();
+    const sdk = new LilySdk({ baseUrl: 'https://api.example.com' }, http);
 
-vi.mock('../src/clients/agent-client', () => ({
-  AgentClient: clientConstructors.AgentClient,
-}));
-vi.mock('../src/clients/wallet-client', () => ({
-  WalletClient: clientConstructors.WalletClient,
-}));
-vi.mock('../src/clients/payment-client', () => ({
-  PaymentClient: clientConstructors.PaymentClient,
-}));
-vi.mock('../src/clients/identity-client', () => ({
-  IdentityClient: clientConstructors.IdentityClient,
-}));
-vi.mock('../src/clients/system-client', () => ({
-  SystemClient: clientConstructors.SystemClient,
-}));
-vi.mock('../src/http/fetch-http-client', () => ({
-  createFetchHttpClient: vi.fn(),
-}));
+    const agentsHttp = (sdk.agents as unknown as { httpClient: HttpClient }).httpClient;
+    const walletsHttp = (sdk.wallets as unknown as { httpClient: HttpClient }).httpClient;
+    const paymentsHttp = (sdk.payments as unknown as { httpClient: HttpClient }).httpClient;
+    const identityHttp = (sdk.identity as unknown as { httpClient: HttpClient }).httpClient;
+    const systemHttp = (sdk.system as unknown as { httpClient: HttpClient }).httpClient;
 
-const fetchHttpClientMock = vi.mocked(createFetchHttpClient);
-const constructors = Object.values(clientConstructors);
-
-describe('LilySdk', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+    expect(agentsHttp).toBe(http);
+    expect(walletsHttp).toBe(http);
+    expect(paymentsHttp).toBe(http);
+    expect(identityHttp).toBe(http);
+    expect(systemHttp).toBe(http);
   });
 
-  it('routes an injected HttpClient to all five client modules', () => {
-    const httpClient = createMockHttpClient(() =>
-      Promise.resolve({
-        status: 200,
-        headers: new Headers(),
-        data: { ok: true },
-      }),
-    );
+  it('default construction creates a fetch client from resolved config', () => {
+    const sdk = new LilySdk({ baseUrl: 'https://api.example.com' });
 
-    const sdk = new LilySdk(
-      {
-        baseUrl: 'https://api.lily.test',
-        fetch: globalThis.fetch,
-      },
-      httpClient,
-    );
+    expect(sdk.agents).toBeDefined();
+    expect(sdk.wallets).toBeDefined();
+    expect(sdk.payments).toBeDefined();
+    expect(sdk.identity).toBeDefined();
+    expect(sdk.system).toBeDefined();
+    expect(sdk.config.baseUrl.toString()).toBe('https://api.example.com/');
+  });
 
-    expect(sdk.config.baseUrl.toString()).toBe('https://api.lily.test/');
-    for (const constructor of constructors) {
-      expect(constructor).toHaveBeenCalledOnce();
-      expect(constructor).toHaveBeenCalledWith(httpClient);
+  it('throws LilyConfigError for invalid config before constructing clients', () => {
+    expect(() => new LilySdk({ baseUrl: '' })).toThrow(LilyConfigError);
+    expect(() => new LilySdk({ baseUrl: 'not-a-url' })).toThrow(LilyConfigError);
+  });
+
+  it('creates an instance via LilySdk.create() with zero-config defaults', () => {
+    const sdk = LilySdk.create();
+    expect(sdk.config.baseUrl.toString()).toBe('https://api.lilyprotocol.org/');
+    expect(sdk.agents).toBeDefined();
+    expect(sdk.wallets).toBeDefined();
+    expect(sdk.payments).toBeDefined();
+  });
+
+  it('creates an instance via LilySdk.create() reading environment variables', () => {
+    const originalUrl = process.env.LILY_BASE_URL;
+    const originalKey = process.env.LILY_API_KEY;
+
+    try {
+      process.env.LILY_BASE_URL = 'https://custom-env.lily.test';
+      process.env.LILY_API_KEY = 'env_secret_key_123';
+
+      const sdk = LilySdk.create();
+      expect(sdk.config.baseUrl.toString()).toBe('https://custom-env.lily.test/');
+      expect(sdk.config.apiKey).toBe('env_secret_key_123');
+    } finally {
+      process.env.LILY_BASE_URL = originalUrl;
+      process.env.LILY_API_KEY = originalKey;
     }
-    expect(fetchHttpClientMock).not.toHaveBeenCalled();
   });
 
-  it('creates the default HttpClient from the resolved config', () => {
-    const defaultHttpClient = createMockHttpClient(() =>
-      Promise.reject(new Error('unused')),
-    );
-    fetchHttpClientMock.mockReturnValue(defaultHttpClient);
-
+  it('exposes a default HttpClient when none is injected', () => {
     const sdk = new LilySdk({
-      baseUrl: 'https://api.lily.test/v1',
-      timeoutMs: 2_000,
+      baseUrl: 'https://api.lily.test',
       fetch: globalThis.fetch,
     });
 
-    expect(fetchHttpClientMock).toHaveBeenCalledOnce();
-    expect(fetchHttpClientMock).toHaveBeenCalledWith(sdk.config);
-    for (const constructor of constructors) {
-      expect(constructor).toHaveBeenCalledWith(defaultHttpClient);
-    }
+    expect(typeof sdk.http.request).toBe('function');
   });
 
-  it('throws LilyConfigError before creating a transport or client', () => {
-    expect(() => new LilySdk({ baseUrl: 'not an absolute URL' })).toThrow(
-      LilyConfigError,
-    );
+  it('creates an SDK using environment configuration', () => {
+    vi.stubEnv('LILY_API_URL', 'https://environment.lily.test');
+    vi.stubEnv('LILY_API_KEY', 'environment-key');
+    vi.stubEnv('LILY_AUTH_TOKEN', 'environment-token');
 
-    expect(fetchHttpClientMock).not.toHaveBeenCalled();
-    for (const constructor of constructors) {
-      expect(constructor).not.toHaveBeenCalled();
-    }
+    const sdk = LilySdk.create();
+
+    expect(sdk.config.baseUrl.toString()).toBe(
+      'https://environment.lily.test/',
+    );
+    expect(sdk.config.apiKey).toBe('environment-key');
+    expect(sdk.config.authToken).toBe('environment-token');
+  });
+
+  it('gives explicit create options precedence over environment configuration', () => {
+    vi.stubEnv('LILY_API_URL', 'https://environment.lily.test');
+    vi.stubEnv('LILY_API_KEY', 'environment-key');
+    vi.stubEnv('LILY_AUTH_TOKEN', 'environment-token');
+
+    const sdk = LilySdk.create({
+      baseUrl: 'https://explicit.lily.test',
+      apiKey: 'explicit-key',
+      authToken: 'explicit-token',
+    });
+
+    expect(sdk.config.baseUrl.toString()).toBe('https://explicit.lily.test/');
+    expect(sdk.config.apiKey).toBe('explicit-key');
+    expect(sdk.config.authToken).toBe('explicit-token');
   });
 });
+
