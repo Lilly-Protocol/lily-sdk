@@ -28,6 +28,7 @@ export function createFetchHttpClient(
 
       let attempt = 0;
       let externalAbortHandler: (() => void) | undefined;
+      let abortSource: 'timeout' | 'external' | undefined;
 
       for (;;) {
         const controller = new AbortController();
@@ -38,7 +39,10 @@ export function createFetchHttpClient(
               cause: request.signal.reason ?? new Error('Aborted'),
             });
           }
-          externalAbortHandler = () => controller.abort(request.signal!.reason);
+          externalAbortHandler = () => {
+            abortSource = 'external';
+            controller.abort(request.signal!.reason);
+          };
           request.signal.addEventListener('abort', externalAbortHandler, { once: true });
         }
         const timeout = setTimeout(() => {
@@ -127,6 +131,13 @@ export function createFetchHttpClient(
           }
 
           if (error instanceof Error && error.name === 'AbortError') {
+            if (abortSource === 'external') {
+              throw new LilyTransportError('Request cancelled by caller.', {
+                code: LILY_ERROR_CODES.CANCELLED,
+                cause: error,
+                request: { method: request.method, path: request.path, url: url.toString() },
+              });
+            }
             throw new LilyTransportError('Request timed out while calling Lily Protocol API.', {
               code: LILY_ERROR_CODES.TIMEOUT,
               cause: error,
