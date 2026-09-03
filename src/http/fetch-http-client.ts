@@ -1,4 +1,5 @@
 import type { ResolvedLilySdkConfig } from '../config/types';
+import { DEFAULT_RETRYABLE_STATUS_CODES } from '../config/defaults';
 import { resolveAuthHeaders } from './resolve-auth-headers';
 import {
   LILY_ERROR_CODES,
@@ -14,8 +15,6 @@ import type {
   HttpRequest,
   HttpResponse,
 } from './types';
-
-const DEFAULT_RETRYABLE_STATUS_CODES = [408, 409, 425, 429, 500, 502, 503, 504];
 
 export function createFetchHttpClient(
   config: ResolvedLilySdkConfig,

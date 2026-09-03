@@ -115,6 +115,8 @@ The SDK accepts a `LilySdkConfig` object. All fields except `baseUrl` are option
 - The delay between attempts grows linearly: `retryDelayMs × attemptNumber` (e.g. 250 ms, then 500 ms).
 - Timeouts (`AbortError`) are wrapped as `LilyTransportError` with code `TIMEOUT` and are not retried beyond the transport policy.
 
+The default values above are not hard-coded twice: they are exported from the `@lily-protocol/sdk/config` subpath as `DEFAULT_TIMEOUT_MS` and `DEFAULT_RETRY_POLICY` (plus `DEFAULT_RETRYABLE_STATUS_CODES`), so custom `HttpClient` implementations and documentation can reference the exact defaults the SDK resolves.
+
 ### Example
 
 ```ts
