@@ -9,6 +9,7 @@ export interface LilyErrorOptions {
   statusCode?: number;
   details?: unknown;
   cause?: unknown;
+  headers?: Record<string, string>;
   request?: {
     method: string;
     path: string;
@@ -20,6 +21,7 @@ export class LilySdkError extends Error {
   public readonly code: string | undefined;
   public readonly statusCode: number | undefined;
   public readonly details: unknown;
+  public readonly headers: Record<string, string> | undefined;
   public readonly request: { method: string; path: string; url: string } | undefined;
 
   public constructor(message: string, options: LilyErrorOptions = {}) {
@@ -28,6 +30,7 @@ export class LilySdkError extends Error {
     this.code = options.code;
     this.statusCode = options.statusCode;
     this.details = options.details;
+    this.headers = options.headers;
     this.request = options.request;
   }
 
@@ -47,6 +50,10 @@ export class LilySdkError extends Error {
 
     if (this.details !== undefined) {
       result.details = this.details;
+    }
+
+    if (this.headers !== undefined) {
+      result.headers = this.headers;
     }
 
     const cause = this.cause;
@@ -95,6 +102,10 @@ export class LilySdkError extends Error {
 
     if (this.details !== undefined) {
       json.details = this.details;
+    }
+
+    if (this.headers !== undefined) {
+      json.headers = this.headers;
     }
 
     return json;

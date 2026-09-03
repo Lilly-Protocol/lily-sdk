@@ -136,6 +136,20 @@ await sdk.http.request({
 });
 ```
 
+## Documentation
+
+| Guide | Description |
+| --- | --- |
+| [Auth Headers](./docs/auth-headers.md) | API key and bearer token authentication |
+| [Error Handling](./docs/error-handling.md) | Typed error hierarchy and recovery patterns |
+| [Timeouts & Retries](./docs/timeouts-and-retries.md) | Configuring timeouts, retries, and backoff |
+| [Custom HTTP Client](./docs/custom-http-client.md) | Injecting custom fetch implementations |
+| [Environment Variables](./docs/environment-variables.md) | Configuration via env vars |
+| [Money & Stellar Assets](./docs/money-and-stellar-assets.md) | Working with Stellar native and issued assets |
+| [Non-JSON Responses](./docs/non-json-responses.md) | Handling 204 and non-JSON payloads |
+| [Runtime Requirements](./docs/runtime-requirements.md) | Node.js and browser compatibility |
+| [Subpath Imports](./docs/subpath-imports.md) | Importing from subpaths like './errors' |
+
 ## Public API Overview
 
 ```ts

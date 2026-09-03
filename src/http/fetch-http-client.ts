@@ -85,6 +85,7 @@ export function createFetchHttpClient(
               code: LILY_ERROR_CODES.AUTHENTICATION_ERROR,
               statusCode: response.status,
               details: data,
+              headers: Object.fromEntries(response.headers.entries()),
               request: { method: request.method, path: request.path, url: url.toString() },
             });
           }
@@ -111,6 +112,7 @@ export function createFetchHttpClient(
             code: LILY_ERROR_CODES.API_ERROR,
             statusCode: response.status,
             details: data,
+            headers: Object.fromEntries(response.headers.entries()),
             request: { method: request.method, path: request.path, url: url.toString() },
           });
         } catch (error) {
