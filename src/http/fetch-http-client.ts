@@ -81,7 +81,10 @@ export function createFetchHttpClient(
         try {
           const response = await config.fetch(url, requestInit);
 
-          const data = (await parseResponse(response)) as TResponse;
+          const data = (await parseResponse(
+            response,
+            requestMetadata(request, url),
+          )) as TResponse;
 
           if (response.ok) {
             cleanup();
@@ -252,14 +255,24 @@ function serializeBody(body: unknown): BodyInit | undefined {
   return JSON.stringify(body);
 }
 
-async function parseResponse(response: Response): Promise<unknown> {
+async function parseResponse(
+  response: Response,
+  request: { method: string; path: string; url: string },
+): Promise<unknown> {
   if (response.status === 204) {
     return null;
   }
 
   const contentType = response.headers.get('content-type') ?? '';
+  const isJson = contentType.includes('application/json');
 
-  if (contentType.includes('application/json')) {
+  // Successful responses must contain exactly what their content-type
+  // advertises: a malformed 2xx JSON body is a contract problem and stays a
+  // validation error. Failed responses, by contrast, may carry arbitrary
+  // error pages — when their JSON body cannot be parsed, surface the real
+  // HTTP status with the raw body text in `details` instead of a confusing
+  // body-parse validation error.
+  if (isJson && response.ok) {
     try {
       return (await response.json()) as unknown;
     } catch (error) {
@@ -271,6 +284,21 @@ async function parseResponse(response: Response): Promise<unknown> {
           cause: error,
         },
       );
+    }
+  }
+
+  if (isJson) {
+    const rawBody = await response.text().catch(() => '');
+    try {
+      return JSON.parse(rawBody) as unknown;
+    } catch (error) {
+      throw new LilyApiError('Lily Protocol API request failed.', {
+        code: LILY_ERROR_CODES.API_ERROR,
+        statusCode: response.status,
+        details: { contentType, body: rawBody },
+        request,
+        cause: error,
+      });
     }
   }
 
