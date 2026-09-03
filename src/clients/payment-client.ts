@@ -1,6 +1,7 @@
 import { encodePathSegment } from '../http/path';
 import type {
   ExecutePaymentRequest,
+  PaginationQuery,
   Payment,
   PaymentQuote,
   PaymentQuoteRequest,
@@ -35,6 +36,16 @@ export class PaymentClient extends BaseClient implements PaymentClientContract {
     return this.request({
       method: 'GET',
       path: `/v1/payments/${encodePathSegment(paymentId)}`,
+    });
+  }
+
+  public list(query: PaginationQuery = {}): Promise<readonly Payment[]> {
+    return this.request({
+      method: 'GET',
+      path: '/v1/payments',
+      query: {
+        ...query,
+      },
     });
   }
 }

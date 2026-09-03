@@ -1,5 +1,6 @@
 import { encodePathSegment } from '../http/path';
 import type {
+  PaginationQuery,
   ProvisionWalletRequest,
   Wallet,
   WalletProvisioningResult,
@@ -22,6 +23,16 @@ export class WalletClient extends BaseClient implements WalletClientContract {
     return this.request({
       method: 'GET',
       path: `/v1/wallets/${encodePathSegment(walletId)}`,
+    });
+  }
+
+  public list(query: PaginationQuery = {}): Promise<readonly Wallet[]> {
+    return this.request({
+      method: 'GET',
+      path: '/v1/wallets',
+      query: {
+        ...query,
+      },
     });
   }
 }

@@ -18,6 +18,18 @@ export function resolveLilySdkConfig(
     throw new LilyConfigError('`baseUrl` is required.');
   }
 
+  if (config.apiKey !== undefined) {
+    if (typeof config.apiKey !== 'string' || config.apiKey.trim() === '') {
+      throw new LilyConfigError('`apiKey` must be a non-empty string.');
+    }
+  }
+
+  if (config.authToken !== undefined) {
+    if (typeof config.authToken !== 'string' || config.authToken.trim() === '') {
+      throw new LilyConfigError('`authToken` must be a non-empty string.');
+    }
+  }
+
   const baseUrl = safeUrl(config.baseUrl);
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const retry = Object.freeze(resolveRetryPolicy(config.retry));
@@ -39,7 +51,11 @@ export function resolveLilySdkConfig(
   return Object.freeze({
     baseUrl,
     timeoutMs,
-    retry,
+    retry: deepFreeze({
+      retries: retry.retries,
+      retryDelayMs: retry.retryDelayMs,
+      retryableStatusCodes: retry.retryableStatusCodes,
+    }),
     defaultHeaders: Object.freeze({
       ...config.defaultHeaders,
     }),
@@ -69,6 +85,48 @@ function safeUrl(rawUrl: string | URL): URL {
   } catch {
     throw new LilyConfigError('`baseUrl` must be a valid absolute URL.');
   }
+
+  if (config.authToken) {
+    headers['authorization'] = config.authToken;
+  }
+
+  return headers;
+}
+
+function deepFreeze<T>(obj: T): T {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  Object.freeze(obj);
+
+  for (const value of Object.values(obj as Record<string, unknown>)) {
+    if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
+      deepFreeze(value);
+    }
+  }
+
+  return obj;
+}
+
+function safeUrl(rawUrl: string | URL): URL {
+  const url = rawUrl instanceof URL ? rawUrl : (() => {
+    try {
+      return new URL(rawUrl.endsWith('/') ? rawUrl : `${rawUrl}/`);
+    } catch {
+      throw new LilyConfigError('`baseUrl` must be a valid absolute URL.');
+    }
+  })();
+
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new LilyConfigError('`baseUrl` must use http: or https: protocol.');
+  }
+
+  if (!url.pathname.endsWith('/')) {
+    return new URL(url.href + '/');
+  }
+
+  return url;
 }
 
 function resolveRetryPolicy(policy?: Partial<RetryPolicy>): RetryPolicy {
@@ -92,6 +150,18 @@ function resolveRetryPolicy(policy?: Partial<RetryPolicy>): RetryPolicy {
 
   if (!Array.isArray(retryableStatusCodes)) {
     throw new LilyConfigError('`retry.retryableStatusCodes` must be an array of HTTP status codes.');
+  }
+
+  if (!Array.isArray(retryableStatusCodes)) {
+    throw new LilyConfigError('`retry.retryableStatusCodes` must be an array of integers.');
+  }
+
+  for (const code of retryableStatusCodes) {
+    if (!Number.isInteger(code) || code < 100 || code > 599) {
+      throw new LilyConfigError(
+        `Invalid retry status code: ${code}. Must be an integer between 100 and 599.`,
+      );
+    }
   }
 
   return {

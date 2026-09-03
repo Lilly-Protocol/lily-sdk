@@ -75,6 +75,47 @@ export class LilySdkError extends Error {
 
     return parts.join(': ');
   }
+
+  /**
+   * Returns a plain JSON-serializable object representation of this error.
+   */
+  public toJSON(): Record<string, unknown> {
+    const json: Record<string, unknown> = {
+      name: this.name,
+      message: this.message,
+    };
+
+    if (this.code !== undefined) {
+      json.code = this.code;
+    }
+
+    if (this.statusCode !== undefined) {
+      json.statusCode = this.statusCode;
+    }
+
+    if (this.details !== undefined) {
+      json.details = this.details;
+    }
+
+    return json;
+  }
+
+  /**
+   * Returns a rich string representation including code and statusCode.
+   */
+  public override toString(): string {
+    let str = `${this.name}: ${this.message}`;
+
+    if (this.code !== undefined) {
+      str += ` [code: ${this.code}]`;
+    }
+
+    if (this.statusCode !== undefined) {
+      str += ` (HTTP ${this.statusCode})`;
+    }
+
+    return str;
+  }
 }
 
 export class LilyConfigError extends LilySdkError {}

@@ -15,6 +15,8 @@ import type { HttpClient, HttpRequest } from './http/types';
 const DEFAULT_API_URL = 'https://api.lilyprotocol.com';
 
 export class LilySdk {
+  public static readonly version: string = SDK_VERSION;
+
   public readonly config: ResolvedLilySdkConfig;
   private readonly httpClient: HttpClient;
   public get http(): HttpClient { return this.httpClient; }
