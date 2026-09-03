@@ -7,14 +7,9 @@ import { LilyConfigError } from '../errors/sdk-error';
 import { VERSION } from '../version';
 import type { RetryPolicy } from '../http/types';
 import { toBearer } from '../http/resolve-auth-headers';
+import { DEFAULT_RETRY_POLICY, DEFAULT_TIMEOUT_MS } from './defaults';
 
-const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_USER_AGENT = `lily-sdk/${VERSION}`;
-const DEFAULT_RETRY_POLICY: RetryPolicy = {
-  retries: 2,
-  retryDelayMs: 250,
-  retryableStatusCodes: [408, 409, 425, 429, 500, 502, 503, 504],
-};
 
 const KNOWN_CONFIG_KEYS: readonly string[] = [
   'baseUrl',
