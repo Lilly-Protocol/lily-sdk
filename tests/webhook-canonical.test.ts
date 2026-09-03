@@ -15,7 +15,6 @@ describe('verifyWebhookJSON canonical serialization (issue #436)', () => {
   });
 
   it('handles nested objects with different key orders', () => {
-    const dataA = { outer: { z: 3, a: 1 }, inner: [1, 2] };
     const dataB = { inner: [1, 2], outer: { a: 1, z: 3 } };
     const sigA = createHmac('sha256', SECRET)
       .update(JSON.stringify({ inner: [1, 2], outer: { a: 1, z: 3 } }))
