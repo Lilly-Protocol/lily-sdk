@@ -14,4 +14,4 @@ export interface MoneyAmount {
   amount: string;
 }
 
-export type ResourceStatus = 'pending' | 'active' | 'inactive' | 'failed';
+export type ResourceStatus = 'pending' | 'active' | 'inactive' | 'failed' | 'paused';
