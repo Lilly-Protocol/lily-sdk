@@ -56,5 +56,5 @@ export function validateHealthStatus(data: unknown): HealthStatusShape {
       );
     }
   }
-  return obj as HealthStatusShape;
+  return obj as unknown as HealthStatusShape;
 }
