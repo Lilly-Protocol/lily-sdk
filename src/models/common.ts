@@ -67,11 +67,7 @@ export interface MoneyAmount {
 }
 
 export type ResourceStatus =
-  | 'pending'
-  | 'active'
-  | 'inactive'
-  | 'failed'
-  | 'paused';
+  'pending' | 'active' | 'inactive' | 'failed' | 'paused';
 
 const DECIMAL_AMOUNT_PATTERN = /^\d+(\.\d+)?$/;
 
