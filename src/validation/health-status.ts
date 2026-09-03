@@ -49,7 +49,7 @@ export function validateHealthStatus(data: unknown): HealthStatusShape {
     });
   }
   if (
-    obj.checks === undefined ||
+    obj.checks === undefined || obj.checks === null ||
     typeof obj.checks !== 'object' ||
     Array.isArray(obj.checks)
   ) {
