@@ -28,6 +28,9 @@ export class PaymentClient extends BaseClient implements PaymentClientContract {
     return this.request({
       method: 'POST',
       path: '/v1/payments',
+      ...(input.idempotencyKey !== undefined
+        ? { headers: { 'Idempotency-Key': input.idempotencyKey } }
+        : {}),
       body: input,
     });
   }
