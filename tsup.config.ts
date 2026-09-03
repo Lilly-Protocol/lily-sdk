@@ -1,32 +1,51 @@
 import { defineConfig } from 'tsup';
-import { readFileSync } from 'node:fs';
+import pkg from './package.json' assert { type: 'json' };
 
-const packageJson = JSON.parse(
-  readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
-) as { version: string };
-
-export default defineConfig({
-  entry: [
-    'src/index.ts',
-    'src/config.ts',
-    'src/errors.ts',
-    'src/http.ts',
-    'src/models.ts',
-    'src/types.ts',
-  ],
-  format: ['esm', 'cjs'],
-  dts: {
-    compilerOptions: {
-      exactOptionalPropertyTypes: true,
+export default defineConfig([
+  {
+    entry: [
+      'src/index.ts',
+      'src/config.ts',
+      'src/errors.ts',
+      'src/http.ts',
+      'src/models.ts',
+      'src/types.ts',
+    ],
+    format: ['esm', 'cjs'],
+    define: {
+      __LILY_SDK_VERSION__: JSON.stringify(pkg.version),
     },
+    dts: {
+      compilerOptions: {
+        exactOptionalPropertyTypes: true,
+      },
+    },
+    sourcemap: true,
+    clean: true,
+    splitting: false,
+    treeshake: true,
+    target: 'node20',
+    outDir: 'dist',
   },
-  sourcemap: true,
-  clean: true,
-  splitting: false,
-  treeshake: true,
-  target: 'node20',
-  outDir: 'dist',
-  define: {
-    __LILY_SDK_VERSION__: JSON.stringify(packageJson.version),
+  // Browser build
+  {
+    entry: [
+      'src/index.ts',
+      'src/config.ts',
+      'src/errors.ts',
+      'src/http.ts',
+      'src/models.ts',
+      'src/types.ts',
+    ],
+    format: ['esm'],
+    dts: false,
+    sourcemap: true,
+    splitting: false,
+    treeshake: true,
+    target: 'es2022',
+    platform: 'browser',
+    outDir: 'dist/browser',
+    external: [],
+    noExternal: [],
   },
-});
+]);
