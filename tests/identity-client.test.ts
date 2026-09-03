@@ -1,153 +1,120 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { IdentityClient } from '../src/clients/identity-client';
+import { LilyValidationError } from '../src/errors/sdk-error';
+import type { HttpClient, HttpResponse } from '../src/http/types';
+import type { IdentityProfile, ResolveIdentityRequest, VerifyIdentityRequest, VerificationResult } from '../src/models';
 
-import type { IdentityProfile, VerificationResult } from '../src/models';
-import { LilySdk } from '../src/sdk';
-import { createMockHttpClient } from './helpers/mock-http-client';
+function createMockHttpClient(responseData: unknown = {}): HttpClient {
+  return {
+    request: vi.fn().mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      data: responseData,
+    } as HttpResponse),
+  };
+}
+
+const mockIdentity: IdentityProfile = {
+  id: 'id-1',
+  agentId: 'agent-1',
+  displayName: 'Test Identity',
+  stellarAddress: 'GABC...',
+  domain: 'example.com',
+  status: 'active',
+  verificationLevel: 'enhanced',
+  createdAt: '2024-01-01T00:00:00Z',
+  updatedAt: '2024-01-01T00:00:00Z',
+};
+
+const mockVerification: VerificationResult = {
+  identityId: 'id-1',
+  verified: true,
+  verifiedAt: '2024-01-01T01:00:00Z',
+};
 
 describe('IdentityClient', () => {
-  // ─── resolve ───────────────────────────────────────────
-  it('resolve sends POST /v1/identity/resolve with ResolveIdentityRequest body', async () => {
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
-        status: 200,
-        headers: new Headers(),
-        data: {
-          id: 'id-001',
-          type: 'agent',
-          name: 'Agent Smith',
-          verified: true,
-          createdAt: '2026-01-01T00:00:00Z',
-          updatedAt: '2026-01-01T00:00:00Z',
-        } satisfies IdentityProfile,
-      }),
-    );
+  let httpClient: HttpClient;
+  let client: IdentityClient;
 
-    const sdk = new LilySdk(
-      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
-      createMockHttpClient(requestSpy),
-    );
-
-    const input = {
-      identifier: 'agent-001',
-      type: 'agent' as const,
-    };
-
-    const result = await sdk.identity.resolve(input);
-
-    expect(requestSpy).toHaveBeenCalledWith({
-      method: 'POST',
-      path: '/v1/identity/resolve',
-      body: input,
-    });
-    expect(result.id).toBe('id-001');
-    expect(result.name).toBe('Agent Smith');
-    expect(result.verified).toBe(true);
+  beforeEach(() => {
+    httpClient = createMockHttpClient();
+    client = new IdentityClient(httpClient);
   });
 
-  it('resolve return value passthrough from HttpResponse.data', async () => {
-    const mockData = {
-      id: 'id-pt',
-      type: 'user',
-      name: 'Test User',
-      verified: false,
-      createdAt: '2026-06-01T00:00:00Z',
-      updatedAt: '2026-06-01T00:00:00Z',
-    };
-
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
+  describe('resolve', () => {
+    it('sends POST /v1/identity/resolve with the input body and returns the profile', async () => {
+      const input: ResolveIdentityRequest = {
+        agentId: 'agent-1',
+      };
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
         status: 200,
         headers: new Headers(),
-        data: mockData,
-      }),
-    );
+        data: mockIdentity,
+      } as HttpResponse);
 
-    const sdk = new LilySdk(
-      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
-      createMockHttpClient(requestSpy),
-    );
+      const result = await client.resolve(input);
 
-    const result = await sdk.identity.resolve({
-      identifier: 'test-user',
-      type: 'user' as const,
+      expect(result).toEqual(mockIdentity);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'POST',
+        path: '/v1/identity/resolve',
+        body: input,
+      });
     });
 
-    expect(result).toEqual(mockData);
+    it('throws LilyValidationError when no resolver key is provided', async () => {
+      await expect(client.resolve({})).rejects.toBeInstanceOf(LilyValidationError);
+      expect(httpClient.request).not.toHaveBeenCalled();
+    });
+
+    it('throws LilyValidationError when resolver key is empty', async () => {
+      await expect(client.resolve({ agentId: '   ' })).rejects.toBeInstanceOf(LilyValidationError);
+      expect(httpClient.request).not.toHaveBeenCalled();
+    });
+
+    it('throws LilyValidationError when more than one resolver key is provided', async () => {
+      await expect(
+        client.resolve({ agentId: 'agent-1', stellarAddress: 'GABC...' }),
+      ).rejects.toBeInstanceOf(LilyValidationError);
+      expect(httpClient.request).not.toHaveBeenCalled();
+    });
   });
 
-  // ─── verify ───────────────────────────────────────────
-  it('verify sends POST /v1/identity/verify with VerifyIdentityRequest body', async () => {
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
+  describe('verify', () => {
+    it('sends POST /v1/identity/verify with the input body and returns the result', async () => {
+      const input: VerifyIdentityRequest = {
+        identityId: 'id-1',
+        challenge: 'test-challenge',
+        signature: 'test-signature',
+      };
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
         status: 200,
         headers: new Headers(),
-        data: {
-          verified: true,
-          score: 0.95,
-          checks: [
-            { name: 'document', passed: true },
-            { name: 'biometric', passed: true },
-            { name: 'liveness', passed: true },
-          ],
-          verifiedAt: '2026-01-01T00:00:00Z',
-        } satisfies VerificationResult,
-      }),
-    );
+        data: mockVerification,
+      } as HttpResponse);
 
-    const sdk = new LilySdk(
-      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
-      createMockHttpClient(requestSpy),
-    );
+      const result = await client.verify(input);
 
-    const input = {
-      identityId: 'id-001',
-      documentHash: '0xabc123',
-      biometricHash: '0xdef456',
-    };
-
-    const result = await sdk.identity.verify(input);
-
-    expect(requestSpy).toHaveBeenCalledWith({
-      method: 'POST',
-      path: '/v1/identity/verify',
-      body: input,
+      expect(result.verified).toBe(true);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'POST',
+        path: '/v1/identity/verify',
+        body: input,
+      });
     });
-    expect(result.verified).toBe(true);
-    expect(result.score).toBe(0.95);
-    expect(result.checks).toHaveLength(3);
-    expect(result.checks[0].passed).toBe(true);
+
+    it('throws LilyValidationError for empty required fields', async () => {
+      await expect(
+        client.verify({ identityId: '', challenge: 'c', signature: 's' }),
+      ).rejects.toBeInstanceOf(LilyValidationError);
+      expect(httpClient.request).not.toHaveBeenCalled();
+    });
   });
 
-  it('verify return value passthrough from HttpResponse.data', async () => {
-    const mockData = {
-      verified: false,
-      score: 0.3,
-      checks: [
-        { name: 'document', passed: true },
-        { name: 'biometric', passed: false },
-      ],
-      verifiedAt: '2026-03-15T10:00:00Z',
-    };
-
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
-        status: 200,
-        headers: new Headers(),
-        data: mockData,
-      }),
-    );
-
-    const sdk = new LilySdk(
-      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
-      createMockHttpClient(requestSpy),
-    );
-
-    const result = await sdk.identity.verify({
-      identityId: 'id-1',
-      documentHash: 'hash',
-      biometricHash: 'bio',
+  describe('get', () => {
+    it('throws LilyValidationError for empty identityId', async () => {
+      await expect(client.get('   ')).rejects.toBeInstanceOf(LilyValidationError);
+      expect(httpClient.request).not.toHaveBeenCalled();
     });
-
-    expect(result).toEqual(mockData);
   });
 });

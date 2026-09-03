@@ -1,95 +1,159 @@
-import { describe, it, expect, vi } from 'vitest';
-import type { HttpClient, HttpRequest, HttpResponse } from '../src/http/types';
-import { BaseClient } from '../src/clients/base-client';
+import { describe, expect, it, vi } from 'vitest';
+import { createFetchHttpClient } from '../src/http/fetch-http-client';
 
-function createMockClient(mockFn: ReturnType<typeof vi.fn>): HttpClient {
-  return {
-    async request<TResponse, TRequest = unknown>(req: HttpRequest<TRequest>): Promise<HttpResponse<TResponse>> {
-      const url = `https://api.test.io${req.path}`;
-      const result = await mockFn(url, req);
-      return {
-        status: result.status,
-        headers: new Map(),
-        data: result.data,
-      } as HttpResponse<TResponse>;
-    },
-  };
-}
+describe('concurrent request isolation', () => {
+  it('handles 20 concurrent requests with correct per-request responses', async () => {
+    const callLog: number[] = [];
+    let callIndex = 0;
 
-class TestClient extends BaseClient {
-  public async get<T>(path: string): Promise<T> {
-    return this.request<T>({ method: 'GET', path });
-  }
-  public async post<T>(path: string, body: unknown): Promise<T> {
-    return this.request<T>({ method: 'POST', path, body: body as any });
-  }
-}
+    const fetchSpy = vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
+      const myIndex = callIndex++;
+      callLog.push(myIndex);
 
-describe('Concurrent stress (issue #103)', () => {
-  it('handles 50 concurrent requests sharing one HttpClient', async () => {
-    const mockFetch = vi.fn(async (url: string, init?: any) => ({
-      status: 200,
-      data: { url, method: init?.method || 'GET' },
-    }));
-    const client = createMockClient(mockFetch);
-    const test = new TestClient(client);
+      // Simulate variable latency to stress-test timeout/abort isolation
+      const delay = Math.floor(Math.random() * 50);
 
-    const results = await Promise.all(
-      Array.from({ length: 50 }, (_, i) => test.get(`/endpoint-${i}`))
+      return new Promise<Response>((resolve) => {
+        setTimeout(() => {
+          resolve(
+            new Response(JSON.stringify({ requestId: myIndex, status: 'ok' }), {
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+            }),
+          );
+        }, delay);
+      });
+    });
+
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 5_000,
+      retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
+    });
+
+    const concurrency = 20;
+    const promises = Array.from({ length: concurrency }, (_, i) =>
+      httpClient.request<{ requestId: number; status: string }>({
+        method: 'GET',
+        path: `/v1/test/${i}`,
+      }),
     );
 
-    expect(results).toHaveLength(50);
-    expect(mockFetch).toHaveBeenCalledTimes(50);
-    results.forEach((r: any, i) => {
-      expect(r.url).toBe(`https://api.test.io/endpoint-${i}`);
-    });
+    const results = await Promise.all(promises);
+
+    // Every request got its own response
+    expect(results).toHaveLength(concurrency);
+    expect(fetchSpy).toHaveBeenCalledTimes(concurrency);
+
+    // Each response matches a unique request (no cross-contamination)
+    const responseIds = results
+      .map((r) => r.data.requestId)
+      .sort((a, b) => a - b);
+    const expectedIds = Array.from({ length: concurrency }, (_, i) => i);
+    expect(responseIds).toEqual(expectedIds);
+
+    // All timers were cleared — no leaked setTimeouts
+    // (if timers leaked, vitest would warn or the test would hang)
   });
 
-  it('mixed read/write operations do not interfere', async () => {
-    const state: Record<string, any> = {};
-    const mockFetch = vi.fn(async (url: string, init?: any) => {
-      const method = init?.method || 'GET';
-      if (method === 'POST') {
-        state[url] = init.body;
-        return { status: 201, data: { created: true } };
+  it('isolates retry state across concurrent failing requests', async () => {
+    const attemptCounts: Record<string, number> = {};
+
+    const fetchSpy = vi.fn((input: URL | RequestInfo) => {
+      const path = new URL(input.toString()).pathname;
+      attemptCounts[path] = (attemptCounts[path] ?? 0) + 1;
+
+      // First 2 attempts fail with 503, third succeeds
+      if (attemptCounts[path]! < 3) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ error: 'unavailable' }), {
+            status: 503,
+            headers: { 'content-type': 'application/json' },
+          }),
+        );
       }
-      return { status: 200, data: state[url] || null };
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ path, attempt: attemptCounts[path] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
     });
-    const client = createMockClient(mockFetch);
-    const test = new TestClient(client);
 
-    const writes = Array.from({ length: 10 }, (_, i) =>
-      test.post(`/item-${i}`, { id: i, value: `val-${i}` })
-    );
-    await Promise.all(writes);
-
-    const reads = await Promise.all(
-      Array.from({ length: 10 }, (_, i) => test.get(`/item-${i}`))
-    );
-
-    reads.forEach((r: any, i) => {
-      expect(r).toEqual({ id: i, value: `val-${i}` });
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 5_000,
+      retry: { retries: 3, retryDelayMs: 0, retryableStatusCodes: [503] },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
     });
+
+    const paths = ['/v1/a', '/v1/b', '/v1/c', '/v1/d', '/v1/e'];
+    const promises = paths.map((path) =>
+      httpClient.request<{ path: string; attempt: number }>({
+        method: 'GET',
+        path,
+      }),
+    );
+
+    const results = await Promise.all(promises);
+
+    // Each path made exactly 3 attempts (2 failures + 1 success)
+    for (const path of paths) {
+      expect(attemptCounts[path]).toBe(3);
+    }
+
+    // Each response has the correct final attempt count
+    for (const result of results) {
+      expect(result.data.attempt).toBe(3);
+    }
+
+    // Total fetch calls = 5 paths × 3 attempts each
+    expect(fetchSpy).toHaveBeenCalledTimes(15);
   });
 
-  it('one failing request does not affect others in concurrent batch', async () => {
-    let callCount = 0;
-    const mockFetch = vi.fn(async (url: string) => {
-      callCount++;
-      if (callCount === 5) {
-        throw new Error('server error');
-      }
-      return { status: 200, data: { ok: true } };
-    });
-    const client = createMockClient(mockFetch);
-    const test = new TestClient(client);
+  it('does not leak AbortControllers on concurrent timeout-free requests', async () => {
+    const abortSignals: AbortSignal[] = [];
 
-    const results = await Promise.allSettled(
-      Array.from({ length: 10 }, () => test.get('/test'))
+    const fetchSpy = vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
+      if (init?.signal) {
+        abortSignals.push(init.signal);
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+    });
+
+    const httpClient = createFetchHttpClient({
+      baseUrl: new URL('https://api.lily.test/'),
+      timeoutMs: 5_000,
+      retry: { retries: 0, retryDelayMs: 0, retryableStatusCodes: [] },
+      defaultHeaders: {},
+      userAgent: 'lily-sdk/test',
+      fetch: fetchSpy,
+    });
+
+    const concurrency = 10;
+    await Promise.all(
+      Array.from({ length: concurrency }, () =>
+        httpClient.request({ method: 'GET', path: '/v1/test' }),
+      ),
     );
 
-    const fulfilled = results.filter(r => r.status === 'fulfilled');
-    const rejected = results.filter(r => r.status === 'rejected');
-    expect(fulfilled.length + rejected.length).toBe(10);
+    // Each request created exactly one AbortController signal
+    expect(abortSignals).toHaveLength(concurrency);
+
+    // No signals were aborted (all requests succeeded without timeout)
+    for (const signal of abortSignals) {
+      expect(signal.aborted).toBe(false);
+    }
   });
 });

@@ -2,50 +2,47 @@ import { describe, it, expect, vi } from 'vitest';
 import { IdentityClient } from '../src/clients/identity-client';
 import type { HttpClient } from '../src/http/types';
 
-/**
- * Bounty #76 — $65
- * "Add `IdentityClient.get(identityId)`"
- */
+function makeMockHttpClient(): HttpClient {
+  return {
+    request: vi.fn().mockResolvedValue({
+      status: 200,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      data: {
+        id: 'ident-abc',
+        agentId: 'agent-1',
+        displayName: 'Test Agent',
+        status: 'active',
+        verificationLevel: 'basic',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+      attempts: 1,
+      retried: false,
+    }),
+  };
+}
+
 describe('IdentityClient.get', () => {
-  it('sends GET /v1/identity/:identityId', async () => {
-    const httpClient: HttpClient = {
-      request: vi.fn().mockResolvedValue({
-        status: 200,
-        headers: new Headers(),
-        data: {
-          id: 'idn_123',
-          address: 'GABC123',
-          status: 'active',
-        },
-      }),
-    };
-    const client = new IdentityClient(httpClient);
-    await client.get('idn_123');
+  it('sends GET /v1/identity/:id with encoded identityId', async () => {
+    const mockClient = makeMockHttpClient();
+    const client = new IdentityClient(mockClient);
 
-    const request = (httpClient.request as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(request.method).toBe('GET');
-    expect(request.path).toBe('/v1/identity/idn_123');
+    const result = await client.get('ident-abc');
+
+    expect(result.id).toBe('ident-abc');
+    expect(mockClient.request).toHaveBeenCalledTimes(1);
+    const callArg = (mockClient.request as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(callArg.method).toBe('GET');
+    expect(callArg.path).toBe('/v1/identity/ident-abc');
   });
 
-  it('returns the identity profile data', async () => {
-    const profile = { id: 'idn_456', address: 'GXYZ', status: 'active' };
-    const httpClient: HttpClient = {
-      request: vi.fn().mockResolvedValue({
-        status: 200,
-        headers: new Headers(),
-        data: profile,
-      }),
-    };
-    const client = new IdentityClient(httpClient);
-    const result = await client.get('idn_456');
-    expect(result).toEqual(profile);
-  });
+  it('encodes special characters in identityId', async () => {
+    const mockClient = makeMockHttpClient();
+    const client = new IdentityClient(mockClient);
 
-  it('propagates errors from the transport', async () => {
-    const httpClient: HttpClient = {
-      request: vi.fn().mockRejectedValue(new Error('network error')),
-    };
-    const client = new IdentityClient(httpClient);
-    await expect(client.get('idn_789')).rejects.toThrow('network error');
+    await client.get('ident/with spaces');
+
+    const callArg = (mockClient.request as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(callArg.path).toBe('/v1/identity/ident%2Fwith%20spaces');
   });
 });

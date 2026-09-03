@@ -1,31 +1,19 @@
 import type { LilySdkConfig, ResolvedLilySdkConfig } from './types';
 import { LilyConfigError } from '../errors/sdk-error';
+import { VERSION } from '../version';
 import type { RetryPolicy } from '../http/types';
 
 const DEFAULT_TIMEOUT_MS = 10_000;
-const DEFAULT_USER_AGENT = 'lily-sdk/0.1.0';
+const DEFAULT_USER_AGENT = `lily-sdk/${VERSION}`;
 const DEFAULT_RETRY_POLICY: RetryPolicy = {
   retries: 2,
   retryDelayMs: 250,
   retryableStatusCodes: [408, 409, 425, 429, 500, 502, 503, 504],
 };
 
-export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConfig {
-  const KNOWN_KEYS = new Set([
-    'baseUrl', 'apiKey', 'authToken', 'timeoutMs',
-    'retry', 'defaultHeaders', 'userAgent', 'fetch',
-  ]);
-
-  const configKeys = Object.keys(config);
-  const unknownKeys = configKeys.filter((k) => !KNOWN_KEYS.has(k));
-
-  if (unknownKeys.length > 0) {
-    console.warn(
-      `[lily-sdk] Unknown config key(s): ${unknownKeys.join(', ')}. ` +
-      `Known keys: ${[...KNOWN_KEYS].join(', ')}.`,
-    );
-  }
-
+export function resolveLilySdkConfig(
+  config: LilySdkConfig,
+): ResolvedLilySdkConfig {
   if (!config.baseUrl) {
     throw new LilyConfigError('`baseUrl` is required.');
   }
@@ -44,8 +32,11 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
 
   const baseUrl = safeUrl(config.baseUrl);
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const retry = resolveRetryPolicy(config.retry);
+  const retry = Object.freeze(resolveRetryPolicy(config.retry));
   const fetchImpl = config.fetch ?? globalThis.fetch;
+  const resolvedApiKey = resolveCredential(config.apiKey, 'LILY_API_KEY');
+  const resolvedAuthToken = resolveCredential(config.authToken, 'LILY_AUTH_TOKEN');
+  const validateResponses = config.validateResponses ?? true;
 
   if (typeof fetchImpl !== 'function') {
     throw new LilyConfigError(
@@ -57,7 +48,7 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
     throw new LilyConfigError('`timeoutMs` must be a positive number.');
   }
 
-  const resolved: ResolvedLilySdkConfig = {
+  return Object.freeze({
     baseUrl,
     timeoutMs,
     retry: deepFreeze({
@@ -70,26 +61,29 @@ export function resolveLilySdkConfig(config: LilySdkConfig): ResolvedLilySdkConf
     }),
     userAgent: config.userAgent ?? DEFAULT_USER_AGENT,
     fetch: fetchImpl,
-    toHeaders: () => buildAuthHeaders(config, config.userAgent ?? DEFAULT_USER_AGENT),
-    ...(config.apiKey ? { apiKey: config.apiKey } : {}),
-    ...(config.authToken ? { authToken: config.authToken } : {}),
-  };
-
-  return Object.freeze(resolved);
+    ...(resolvedApiKey ? { apiKey: resolvedApiKey } : {}),
+    ...(resolvedAuthToken ? { authToken: resolvedAuthToken } : {}),
+    validateResponses,
+  });
 }
 
-function buildAuthHeaders(
-  config: LilySdkConfig,
-  userAgent: string,
-): Record<string, string> {
-  const headers: Record<string, string> = {
-    accept: 'application/json',
-    'user-agent': userAgent,
-    ...config.defaultHeaders,
-  };
+function resolveCredential(
+  explicit: string | undefined,
+  envName: string,
+): string | undefined {
+  return explicit ?? process.env[envName] ?? undefined;
+}
 
-  if (config.apiKey) {
-    headers['x-api-key'] = config.apiKey;
+function safeUrl(rawUrl: string | URL): URL {
+  try {
+    if (rawUrl instanceof URL) {
+      return new URL(
+        rawUrl.href.endsWith('/') ? rawUrl.href : `${rawUrl.href}/`,
+      );
+    }
+    return new URL(rawUrl.endsWith('/') ? rawUrl : `${rawUrl}/`);
+  } catch {
+    throw new LilyConfigError('`baseUrl` must be a valid absolute URL.');
   }
 
   if (config.authToken) {
@@ -137,16 +131,25 @@ function safeUrl(rawUrl: string | URL): URL {
 
 function resolveRetryPolicy(policy?: Partial<RetryPolicy>): RetryPolicy {
   const retries = policy?.retries ?? DEFAULT_RETRY_POLICY.retries;
-  const retryDelayMs = policy?.retryDelayMs ?? DEFAULT_RETRY_POLICY.retryDelayMs;
+  const retryDelayMs =
+    policy?.retryDelayMs ?? DEFAULT_RETRY_POLICY.retryDelayMs;
   const retryableStatusCodes =
     policy?.retryableStatusCodes ?? DEFAULT_RETRY_POLICY.retryableStatusCodes;
 
   if (!Number.isInteger(retries) || retries < 0) {
-    throw new LilyConfigError('`retry.retries` must be a non-negative integer.');
+    throw new LilyConfigError(
+      '`retry.retries` must be a non-negative integer.',
+    );
   }
 
   if (!Number.isFinite(retryDelayMs) || retryDelayMs < 0) {
-    throw new LilyConfigError('`retry.retryDelayMs` must be a non-negative number.');
+    throw new LilyConfigError(
+      '`retry.retryDelayMs` must be a non-negative number.',
+    );
+  }
+
+  if (!Array.isArray(retryableStatusCodes)) {
+    throw new LilyConfigError('`retry.retryableStatusCodes` must be an array of HTTP status codes.');
   }
 
   if (!Array.isArray(retryableStatusCodes)) {

@@ -2,55 +2,52 @@
 
 ## Supported Versions
 
-The following versions of `@lily-protocol/sdk` receive security updates:
-
-| Version | Supported |
-| ------- | ---------- |
-| 0.1.x   | ✅        |
-| < 0.1.0 | ❌        |
+| Version | Supported          |
+| ------- | ------------------ |
+| 0.1.x   | :white_check_mark: |
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in the Lily Protocol SDK, please report it responsibly:
+**Please do NOT report security vulnerabilities through public GitHub issues.**
 
-1. **Email** your findings to `security@lily-protocol.dev`.
-2. Include a clear description of the issue, steps to reproduce, and the potential impact.
-3. If possible, provide a proof-of-concept.
+If you discover a security vulnerability in this project, please report it using one of the following methods:
+
+- **GitHub Security Advisories**: Use the "Report a vulnerability" button on the [Security tab](https://github.com/Lilly-Protocol/lily-sdk/security/advisories/new) of this repository.
+- **Email**: Send details to security@lilyprotocol.com (encrypted with our PGP key if possible).
+
+### What to Include
+
+- Description of the vulnerability
+- Steps to reproduce or proof-of-concept
+- Potential impact assessment
+- Suggested fix (if any)
 
 ### Response Timeline
 
-| Step | Target |
-| ---- | ------ |
-| Acknowledgement of report | 48 hours |
-| Initial assessment | 5 business days |
-| Fix or mitigation | 30 days (severity-dependent) |
+- **Acknowledgment**: We will acknowledge receipt within 48 hours.
+- **Initial Assessment**: A preliminary assessment will be provided within 5 business days.
+- **Resolution Target**: Critical vulnerabilities will be patched within 30 days; lower-severity issues may take longer depending on complexity.
 
-## Coordinated Disclosure
+### Safe Harbor
 
-- Please **do not** disclose the vulnerability publicly until a fix has been released.
-- We will credit reporters in the release notes unless you prefer to remain anonymous.
-- We follow a **90-day disclosure deadline** from the initial report. If a fix is not released within 90 days, the reporter may publish details of the vulnerability.
+We consider security research conducted in accordance with this policy to be:
+
+- Authorized and lawful
+- Helpful to the overall security of the ecosystem
+- Conducted in good faith
+
+We will not pursue legal action against researchers who follow this policy and act responsibly.
+
+## Disclosure Policy
+
+We follow coordinated disclosure. Please allow us reasonable time to address the issue before any public disclosure. We will credit reporters in release notes unless anonymity is requested.
 
 ## Scope
 
-**In scope:**
-- The `@lily-protocol/sdk` TypeScript source code in this repository.
-- The published npm package matching a release tag.
+This policy applies to:
 
-**Out of scope:**
-- Third-party dependencies (report to the upstream maintainer).
-- The Lily Protocol backend API (report to `security@lily-protocol.dev` with "Backend" in the subject).
-- Social engineering, phishing, or physical attacks.
+- The `@lily-protocol/sdk` npm package
+- Source code in this repository
+- Official documentation and examples
 
-## Bounty Rewards
-
-We offer monetary rewards for confirmed security vulnerabilities:
-
-| Severity (CVSS) | Reward |
-| --------------- | ------ |
-| Critical (9.0–10.0) | $500 |
-| High (7.0–8.9) | $250 |
-| Medium (4.0–6.9) | $100 |
-| Low (0.1–3.9) | $50 |
-
-Rewards are paid via PayPal or cryptocurrency at the reporter's preference.
+Out of scope: third-party dependencies (report to their maintainers), social engineering attacks, and denial-of-service testing against production systems.

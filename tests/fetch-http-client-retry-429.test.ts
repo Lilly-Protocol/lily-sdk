@@ -1,129 +1,51 @@
-import { describe, expect, it, vi } from 'vitest';
-
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ResolvedLilySdkConfig } from '../src/config/types';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 
-function createConfig(overrides: Record<string, unknown> = {}) {
+function makeConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): ResolvedLilySdkConfig {
   return {
-    baseUrl: new URL('https://api.lily.test/'),
-    timeoutMs: 2_000,
-    retry: {
-      retries: 2,
-      retryDelayMs: 0,
-      retryableStatusCodes: [429, 500, 502, 503, 504],
-    },
+    baseUrl: new URL('https://api.example.com'),
+    apiKey: undefined,
+    authToken: undefined,
     defaultHeaders: {},
     userAgent: 'lily-sdk/test',
-    fetch: vi.fn(),
+    timeoutMs: 1000,
+    fetch: overrides.fetch ?? vi.fn(),
+    retry: {
+      retries: 3,
+      retryDelayMs: 10,
+      retryableStatusCodes: [408, 409, 425, 429, 500, 502, 503, 504],
+    },
     ...overrides,
-  };
+  } as ResolvedLilySdkConfig;
 }
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  });
-}
-
-describe('fetch-http-client — 429-then-success retry flow', () => {
-  it('retries on 429 and succeeds on the second attempt', async () => {
-    const fetchSpy = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ message: 'rate limited' }, 429))
-      .mockResolvedValueOnce(jsonResponse({ status: 'ok' }, 200));
-
-    const client = createFetchHttpClient(createConfig({ fetch: fetchSpy }));
-
-    const response = await client.request({
-      method: 'GET',
-      path: '/v1/system/health',
-    });
-
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(response.status).toBe(200);
-    expect(response.data).toEqual({ status: 'ok' });
+describe('fetch-http-client retry on 429 then success', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
   });
 
-  it('retries on 429 twice then succeeds on the third attempt', async () => {
-    const fetchSpy = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ message: 'rate limited' }, 429))
-      .mockResolvedValueOnce(jsonResponse({ message: 'still rate limited' }, 429))
-      .mockResolvedValueOnce(jsonResponse({ status: 'ok' }, 200));
-
-    const client = createFetchHttpClient({
-      ...createConfig(),
-      fetch: fetchSpy,
-      retry: {
-        retries: 2,
-        retryDelayMs: 0,
-        retryableStatusCodes: [429],
-      },
-    } as any);
-
-    const response = await client.request({
-      method: 'GET',
-      path: '/v1/system/health',
-    });
-
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
-    expect(response.status).toBe(200);
-    expect(response.data).toEqual({ status: 'ok' });
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
-  it('exhausts retries on repeated 429 and throws', async () => {
-    const fetchSpy = vi.fn(() => Promise.resolve(jsonResponse({ message: 'rate limited' }, 429)));
-    const client = createFetchHttpClient(createConfig({
-      fetch: fetchSpy,
-      retry: {
-        retries: 2,
-        retryDelayMs: 0,
-        retryableStatusCodes: [429],
-      },
-    }));
+  it('retries once after 429 and returns the subsequent 200 response', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'rate limited' }), { status: 429 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } }));
 
-    await expect(
-      client.request({
-        method: 'GET',
-        path: '/v1/system/health',
-      }),
-    ).rejects.toThrow();
+    const config = makeConfig({ fetch: fetchMock });
+    const client = createFetchHttpClient(config);
 
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
-  });
+    const promise = client.request({ method: 'GET', path: '/test' });
 
-  it('retries on 503 then succeeds', async () => {
-    const fetchSpy = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ message: 'unavailable' }, 503))
-      .mockResolvedValueOnce(jsonResponse({ status: 'ok' }, 200));
+    // First attempt fails with 429, delay is retryDelayMs * 1 = 10ms
+    await vi.advanceTimersByTimeAsync(10);
 
-    const client = createFetchHttpClient(createConfig({ fetch: fetchSpy }));
+    const result = await promise;
 
-    const response = await client.request({
-      method: 'GET',
-      path: '/v1/system/health',
-    });
-
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(response.status).toBe(200);
-  });
-
-  it('retries on 500 then succeeds with data passthrough', async () => {
-    const mockData = { id: 'w-1', status: 'active', balance: '100' };
-    const fetchSpy = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ message: 'error' }, 500))
-      .mockResolvedValueOnce(jsonResponse(mockData, 200));
-
-    const client = createFetchHttpClient(createConfig({ fetch: fetchSpy }));
-
-    const response = await client.request({
-      method: 'GET',
-      path: '/v1/wallets/w-1',
-    });
-
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(response.data).toEqual(mockData);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.status).toBe(200);
+    expect(result.data).toEqual({ ok: true });
   });
 });

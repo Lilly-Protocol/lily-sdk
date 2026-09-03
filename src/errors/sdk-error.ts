@@ -1,14 +1,26 @@
+export interface LilyRequestMetadata {
+  method: string;
+  path: string;
+  url: string;
+}
+
 export interface LilyErrorOptions {
   code?: string;
   statusCode?: number;
   details?: unknown;
   cause?: unknown;
+  request?: {
+    method: string;
+    path: string;
+    url: string;
+  };
 }
 
 export class LilySdkError extends Error {
   public readonly code: string | undefined;
   public readonly statusCode: number | undefined;
   public readonly details: unknown;
+  public readonly request: { method: string; path: string; url: string } | undefined;
 
   public constructor(message: string, options: LilyErrorOptions = {}) {
     super(message, { cause: options.cause });
@@ -16,6 +28,52 @@ export class LilySdkError extends Error {
     this.code = options.code;
     this.statusCode = options.statusCode;
     this.details = options.details;
+    this.request = options.request;
+  }
+
+  public toJSON(): Record<string, unknown> {
+    const result: Record<string, unknown> = {
+      name: this.name,
+      message: this.message,
+    };
+
+    if (this.code !== undefined) {
+      result.code = this.code;
+    }
+
+    if (this.statusCode !== undefined) {
+      result.statusCode = this.statusCode;
+    }
+
+    if (this.details !== undefined) {
+      result.details = this.details;
+    }
+
+    const cause = this.cause;
+    if (cause !== undefined && cause !== null) {
+      result.cause =
+        cause instanceof LilySdkError
+          ? cause.toJSON()
+          : cause instanceof Error
+            ? { name: cause.name, message: cause.message }
+            : cause;
+    }
+
+    return result;
+  }
+
+  public override toString(): string {
+    const parts: string[] = [this.name, this.message];
+
+    if (this.code !== undefined) {
+      parts.push(`[${this.code}]`);
+    }
+
+    if (this.statusCode !== undefined) {
+      parts.push(`(HTTP ${this.statusCode})`);
+    }
+
+    return parts.join(': ');
   }
 
   /**
@@ -62,26 +120,6 @@ export class LilySdkError extends Error {
 
 export class LilyConfigError extends LilySdkError {}
 export class LilyTransportError extends LilySdkError {}
-export class LilyValidationError extends LilySdkError {}
 export class LilyAuthenticationError extends LilySdkError {}
 export class LilyApiError extends LilySdkError {}
-
-/**
- * Immutable map of well-known Lily SDK error codes.
- */
-export const LILY_ERROR_CODES = Object.freeze({
-  CONFIG_ERROR: 'CONFIG_ERROR',
-  API_ERROR: 'API_ERROR',
-  AUTHENTICATION_ERROR: 'AUTHENTICATION_ERROR',
-  TRANSPORT_ERROR: 'TRANSPORT_ERROR',
-  VALIDATION_ERROR: 'VALIDATION_ERROR',
-  TIMEOUT: 'TIMEOUT',
-} as const);
-
-/**
- * Type guard that returns true if the given value is an instance of LilySdkError
- * (or any subclass thereof).
- */
-export function isLilySdkError(value: unknown): value is LilySdkError {
-  return value instanceof LilySdkError;
-}
+export class LilyValidationError extends LilySdkError {}

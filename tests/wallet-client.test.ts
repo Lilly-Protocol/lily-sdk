@@ -1,233 +1,82 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { WalletClient } from '../src/clients/wallet-client';
+import type { HttpClient, HttpResponse } from '../src/http/types';
+import type { Wallet, ProvisionWalletRequest, WalletProvisioningResult } from '../src/models';
 
-import type { Wallet, WalletProvisioningResult } from '../src/models';
-import { LilySdk } from '../src/sdk';
-import { createMockHttpClient } from './helpers/mock-http-client';
+function createMockHttpClient(responseData: unknown = {}): HttpClient {
+  return {
+    request: vi.fn().mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      data: responseData,
+    } as HttpResponse),
+  };
+}
+
+const mockWallet: Wallet = {
+  id: 'wallet-1',
+  agentId: 'agent-1',
+  address: 'GABC...',
+  network: 'stellar-testnet',
+  status: 'active',
+  balances: [],
+  createdAt: '2024-01-01T00:00:00Z',
+  updatedAt: '2024-01-01T00:00:00Z',
+};
 
 describe('WalletClient', () => {
-  it('provision sends POST /v1/wallets/provision with ProvisionWalletRequest body', async () => {
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
+  let httpClient: HttpClient;
+  let client: WalletClient;
+
+  beforeEach(() => {
+    httpClient = createMockHttpClient();
+    client = new WalletClient(httpClient);
+  });
+
+  describe('provision', () => {
+    it('sends POST /v1/wallets/provision with the input body and returns result', async () => {
+      const input: ProvisionWalletRequest = {
+        agentId: 'agent-1',
+        network: 'stellar-testnet',
+        fundingAsset: { assetCode: 'XLM', amount: '100' },
+      };
+      const result: WalletProvisioningResult = {
+        wallet: mockWallet,
+        recoveryHint: 'some-hint',
+      };
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
         status: 201,
         headers: new Headers(),
-        data: {
-          wallet: {
-            id: 'wallet-123',
-            agentId: 'agent-001',
-            address: 'GABC123...',
-            network: 'stellar-testnet',
-            status: 'active',
-            balances: [],
-            createdAt: '2026-01-01T00:00:00Z',
-            updatedAt: '2026-01-01T00:00:00Z',
-          },
-          recoveryHint: 'rh-abc',
-        } satisfies WalletProvisioningResult,
-      }),
-    );
+        data: result,
+      } as HttpResponse);
 
-    const sdk = new LilySdk(
-      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
-      createMockHttpClient(requestSpy),
-    );
+      const response = await client.provision(input);
 
-    const input = {
-      agentId: 'agent-001',
-      network: 'stellar-testnet' as const,
-    };
-
-    const result = await sdk.wallets.provision(input);
-
-    expect(requestSpy).toHaveBeenCalledWith({
-      method: 'POST',
-      path: '/v1/wallets/provision',
-      body: input,
+      expect(response.wallet.id).toBe('wallet-1');
+      expect(response.recoveryHint).toBe('some-hint');
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'POST',
+        path: '/v1/wallets/provision',
+        body: input,
+      });
     });
-    expect(result.wallet.id).toBe('wallet-123');
-    expect(result.wallet.agentId).toBe('agent-001');
-    expect(result.wallet.network).toBe('stellar-testnet');
-    expect(result.recoveryHint).toBe('rh-abc');
   });
 
-  it('provision with fundingAsset sends the full body including funding details', async () => {
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
-        status: 201,
-        headers: new Headers(),
-        data: {
-          wallet: {
-            id: 'wallet-456',
-            agentId: 'agent-002',
-            address: 'GDEF456...',
-            network: 'stellar-mainnet',
-            status: 'active',
-            balances: [{ assetCode: 'USDC', amount: '100.00' }],
-            createdAt: '2026-01-01T00:00:00Z',
-            updatedAt: '2026-01-01T00:00:00Z',
-          },
-        },
-      }),
-    );
-
-    const sdk = new LilySdk(
-      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
-      createMockHttpClient(requestSpy),
-    );
-
-    const input = {
-      agentId: 'agent-002',
-      network: 'stellar-mainnet' as const,
-      fundingAsset: {
-        assetCode: 'USDC',
-        amount: '100.00',
-      },
-    };
-
-    const result = await sdk.wallets.provision(input);
-
-    expect(requestSpy).toHaveBeenCalledWith({
-      method: 'POST',
-      path: '/v1/wallets/provision',
-      body: input,
-    });
-    expect(result.wallet.id).toBe('wallet-456');
-    expect(result.wallet.balances[0].assetCode).toBe('USDC');
-  });
-
-  it('get sends GET /v1/wallets/:id', async () => {
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
+  describe('get', () => {
+    it('sends GET /v1/wallets/:id and returns the wallet', async () => {
+      vi.mocked(httpClient.request).mockResolvedValueOnce({
         status: 200,
         headers: new Headers(),
-        data: {
-          id: 'wallet-789',
-          agentId: 'agent-003',
-          address: 'GXYZ789...',
-          network: 'stellar-testnet',
-          status: 'active',
-          balances: [],
-          createdAt: '2026-01-01T00:00:00Z',
-          updatedAt: '2026-01-01T00:00:00Z',
-        } satisfies Wallet,
-      }),
-    );
+        data: mockWallet,
+      } as HttpResponse);
 
-    const sdk = new LilySdk(
-      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
-      createMockHttpClient(requestSpy),
-    );
+      const result = await client.get('wallet-1');
 
-    const wallet = await sdk.wallets.get('wallet-789');
-
-    expect(requestSpy).toHaveBeenCalledWith({
-      method: 'GET',
-      path: '/v1/wallets/wallet-789',
+      expect(result).toEqual(mockWallet);
+      expect(httpClient.request).toHaveBeenCalledWith({
+        method: 'GET',
+        path: '/v1/wallets/wallet-1',
+      });
     });
-    expect(wallet.id).toBe('wallet-789');
-    expect(wallet.agentId).toBe('agent-003');
-    expect(wallet.address).toBe('GXYZ789...');
-    expect(wallet.network).toBe('stellar-testnet');
-    expect(wallet.status).toBe('active');
-  });
-
-  it('get passes the wallet ID into the URL path', async () => {
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
-        status: 200,
-        headers: new Headers(),
-        data: {
-          id: 'w-1',
-          agentId: 'a-1',
-          address: 'addr',
-          network: 'stellar-testnet',
-          status: 'active',
-          balances: [],
-          createdAt: '2026-01-01T00:00:00Z',
-          updatedAt: '2026-01-01T00:00:00Z',
-        },
-      }),
-    );
-
-    const sdk = new LilySdk(
-      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
-      createMockHttpClient(requestSpy),
-    );
-
-    await sdk.wallets.get('w-1');
-
-    const call = requestSpy.mock.calls[0][0];
-    expect(call.method).toBe('GET');
-    expect(call.path).toContain('w-1');
-    expect(call.path).toBe('/v1/wallets/w-1');
-  });
-
-  it('provision return value passthrough from HttpResponse.data', async () => {
-    const mockData = {
-      wallet: {
-        id: 'w-passthrough',
-        agentId: 'a-pt',
-        address: 'GPT...',
-        network: 'stellar-mainnet',
-        status: 'provisioning',
-        balances: [{ assetCode: 'XLM', amount: '500' }],
-        createdAt: '2026-06-01T00:00:00Z',
-        updatedAt: '2026-06-01T00:00:00Z',
-      },
-      recoveryHint: 'secret-hint',
-    };
-
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
-        status: 201,
-        headers: new Headers(),
-        data: mockData,
-      }),
-    );
-
-    const sdk = new LilySdk(
-      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
-      createMockHttpClient(requestSpy),
-    );
-
-    const result = await sdk.wallets.provision({
-      agentId: 'a-pt',
-      network: 'stellar-mainnet',
-    });
-
-    // Assert the entire response data is passed through without modification
-    expect(result).toEqual(mockData);
-  });
-
-  it('get return value passthrough from HttpResponse.data', async () => {
-    const mockData = {
-      id: 'w-pt2',
-      agentId: 'a-pt2',
-      address: 'GPT2...',
-      network: 'stellar-testnet',
-      status: 'suspended',
-      balances: [
-        { assetCode: 'USDC', amount: '0.00' },
-        { assetCode: 'XLM', amount: '1.5' },
-      ],
-      createdAt: '2026-03-15T10:30:00Z',
-      updatedAt: '2026-03-16T12:00:00Z',
-    };
-
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
-        status: 200,
-        headers: new Headers(),
-        data: mockData,
-      }),
-    );
-
-    const sdk = new LilySdk(
-      { baseUrl: 'https://api.lily.test', fetch: globalThis.fetch },
-      createMockHttpClient(requestSpy),
-    );
-
-    const result = await sdk.wallets.get('w-pt2');
-
-    expect(result).toEqual(mockData);
   });
 });

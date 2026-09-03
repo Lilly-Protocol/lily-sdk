@@ -1,80 +1,113 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { LilyValidationError } from '../src/errors/sdk-error';
+import {
+  validateExecutePaymentRequest,
+  validateMemo,
+  validateMoneyAmount,
+} from '../src/validation';
 
-function validateMoneyAmount(value: unknown): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-  if (typeof value !== 'string') {
-    errors.push('MoneyAmount must be a decimal string');
-    return { valid: false, errors };
-  }
-  if (!/^\d+\.\d{2}$/.test(value)) {
-    errors.push('MoneyAmount must have exactly 2 decimal places (e.g. "10.00")');
-  }
-  if (parseFloat(value) < 0) {
-    errors.push('MoneyAmount must be non-negative');
-  }
-  return { valid: errors.length === 0, errors };
-}
-
-function validateMemo(value: unknown): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-  if (value === undefined || value === null) return { valid: true, errors };
-  if (typeof value !== 'string') {
-    errors.push('memo must be a string');
-    return { valid: false, errors };
-  }
-  if (value.length > 28) {
-    errors.push('memo must be at most 28 characters (Stellar limit)');
-  }
-  if (!/^[\x20-\x7E]*$/.test(value)) {
-    errors.push('memo must contain only printable ASCII characters');
-  }
-  return { valid: errors.length === 0, errors };
-}
-
-describe('MoneyAmount validation (issue #109)', () => {
-  it('accepts valid decimal strings', () => {
-    expect(validateMoneyAmount('10.00').valid).toBe(true);
-    expect(validateMoneyAmount('0.99').valid).toBe(true);
-    expect(validateMoneyAmount('1000000.00').valid).toBe(true);
+describe('validateMoneyAmount Stellar constraints', () => {
+  it('accepts amount with exactly 7 fractional digits', () => {
+    expect(() =>
+      validateMoneyAmount({ assetCode: 'USDC', amount: '10.1234567' }, 'test'),
+    ).not.toThrow();
   });
 
-  it('rejects non-string values', () => {
-    expect(validateMoneyAmount(10.00).valid).toBe(false);
-    expect(validateMoneyAmount(null).valid).toBe(false);
-    expect(validateMoneyAmount(undefined).valid).toBe(false);
+  it('rejects amount with 8 fractional digits', () => {
+    expect(() =>
+      validateMoneyAmount({ assetCode: 'USDC', amount: '10.12345678' }, 'test'),
+    ).toThrow(/at most 7 fractional digits/);
   });
 
-  it('rejects wrong decimal places', () => {
-    expect(validateMoneyAmount('10').valid).toBe(false);
-    expect(validateMoneyAmount('10.0').valid).toBe(false);
-    expect(validateMoneyAmount('10.000').valid).toBe(false);
+  it('accepts zero amount', () => {
+    expect(() =>
+      validateMoneyAmount({ assetCode: 'XLM', amount: '0' }, 'test'),
+    ).not.toThrow();
   });
 
-  it('rejects negative amounts', () => {
-    expect(validateMoneyAmount('-5.00').valid).toBe(false);
+  it('accepts integer amount without decimals', () => {
+    expect(() =>
+      validateMoneyAmount({ assetCode: 'XLM', amount: '100' }, 'test'),
+    ).not.toThrow();
+  });
+
+  it('rejects negative amount', () => {
+    expect(() =>
+      validateMoneyAmount({ assetCode: 'USDC', amount: '-5' }, 'test'),
+    ).toThrow(/non-negative decimal/);
+  });
+
+  it('rejects scientific notation', () => {
+    expect(() =>
+      validateMoneyAmount({ assetCode: 'USDC', amount: '1e3' }, 'test'),
+    ).toThrow(/non-negative decimal/);
   });
 });
 
-describe('Memo validation (issue #109)', () => {
-  it('accepts valid memos', () => {
-    expect(validateMemo('Payment for services').valid).toBe(true);
-    expect(validateMemo('INV-2024-001').valid).toBe(true);
-    expect(validateMemo(undefined).valid).toBe(true);
-    expect(validateMemo(null).valid).toBe(true);
+describe('validateMemo Stellar constraints', () => {
+  it('accepts memo within 28 byte limit', () => {
+    expect(() => validateMemo('short memo', 'test')).not.toThrow();
   });
 
-  it('rejects memos over 28 characters', () => {
-    expect(validateMemo('a'.repeat(29)).valid).toBe(false);
-    expect(validateMemo('a'.repeat(28)).valid).toBe(true);
+  it('accepts exactly 28 character text memo', () => {
+    expect(() => validateMemo('a'.repeat(28), 'test')).not.toThrow();
   });
 
-  it('rejects non-printable ASCII', () => {
-    expect(validateMemo('hello\x01world').valid).toBe(false);
-    expect(validateMemo('hello\u2603world').valid).toBe(false); // snowman unicode
+  it('rejects text memo exceeding 28 bytes', () => {
+    expect(() => validateMemo('a'.repeat(29), 'test')).toThrow(
+      /at most 28 bytes/,
+    );
   });
 
-  it('rejects non-string types', () => {
-    expect(validateMemo(12345).valid).toBe(false);
-    expect(validateMemo({ text: 'hello' }).valid).toBe(false);
+  it('accepts hex memo within 64 character limit', () => {
+    expect(() => validateMemo('ab'.repeat(32), 'test')).not.toThrow();
+  });
+
+  it('rejects hex memo exceeding 64 characters', () => {
+    expect(() => validateMemo('ab'.repeat(33), 'test')).toThrow(
+      /at most 64 characters/,
+    );
+  });
+
+  it('accepts undefined memo', () => {
+    expect(() => validateMemo(undefined, 'test')).not.toThrow();
+  });
+
+  it('rejects non-string memo', () => {
+    expect(() => validateMemo(123 as any, 'test')).toThrow(/must be a string/);
+  });
+});
+
+describe('validateExecutePaymentRequest with memo and MoneyAmount', () => {
+  it('accepts valid payment request with memo', () => {
+    expect(() =>
+      validateExecutePaymentRequest({
+        fromWalletId: 'wallet-1',
+        toAddress: 'GABC...',
+        amount: { assetCode: 'USDC', amount: '10.50' },
+        memo: 'payment ref',
+      }),
+    ).not.toThrow();
+  });
+
+  it('rejects payment with over-long memo', () => {
+    expect(() =>
+      validateExecutePaymentRequest({
+        fromWalletId: 'wallet-1',
+        toAddress: 'GABC...',
+        amount: { assetCode: 'USDC', amount: '10.50' },
+        memo: 'x'.repeat(29),
+      }),
+    ).toThrow(/memo/);
+  });
+
+  it('rejects payment with invalid MoneyAmount fractionals', () => {
+    expect(() =>
+      validateExecutePaymentRequest({
+        fromWalletId: 'wallet-1',
+        toAddress: 'GABC...',
+        amount: { assetCode: 'USDC', amount: '10.12345678' },
+      }),
+    ).toThrow(/fractional digits/);
   });
 });
