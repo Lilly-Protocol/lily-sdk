@@ -127,13 +127,15 @@ const sdk = new LilySdk({
 });
 ```
 
-Per-request overrides work the same way:
+Per-request overrides use the low-level HTTP client instead:
 
 ```ts
-await sdk.wallets.provision(
-  { agentId: 'agent_123', network: 'stellar-testnet' },
-  { timeoutMs: 5_000 }, // overrides the global timeout for this call only
-);
+await sdk.http.request({
+  method: 'POST',
+  path: '/v1/wallets/provision',
+  body: { agentId: 'agent_123', network: 'stellar-testnet' },
+  timeoutMs: 5_000,
+});
 ```
 
 ## Public API Overview
