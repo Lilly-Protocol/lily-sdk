@@ -57,12 +57,6 @@ npm install
 npm install @lily-protocol/sdk
 ```
 
-For local development in this repository:
-
-```bash
-npm install
-```
-
 ## Requirements & Compatibility
 
 - **Node.js >= 20**: The SDK requires Node.js 20 or later. It relies on the built-in global `fetch`, `AbortController`, and DOM `Headers` APIs available natively from Node 20+.
@@ -373,7 +367,6 @@ See [CHANGELOG.md](./CHANGELOG.md) for a full list of changes. The changelog fol
 - Webhook verification, observability hooks, and advanced auth flows
 - More complete Stellar asset and payment orchestration coverage
 
-## Security
 
 Please read [SECURITY.md](./SECURITY.md) for supported versions and how to report a vulnerability privately via GitHub Security Advisories. Do not file public issues for security-sensitive reports.
 
@@ -381,7 +374,6 @@ Please read [SECURITY.md](./SECURITY.md) for supported versions and how to repor
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
-## Requirements and Compatibility
 
 - **Node.js**: Version 20 or newer is required. The SDK relies on built-in `fetch`, `AbortController`, and `Headers` APIs available in Node 20+.
 - **CI-Supported Versions**: Automated tests run against Node.js 20 and 22.
