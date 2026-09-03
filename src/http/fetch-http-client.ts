@@ -39,7 +39,7 @@ export function createFetchHttpClient(
         if (request.signal) {
           if (request.signal.aborted) {
             throw new LilyTransportError('Request cancelled by caller.', {
-              code: 'CANCELLED',
+              code: LILY_ERROR_CODES.CANCELLED,
               cause: request.signal.reason ?? new Error('Aborted'),
               request: requestMetadata(request, url),
             });
@@ -158,7 +158,7 @@ export function createFetchHttpClient(
                 : 'Request timed out while calling Lily Protocol API.',
               {
                 code: externallyAborted
-                  ? 'CANCELLED'
+                  ? LILY_ERROR_CODES.CANCELLED
                   : LILY_ERROR_CODES.TIMEOUT,
                 cause: error,
                 request: requestMetadata(request, url),
@@ -266,7 +266,7 @@ async function parseResponse(response: Response): Promise<unknown> {
       throw new LilyValidationError(
         `Failed to parse response body as JSON (status ${response.status}, content-type: ${contentType}).`,
         {
-          code: 'RESPONSE_VALIDATION_ERROR',
+          code: LILY_ERROR_CODES.RESPONSE_VALIDATION_ERROR,
           statusCode: response.status,
           cause: error,
         },
