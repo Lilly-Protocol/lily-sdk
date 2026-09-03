@@ -26,7 +26,14 @@ export function validateHealthStatus(data: unknown): HealthStatusShape {
   if (!VALID_STATUSES.includes(obj.status)) {
     throw new LilyValidationError(
       `HealthStatus.status must be one of: ${VALID_STATUSES.join(', ')}`,
-      { code: 'VALIDATION_ERROR', details: { field: 'status', received: obj.status, valid: VALID_STATUSES } },
+      {
+        code: 'VALIDATION_ERROR',
+        details: {
+          field: 'status',
+          received: obj.status,
+          valid: VALID_STATUSES,
+        },
+      },
     );
   }
   if (typeof obj.version !== 'string') {
@@ -41,7 +48,11 @@ export function validateHealthStatus(data: unknown): HealthStatusShape {
       details: { field: 'timestamp', received: obj.timestamp },
     });
   }
-  if (obj.checks === undefined || typeof obj.checks !== 'object' || Array.isArray(obj.checks)) {
+  if (
+    obj.checks === undefined ||
+    typeof obj.checks !== 'object' ||
+    Array.isArray(obj.checks)
+  ) {
     throw new LilyValidationError('HealthStatus.checks must be an object', {
       code: 'VALIDATION_ERROR',
       details: { field: 'checks', received: obj.checks },
@@ -52,7 +63,14 @@ export function validateHealthStatus(data: unknown): HealthStatusShape {
     if (typeof value !== 'string' || !VALID_STATUSES.includes(value)) {
       throw new LilyValidationError(
         `HealthStatus.checks[${key}] must be one of: ${VALID_STATUSES.join(', ')}`,
-        { code: 'VALIDATION_ERROR', details: { field: `checks[${key}]`, received: value, valid: VALID_STATUSES } },
+        {
+          code: 'VALIDATION_ERROR',
+          details: {
+            field: `checks[${key}]`,
+            received: value,
+            valid: VALID_STATUSES,
+          },
+        },
       );
     }
   }

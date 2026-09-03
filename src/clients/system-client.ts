@@ -37,4 +37,3 @@ export class SystemClient extends BaseClient implements SystemClientContract {
     });
   }
 }
-
