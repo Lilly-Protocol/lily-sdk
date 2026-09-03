@@ -99,6 +99,8 @@ export class LilySdk {
   /**
    * Creates a new LilySdk instance with merged configuration.
    * Useful for multi-tenant scenarios where credentials or baseUrl differ per tenant.
+   * Pass `apiKey: null` or `authToken: null` in overrides to explicitly clear inherited
+   * credentials when creating tenant-scoped or unauthenticated child instances.
    */
   public withConfig(overrides: Partial<LilySdkConfig>): LilySdk {
     const merged: LilySdkConfig = {
