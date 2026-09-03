@@ -2,7 +2,7 @@
 
 ## Security
 
-Please see [SECURITY.md](SECURITY.md) for vulnerability reporting and security policy.
+Please see [SECURITY.md](SECURITY.md) for supported versions and private vulnerability reporting through GitHub Security Advisories. Do not file public issues for security-sensitive reports.
 
 [![CI](https://github.com/lily-protocol/lily-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/lily-protocol/lily-sdk/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
@@ -53,16 +53,6 @@ For local development in this repository:
 npm install
 ```
 
-```bash
-npm install @lily-protocol/sdk
-```
-
-For local development in this repository:
-
-```bash
-npm install
-```
-
 ## Requirements & Compatibility
 
 - **Node.js >= 20**: The SDK requires Node.js 20 or later. It relies on the built-in global `fetch`, `AbortController`, and DOM `Headers` APIs available natively from Node 20+.
@@ -70,6 +60,18 @@ npm install
 - **CI-Supported Versions**: Automated tests run against Node.js 20 and Node.js 22.
 - **Browser Considerations**: When using the SDK in browser environments, be aware of CORS restrictions and ensure that the `Headers` API is supported. The SDK does not include browser-specific polyfills; configure your bundler or runtime accordingly.
 - **Custom Fetch Fallback**: For unsupported runtimes (e.g., older Node versions or specialized environments), pass a custom fetch implementation through the SDK configuration to override the global default.
+
+  ```ts
+  import { LilySdk } from '@lily-protocol/sdk';
+  import fetch from 'node-fetch'; // or any compatible polyfill
+
+  const sdk = new LilySdk({
+    baseUrl: 'https://api.lilyprotocol.com',
+    fetch: fetch as typeof globalThis.fetch,
+  });
+  ```
+
+  Browser applications are also subject to server-enforced CORS restrictions. Ensure the Lily backend allows requests from your origin, or use a proxy/backend-for-frontend pattern.
 
 ## Quick Start
 
@@ -94,16 +96,16 @@ console.log(wallet.wallet.address);
 
 The SDK accepts a `LilySdkConfig` object. All fields except `baseUrl` are optional and have sensible defaults.
 
-| Field | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `baseUrl` | `string` | *required* | Absolute URL for the Lily Protocol API (e.g. `https://api.lilyprotocol.com`). |
-| `apiKey` | `string` | `undefined` | API key sent as `x-api-key` header when provided. |
-| `authToken` | `string` | `undefined` | Bearer token sent as `Authorization` header when provided. |
-| `timeoutMs` | `number` | `10000` | Request timeout in milliseconds. Must be positive. Can be overridden per-request via `HttpRequest.timeoutMs`. |
-| `retry` | `Partial<RetryPolicy>` | `{ retries: 2, retryDelayMs: 250, retryableStatusCodes: [408,409,425,429,500,502,503,504] }` | Retry behaviour for failed requests. See below. |
-| `defaultHeaders` | `Record<string,string>` | `{}` | Extra headers merged into every request. |
-| `userAgent` | `string` | `lily-sdk/0.1.0` | Value of the `User-Agent` header. |
-| `fetch` | `typeof fetch` | `globalThis.fetch` | Custom fetch implementation for unsupported runtimes. |
+| Field            | Type                    | Default                                                                                      | Description                                                                                                   |
+| :--------------- | :---------------------- | :------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ |
+| `baseUrl`        | `string`                | _required_                                                                                   | Absolute URL for the Lily Protocol API (e.g. `https://api.lilyprotocol.com`).                                 |
+| `apiKey`         | `string`                | `undefined`                                                                                  | API key sent as `x-api-key` header when provided.                                                             |
+| `authToken`      | `string`                | `undefined`                                                                                  | Bearer token sent as `Authorization` header when provided.                                                    |
+| `timeoutMs`      | `number`                | `10000`                                                                                      | Request timeout in milliseconds. Must be positive. Can be overridden per-request via `HttpRequest.timeoutMs`. |
+| `retry`          | `Partial<RetryPolicy>`  | `{ retries: 2, retryDelayMs: 250, retryableStatusCodes: [408,409,425,429,500,502,503,504] }` | Retry behaviour for failed requests. See below.                                                               |
+| `defaultHeaders` | `Record<string,string>` | `{}`                                                                                         | Extra headers merged into every request.                                                                      |
+| `userAgent`      | `string`                | `lily-sdk/0.1.0`                                                                             | Value of the `User-Agent` header.                                                                             |
+| `fetch`          | `typeof fetch`          | `globalThis.fetch`                                                                           | Custom fetch implementation for unsupported runtimes.                                                         |
 
 ### Retry semantics
 
@@ -133,7 +135,6 @@ await sdk.wallets.provision(
   { timeoutMs: 5_000 }, // overrides the global timeout for this call only
 );
 ```
-
 
 ## Public API Overview
 
@@ -309,12 +310,12 @@ examples/        runnable local examples
 
 ## Testing
 
-| Command | Description |
-| --- | --- |
-| `npm test` | Run tests with coverage (default) |
-| `npm run test:unit` | Fast tests without coverage instrumentation |
-| `npm run test:coverage` | Explicit coverage run (same as `npm test`) |
-| `npm run test:watch` | Watch mode for development |
+| Command                 | Description                                 |
+| ----------------------- | ------------------------------------------- |
+| `npm test`              | Run tests with coverage (default)           |
+| `npm run test:unit`     | Fast tests without coverage instrumentation |
+| `npm run test:coverage` | Explicit coverage run (same as `npm test`)  |
+| `npm run test:watch`    | Watch mode for development                  |
 
 ## Development
 
@@ -373,28 +374,6 @@ See [CHANGELOG.md](./CHANGELOG.md) for a full list of changes. The changelog fol
 - Webhook verification, observability hooks, and advanced auth flows
 - More complete Stellar asset and payment orchestration coverage
 
-## Security
-
-Please read [SECURITY.md](./SECURITY.md) for supported versions and how to report a vulnerability privately via GitHub Security Advisories. Do not file public issues for security-sensitive reports.
-
 ## Contributing
 
 Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
-
-## Requirements and Compatibility
-
-- **Node.js**: Version 20 or newer is required. The SDK relies on built-in `fetch`, `AbortController`, and `Headers` APIs available in Node 20+.
-- **CI-Supported Versions**: Automated tests run against Node.js 20 and 22.
-- **Global Fetch**: A standards-compliant global `fetch` implementation is required by default. If your runtime lacks native fetch (e.g., older Node versions or specialized environments), provide a custom implementation via the `fetch` config option:
-
-  ```ts
-  import { LilySdk } from '@lily-protocol/sdk';
-  import fetch from 'node-fetch'; // or any compatible polyfill
-
-  const sdk = new LilySdk({
-    baseUrl: 'https://api.lilyprotocol.com',
-    fetch: fetch as typeof globalThis.fetch,
-  });
-  ```
-
-- **Browser Usage**: The SDK can run in browsers that support the Fetch API. Note that browser environments are subject to CORS restrictions enforced by the server. Ensure the Lily backend allows requests from your origin, or use a proxy/backend-for-frontend pattern.
