@@ -17,6 +17,7 @@ export interface HttpRequest<TBody = unknown> {
     string | number | boolean | (string | number)[] | undefined
   >;
   body?: TBody;
+  /** Request timeout in milliseconds. Set to `0` to disable the timeout for this request. */
   timeoutMs?: number;
   signal?: AbortSignal;
 }

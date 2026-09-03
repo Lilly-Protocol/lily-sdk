@@ -46,7 +46,7 @@ export function createFetchHttpClient(
         const requestInit: RequestInit = {
           method: request.method,
           headers,
-          signal: controller.signal,
+          ...(controller ? { signal: controller.signal } : {}),
         };
 
         if (body !== undefined) {
