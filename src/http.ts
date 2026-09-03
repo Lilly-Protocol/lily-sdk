@@ -1,4 +1,4 @@
-export { createFetchHttpClient } from './http/fetch-http-client';
+export { buildUrl, createFetchHttpClient } from './http/fetch-http-client';
 export type {
   HttpClient,
   HttpHeaders,
