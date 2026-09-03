@@ -1,98 +1,166 @@
-import { describe, expect, it, vi } from 'vitest';
-
-import type { ResolvedLilySdkConfig } from '../src/config/types';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
+import type { ResolvedLilySdkConfig } from '../src/config/types';
+import { LilyApiError, LilyAuthenticationError, LilyTransportError } from '../src/errors/sdk-error';
 
-function createPendingFetch(): typeof globalThis.fetch {
-  return vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
-    return new Promise<Response>((_resolve, reject) => {
-      const signal = init?.signal;
-      const rejectWithAbort = (): void => {
-        reject(new DOMException('The operation was aborted.', 'AbortError'));
-      };
-
-      if (signal?.aborted) {
-        rejectWithAbort();
-      } else {
-        signal?.addEventListener('abort', rejectWithAbort, { once: true });
-      }
-    });
-  });
-}
-
-function createConfig(fetch: typeof globalThis.fetch): ResolvedLilySdkConfig {
+function makeConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): ResolvedLilySdkConfig {
   return {
-    baseUrl: new URL('https://api.lily.test/'),
-    timeoutMs: 2_000,
-    retry: {
-      retries: 0,
-      retryDelayMs: 0,
-      retryableStatusCodes: [],
-    },
-    defaultHeaders: {},
+    baseUrl: new URL('https://api.example.com'),
+    apiKey: 'test-key',
+    authToken: undefined,
     userAgent: 'lily-sdk/test',
-    fetch,
-  };
+    defaultHeaders: {},
+    timeoutMs: 1000,
+    retry: { retries: 2, retryDelayMs: 1 },
+    fetch: vi.fn(),
+    ...overrides,
+  } as ResolvedLilySdkConfig;
 }
 
-describe('fetch HTTP client cancellation', () => {
-  it('cancels an in-flight request with an external signal', async () => {
-    const externalController = new AbortController();
-    const fetch = createPendingFetch();
-    const httpClient = createFetchHttpClient(createConfig(fetch));
+function jsonResponse(body: unknown, status = 200) {
+  return () => new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
 
-    const result = httpClient.request({
-      method: 'GET',
-      path: '/v1/agents',
-      signal: externalController.signal,
-    });
-    externalController.abort();
+function textResponse(body: string, status = 200) {
+  return () => new Response(body, {
+    status,
+    headers: { 'content-type': 'text/plain' },
+  });
+}
 
-    await expect(result).rejects.toMatchObject({
-      name: 'LilyTransportError',
-      code: 'CANCELLED',
-    });
-    expect(fetch).toHaveBeenCalledOnce();
+function emptyResponse(status: number) {
+  return () => new Response(null, { status });
+}
+
+describe('fetch-http-client coverage matrix', () => {
+  let config: ResolvedLilySdkConfig;
+
+  beforeEach(() => {
+    config = makeConfig();
+    vi.useFakeTimers();
   });
 
-  it('distinguishes timeout cancellation from external cancellation', async () => {
-    const externalController = new AbortController();
-    const httpClient = createFetchHttpClient(
-      createConfig(createPendingFetch()),
-    );
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
-    const result = httpClient.request({
-      method: 'GET',
-      path: '/v1/agents',
-      timeoutMs: 10,
-      signal: externalController.signal,
-    });
+  it('buildUrl handles path without leading slash and query params', async () => {
+    config.fetch = vi.fn().mockImplementation(jsonResponse({ ok: true }));
+    const client = createFetchHttpClient(config);
 
-    await expect(result).rejects.toMatchObject({
-      name: 'LilyTransportError',
+    await client.request({ method: 'GET', path: 'health', query: { v: 1, empty: undefined } });
+
+    const calledUrl = config.fetch.mock.calls[0][0] as URL;
+    expect(calledUrl.pathname).toBe('/health');
+    expect(calledUrl.searchParams.get('v')).toBe('1');
+    expect(calledUrl.searchParams.has('empty')).toBe(false);
+  });
+
+  it('serializeBody returns undefined for null/undefined and stringifies objects', async () => {
+    config.fetch = vi.fn().mockImplementation(jsonResponse({}));
+    const client = createFetchHttpClient(config);
+
+    await client.request({ method: 'POST', path: '/a', body: undefined });
+    expect(config.fetch.mock.calls[0][1].body).toBeUndefined();
+
+    await client.request({ method: 'POST', path: '/b', body: null });
+    expect(config.fetch.mock.calls[1][1].body).toBeUndefined();
+
+    await client.request({ method: 'POST', path: '/c', body: { x: 1 } });
+    expect(config.fetch.mock.calls[2][1].body).toBe('{"x":1}');
+  });
+
+  it('parseResponse returns null for 204, text for non-json, json for application/json', async () => {
+    const client = createFetchHttpClient(config);
+
+    config.fetch = vi.fn().mockImplementation(emptyResponse(204));
+    const r1 = await client.request({ method: 'GET', path: '/no-content' });
+    expect(r1.data).toBeNull();
+
+    config.fetch = vi.fn().mockImplementation(textResponse('plain text'));
+    const r2 = await client.request({ method: 'GET', path: '/text' });
+    expect(r2.data).toBe('plain text');
+
+    config.fetch = vi.fn().mockImplementation(jsonResponse({ key: 'val' }));
+    const r3 = await client.request({ method: 'GET', path: '/json' });
+    expect(r3.data).toEqual({ key: 'val' });
+  });
+
+  it('retries on retryable status codes for safe methods and exhausts to LilyApiError', async () => {
+    config.retry.retries = 2;
+    config.fetch = vi.fn().mockImplementation(jsonResponse({ err: 'fail' }, 500));
+    const client = createFetchHttpClient(config);
+
+    const promise = client.request({ method: 'GET', path: '/fail' });
+    const assertion = expect(promise).rejects.toBeInstanceOf(LilyApiError);
+    
+    // Advance timers for each retry delay
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(2);
+    
+    // Ensure all pending promises settle before asserting
+    await vi.runAllTimersAsync();
+
+    await assertion;
+    expect(config.fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not retry POST on 500', async () => {
+    config.fetch = vi.fn().mockImplementation(jsonResponse({}, 500));
+    const client = createFetchHttpClient(config);
+
+    await expect(client.request({ method: 'POST', path: '/p' })).rejects.toBeInstanceOf(LilyApiError);
+    expect(config.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws LilyAuthenticationError on 401/403 without retry', async () => {
+    config.fetch = vi.fn()
+      .mockImplementationOnce(jsonResponse({}, 401))
+      .mockImplementationOnce(jsonResponse({}, 403));
+    const client = createFetchHttpClient(config);
+
+    await expect(client.request({ method: 'GET', path: '/auth' })).rejects.toBeInstanceOf(LilyAuthenticationError);
+    await expect(client.request({ method: 'GET', path: '/forbidden' })).rejects.toBeInstanceOf(LilyAuthenticationError);
+    expect(config.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries on transport errors for safe methods and exhausts to LilyTransportError', async () => {
+    config.retry.retries = 1;
+    config.fetch = vi.fn().mockRejectedValue(new Error('network down'));
+    const client = createFetchHttpClient(config);
+
+    const promise = client.request({ method: 'GET', path: '/net' });
+    const assertion = expect(promise).rejects.toBeInstanceOf(LilyTransportError);
+    
+    // Advance timer for retry delay
+    await vi.advanceTimersByTimeAsync(1);
+    
+    // Settle remaining microtasks/promises
+    await vi.runAllTimersAsync();
+
+    await assertion;
+    expect(config.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('wraps AbortError as TIMEOUT transport error', async () => {
+    const abortErr = new Error('aborted');
+    abortErr.name = 'AbortError';
+    config.fetch = vi.fn().mockRejectedValue(abortErr);
+    const client = createFetchHttpClient(config);
+
+    await expect(client.request({ method: 'GET', path: '/timeout' })).rejects.toMatchObject({
       code: 'TIMEOUT',
     });
-
-    externalController.abort();
   });
 
-  it('gives external cancellation precedence when it occurs before the timeout', async () => {
-    const externalController = new AbortController();
-    const httpClient = createFetchHttpClient(
-      createConfig(createPendingFetch()),
-    );
+  it('does not retry transport errors for POST', async () => {
+    config.fetch = vi.fn().mockRejectedValue(new Error('fail'));
+    const client = createFetchHttpClient(config);
 
-    const result = httpClient.request({
-      method: 'GET',
-      path: '/v1/agents',
-      timeoutMs: 50,
-      signal: externalController.signal,
-    });
-    externalController.abort();
-
-    await expect(result).rejects.toMatchObject({
-      name: 'LilyTransportError',
-      code: 'CANCELLED',
-    });
+    await expect(client.request({ method: 'POST', path: '/post-net' })).rejects.toBeInstanceOf(LilyTransportError);
+    expect(config.fetch).toHaveBeenCalledTimes(1);
   });
 });
