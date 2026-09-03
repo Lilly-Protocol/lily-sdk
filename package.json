@@ -8,91 +8,147 @@
     "stellar",
     "sdk",
     "typescript",
-    "agents",
     "payments",
     "wallet"
   ],
-  "homepage": "https://github.com/lily-protocol/lily-sdk#readme",
+  "homepage": "https://github.com/Lilly-Protocol/lily-sdk#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lily-protocol/lily-sdk.git"
+    "url": "git+https://github.com/Lilly-Protocol/lily-sdk.git"
   },
   "bugs": {
-    "url": "https://github.com/lily-protocol/lily-sdk/issues"
+    "url": "https://github.com/Lilly-Protocol/lily-sdk/issues"
   },
   "license": "MIT",
   "author": "Lily Protocol",
   "type": "module",
   "sideEffects": false,
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.0.0",
+    "npm": ">=10"
   },
   "files": [
     "dist",
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./config": {
-      "types": "./dist/config.d.ts",
-      "import": "./dist/config.js",
-      "require": "./dist/config.cjs"
+      "import": {
+        "types": "./dist/config.d.ts",
+        "default": "./dist/config.js"
+      },
+      "require": {
+        "types": "./dist/config.d.cts",
+        "default": "./dist/config.cjs"
+      }
     },
     "./errors": {
-      "types": "./dist/errors.d.ts",
-      "import": "./dist/errors.js",
-      "require": "./dist/errors.cjs"
+      "import": {
+        "types": "./dist/errors.d.ts",
+        "default": "./dist/errors.js"
+      },
+      "require": {
+        "types": "./dist/errors.d.cts",
+        "default": "./dist/errors.cjs"
+      }
     },
     "./http": {
-      "types": "./dist/http.d.ts",
-      "import": "./dist/http.js",
-      "require": "./dist/http.cjs"
+      "import": {
+        "types": "./dist/http.d.ts",
+        "default": "./dist/http.js"
+      },
+      "require": {
+        "types": "./dist/http.d.cts",
+        "default": "./dist/http.cjs"
+      }
     },
     "./models": {
-      "types": "./dist/models.d.ts",
-      "import": "./dist/models.js",
-      "require": "./dist/models.cjs"
+      "import": {
+        "types": "./dist/models.d.ts",
+        "default": "./dist/models.js"
+      },
+      "require": {
+        "types": "./dist/models.d.cts",
+        "default": "./dist/models.cjs"
+      }
     },
     "./types": {
-      "types": "./dist/types.d.ts",
-      "import": "./dist/types.js",
-      "require": "./dist/types.cjs"
+      "import": {
+        "types": "./dist/types.d.ts",
+        "default": "./dist/types.js"
+      },
+      "require": {
+        "types": "./dist/types.d.cts",
+        "default": "./dist/types.cjs"
+      }
     },
     "./package.json": "./package.json"
   },
   "scripts": {
     "clean": "rm -rf dist coverage .turbo",
+    "prebuild": "bash scripts/generate-version.sh",
     "build": "tsup",
+    "size": "npm run build && node scripts/check-size.mjs",
     "dev": "tsup --watch",
-    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "typecheck": "tsc --project tsconfig.json --noEmit && tsc --project tsconfig.examples.json --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format:check": "prettier --check . examples/",
     "test": "vitest run --coverage",
+    "test:unit": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "example": "tsx examples/quickstart.ts",
-    "prepublishOnly": "npm run clean && npm run build && npm run test"
+    "prepublishOnly": "npm run clean && npm run build && npm run test",
+    "docs": "typedoc --out docs/api --tsconfig tsconfig.docs.json --entryPoints src/index.ts src/config.ts src/errors.ts src/http.ts src/models.ts src/types.ts"
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.1",
     "@eslint/js": "^9.27.0",
+    "@size-limit/file": "^13.0.3",
     "@types/node": "^24.0.1",
     "@vitest/coverage-v8": "^3.2.4",
     "eslint": "^9.27.0",
     "eslint-config-prettier": "^10.1.5",
+    "esbuild": "^0.27.0",
     "globals": "^16.1.0",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.5.3",
+    "size-limit": "^13.0.3",
     "tsup": "^8.5.0",
     "tsx": "^4.19.4",
+    "typedoc": "^0.28.20",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.32.0",
     "vitest": "^3.2.4"
-  }
+  },
+  "size-limit": [
+    {
+      "path": "dist/index.js",
+      "limit": "15 kB",
+      "gzip": true
+    },
+    {
+      "path": "dist/index.cjs",
+      "limit": "15 kB",
+      "gzip": true
+    }
+  ]
 }
