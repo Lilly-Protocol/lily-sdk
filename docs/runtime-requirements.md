@@ -2,11 +2,12 @@
 
 ## Node.js
 
-- Minimum: Node.js 18 (LTS)
-- Recommended: Node.js 20+ (LTS)
-- Tested: Node.js 18, 20, 22, 24
+- Minimum: Node.js 20
+- Recommended: the latest active LTS release of Node.js
+- Tested in CI: Node.js 20, 22, and 24
 
-Uses native global `fetch` (Node.js 18+).
+The SDK relies on the native global `fetch`, `AbortController`, and DOM `Headers`
+APIs available in Node.js 20 and later.
 
 ## Browser
 

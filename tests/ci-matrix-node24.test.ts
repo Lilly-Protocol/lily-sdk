@@ -43,4 +43,23 @@ describe('CI matrix includes Node 24', () => {
     );
     expect(uniqueVersions.size).toBeGreaterThanOrEqual(2);
   });
+
+  it('keeps the documented Node support aligned with package engines and CI', () => {
+    const packageJson = JSON.parse(
+      readFileSync(resolve(process.cwd(), 'package.json'), 'utf8'),
+    ) as { engines?: { node?: string } };
+    const readme = readFileSync(resolve(process.cwd(), 'README.md'), 'utf8');
+    const runtimeRequirements = readFileSync(
+      resolve(process.cwd(), 'docs/runtime-requirements.md'),
+      'utf8',
+    );
+
+    expect(packageJson.engines?.node).toBe('>=20.0.0');
+    expect(readme).toContain('Node.js 20, 22, and 24');
+    expect(runtimeRequirements).toContain('Minimum: Node.js 20');
+    expect(runtimeRequirements).toContain(
+      'Tested in CI: Node.js 20, 22, and 24',
+    );
+    expect(runtimeRequirements).not.toMatch(/Node\.js 18/);
+  });
 });
