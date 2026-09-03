@@ -29,8 +29,23 @@ describe('resolveLilySdkConfig', () => {
     expect(config.baseUrl.toString()).toBe('https://env.example.com/');
   });
 
+  it('falls back to LILY_BASE_URL when baseUrl and LILY_API_URL are omitted', () => {
+    delete process.env.LILY_API_URL;
+    process.env.LILY_BASE_URL = 'https://base-env.example.com';
+    const config = resolveLilySdkConfig({});
+    expect(config.baseUrl.toString()).toBe('https://base-env.example.com/');
+  });
+
+  it('prefers LILY_API_URL over LILY_BASE_URL when both are set', () => {
+    process.env.LILY_API_URL = 'https://api-env.example.com';
+    process.env.LILY_BASE_URL = 'https://base-env.example.com';
+    const config = resolveLilySdkConfig({});
+    expect(config.baseUrl.toString()).toBe('https://api-env.example.com/');
+  });
+
   it('throws when neither baseUrl nor env is provided', () => {
     delete process.env.LILY_API_URL;
+    delete process.env.LILY_BASE_URL;
     expect(() => resolveLilySdkConfig({})).toThrow(LilyConfigError);
   });
 

@@ -25,6 +25,15 @@ export class LilySdk {
   public readonly identity: IdentityClient;
   public readonly system: SystemClient;
 
+  /**
+   * Initializes a new instance of the LilySdk.
+   *
+   * If config is omitted or baseUrl is not provided, the SDK attempts to resolve baseUrl
+   * from the environment variables `LILY_API_URL` or `LILY_BASE_URL`.
+   *
+   * @param config - Optional configuration overrides.
+   * @param httpClient - Optional custom HttpClient implementation.
+   */
   public constructor(config?: Partial<LilySdkConfig>, httpClient?: HttpClient) {
     this.config = resolveLilySdkConfig(config ?? {});
     this.httpClient = httpClient ?? createFetchHttpClient(this.config);
@@ -60,7 +69,7 @@ export class LilySdk {
 
     if (!baseUrl) {
       throw new Error(
-        'baseUrl is required. Pass it in options or set the LILY_API_URL environment variable.',
+        'baseUrl is required. Pass it in options or set the LILY_API_URL or LILY_BASE_URL environment variable.',
       );
     }
 

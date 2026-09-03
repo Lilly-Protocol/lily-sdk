@@ -182,4 +182,48 @@ describe('LilySdk composition', () => {
     expect(tenantSdk).not.toBe(sdk);
     expect(tenantSdk.system).not.toBe(sdk.system);
   });
+
+  it('constructs with new LilySdk() when only LILY_BASE_URL is set in environment', () => {
+    vi.stubEnv('LILY_BASE_URL', 'https://base-only.lily.test');
+    delete process.env.LILY_API_URL;
+
+    const sdk = new LilySdk({ apiKey: 'key_123' });
+    expect(sdk.config.baseUrl.toString()).toBe('https://base-only.lily.test/');
+    expect(sdk.config.apiKey).toBe('key_123');
+  });
+
+  it('prefers LILY_API_URL over LILY_BASE_URL in new LilySdk()', () => {
+    vi.stubEnv('LILY_API_URL', 'https://api-priority.lily.test');
+    vi.stubEnv('LILY_BASE_URL', 'https://base-fallback.lily.test');
+
+    const sdk = new LilySdk();
+    expect(sdk.config.baseUrl.toString()).toBe(
+      'https://api-priority.lily.test/',
+    );
+  });
+
+  it('prefers explicit baseUrl over LILY_BASE_URL in new LilySdk()', () => {
+    vi.stubEnv('LILY_BASE_URL', 'https://base-env.lily.test');
+
+    const sdk = new LilySdk({ baseUrl: 'https://explicit-override.lily.test' });
+    expect(sdk.config.baseUrl.toString()).toBe(
+      'https://explicit-override.lily.test/',
+    );
+  });
+
+  it('creates an instance via LilySdk.create() when only LILY_BASE_URL is set', () => {
+    vi.stubEnv('LILY_BASE_URL', 'https://create-base.lily.test');
+    delete process.env.LILY_API_URL;
+
+    const sdk = LilySdk.create();
+    expect(sdk.config.baseUrl.toString()).toBe('https://create-base.lily.test/');
+  });
+
+  it('prefers LILY_API_URL over LILY_BASE_URL in LilySdk.create()', () => {
+    vi.stubEnv('LILY_API_URL', 'https://create-api.lily.test');
+    vi.stubEnv('LILY_BASE_URL', 'https://create-base.lily.test');
+
+    const sdk = LilySdk.create();
+    expect(sdk.config.baseUrl.toString()).toBe('https://create-api.lily.test/');
+  });
 });
