@@ -263,6 +263,19 @@ async function parseResponse(response: Response): Promise<unknown> {
     try {
       return (await response.json()) as unknown;
     } catch (error) {
+      if (!response.ok) {
+        let rawBody: string | undefined;
+        try {
+          rawBody = await response.text();
+        } catch {
+          rawBody = undefined;
+        }
+        return {
+          contentType,
+          body: rawBody ?? '',
+        };
+      }
+
       throw new LilyValidationError(
         `Failed to parse response body as JSON (status ${response.status}, content-type: ${contentType}).`,
         {
