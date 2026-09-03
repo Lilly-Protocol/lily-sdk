@@ -82,12 +82,12 @@ export function parseWebhookHeader(header: string): {
 
 /**
  * Verifies a timestamped webhook signature with replay protection.
- * Rejects signatures older than `toleranceMs` milliseconds.
+ * Rejects signatures outside the `[-toleranceMs, +toleranceMs]` window.
  *
  * @param payload - The raw request body.
  * @param header - The raw signature header (`t=<ts>,v1=<sig>`).
  * @param secret - The webhook signing secret.
- * @param toleranceMs - Maximum age in ms (default: 5 minutes).
+ * @param toleranceMs - Maximum allowable timestamp skew/age in ms (default: 5 minutes, must be a positive finite number).
  * @returns `true` if the signature is valid and within the tolerance window.
  */
 export function verifyWebhookWithReplay(
@@ -96,6 +96,10 @@ export function verifyWebhookWithReplay(
   secret: string,
   toleranceMs: number = 300_000,
 ): boolean {
+  if (!Number.isFinite(toleranceMs) || toleranceMs <= 0) {
+    return false;
+  }
+
   const { timestamp, signature } = parseWebhookHeader(header);
 
   if (timestamp === null || signature === null) {
@@ -103,9 +107,9 @@ export function verifyWebhookWithReplay(
   }
 
   const now = Date.now();
-  const age = now - timestamp;
+  const diff = now - timestamp;
 
-  if (age > toleranceMs) {
+  if (diff > toleranceMs || diff < -toleranceMs) {
     return false;
   }
 
