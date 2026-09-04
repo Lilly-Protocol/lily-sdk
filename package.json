@@ -31,7 +31,9 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md",
+    "docs/*.md"
   ],
   "publishConfig": {
     "access": "public"
