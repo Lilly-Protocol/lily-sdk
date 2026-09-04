@@ -71,6 +71,24 @@ export function validateMoneyAmount(
       );
     }
   }
+
+  // Native asset semantics: `XLM` is built into the ledger and has no
+  // issuing account, so `assetIssuer` must be omitted for it (see the
+  // `MoneyAmount` model docs and the README "Native vs. Issued Assets"
+  // section). Case-sensitive: only the exact code `XLM` is native.
+  if (amount.assetCode === 'XLM' && amount.assetIssuer !== undefined) {
+    throw new LilyValidationError(
+      `${context}: \`assetIssuer\` must be omitted for the native asset (XLM has no issuing account).`,
+    );
+  }
+
+  // Issued credit assets are uniquely identified by the (assetCode,
+  // assetIssuer) pair, so a non-native asset code requires an issuer.
+  if (amount.assetCode !== 'XLM' && amount.assetIssuer === undefined) {
+    throw new LilyValidationError(
+      `${context}: \`assetIssuer\` is required for issued assets (only the native asset XLM may omit it).`,
+    );
+  }
 }
 
 export function validateMemo(memo: unknown, context = 'Payment'): void {
