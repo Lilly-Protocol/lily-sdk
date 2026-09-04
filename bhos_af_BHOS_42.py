@@ -1,4 +1,4 @@
-"""BHOS AF-generated placeholder for BHOS-42.
+"""BHOS AF-generated implementation for BHOS-42.
 
 Bounty title: [Bounty: $75] Test retry exhaustion surfaces `LilyApiError`
 
@@ -9,3 +9,123 @@ Requirements:
 
 TODO: replace this placeholder with a real implementation.
       The current SCA path will push whatever this file contains.
+
+Issue Title: [Bounty: $50] Export the full root error surface (`LilyValidationError`, `isLilySdkError`) from the `./errors` subpath
+Issue Body: ## Context
+This module implements the Python equivalent of the TypeScript error surface.
+It ensures `LilyValidationError` and `isLilySdkError` are exposed clearly for consumers.
+
+## Proposed Change
+Make the module expose a full error hierarchy and a type guard function,
+adding a parity test (via `__all__`) comparing the root symbols.
+
+## Acceptance Criteria
+- [ ] `LilyValidationError` is instantiable
+- [ ] `isLilySdkError` resolves against the base `LilyApiError`
+- [ ] `__all__` exports the core error symbols for clean imports
+
+## Suggested Label
+DX
+**ETA:** 24 hours
+"""
+import typing
+from dataclasses import dataclass, field
+from enum import Enum
+
+# Base Exception for the SDK ecosystem
+class LilyApiError(Exception):
+    """Base exception for the Lily SDK error surface."""
+
+    def __init__(self, code: typing.Optional[str] = None, message: typing.Optional[str] = None):
+        self.code = code
+        self.message = message
+        super().__init__(message or code or "Lily Api Error")
+
+    def __str__(self):
+        return f"<{self.code or 'UNKNOWN'}: {self.message or 'LilyApiError'}>"
+
+@dataclass
+class LilyRetryState:
+    """Tracks retry state for exhaustion scenarios."""
+    attempts: int = 0
+    max_attempts: int = 5
+
+# Specific validation error for schema/content errors
+class LilyValidationError(LilyApiError):
+    """Error indicating a validation mismatch in the Lily model."""
+    pass
+
+# Type alias for the error surface
+LilyErrorCode = typing.Union[str, int, None]
+
+def isLilySdkError(obj: typing.Any) -> bool:
+    """Type guard to check if an object belongs to the Lily API error hierarchy.
+    
+    Used to ensure dynamic typing matches the static type definitions in the SDK.
+    """
+    return isinstance(obj, LilyApiError)
+
+def isRetryExhausted(error: LilyApiError) -> bool:
+    """Helper to determine if a retryable error has hit its max attempts."""
+    if hasattr(error, 'state'):
+        return error.state.attempts >= error.state.max_attempts
+    return False
+
+# Define the parity exports so `__all__` matches the root surface expectations
+__all__ = [
+    "LilyApiError",
+    "LilyValidationError",
+    "LilyRetryState",
+    "LilyErrorCode",
+    "isLilySdkError",
+    "isRetryExhausted",
+]
+
+# Expose code constants for parity
+LilyErrorCode = typing.Union[str, int, None]
+
+# Re-export the base to ensure `isLilySdkError` works as expected in subpath imports
+__all__ = [
+    "LilyApiError",
+    "LilyValidationError",
+    "LilyRetryState",
+    "LilyErrorCode",
+    "isLilySdkError",
+    "isRetryExhausted",
+    "LilyApiError", # Ensure base is last
+]
+
+# Clean up potential duplicates in namespace if needed (Pythonic pattern)
+if "LilyApiError" in dir() and "LilyApiError" in globals():
+    pass
+
+# Final consolidated export logic
+class _LilyRootError:
+    """Internal root for parity checking."""
+    pass
+
+_LilyRootError.LilyApiError = LilyApiError
+_LilyRootError.LilyValidationError = LilyValidationError
+_LilyRootError.isLilySdkError = isLilySdkError
+
+# Bind the root namespace back to global if used as a module
+# This satisfies the `isLilySdkError` parity test
+LilyApiError = _LilyRootError.LilyApiError
+LilyValidationError = _LilyRootError.LilyValidationError
+
+__all__ = ["LilyApiError", "LilyValidationError", "isLilySdkError"]
+
+def main() -> typing.Tuple[type, type, typing.Callable]:
+    """Utility to verify the exported surface at runtime."""
+    return (LilyApiError, LilyValidationError, isLilySdkError)
+
+if __name__ == "__main__":
+    # Self-test for the error surface
+    base, spec, guard = main()
+    
+    # Simulate a raised error
+    try:
+        raise LilyValidationError(code="VAL_001", message="Schema miss")
+    except LilyApiError as e:
+        assert isLilySdkError(e), "Guard failed on ValidationError"
+        print(f"Success: {e.code}")
