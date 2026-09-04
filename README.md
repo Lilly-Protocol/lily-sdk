@@ -295,6 +295,33 @@ const invalidMissingIssuer: MoneyAmount = {
 };
 ```
 
+#### Safe Amount Conversion Helpers (`toAmountString` & `toMoneyAmount`)
+
+To eliminate floating-point artifacts (e.g. `0.1 + 0.2 === 0.30000000000000004`), expand exponential notations (such as `1e-7`), and safely construct `MoneyAmount` objects from database values or user inputs, use the built-in conversion helpers:
+
+```ts
+import { toAmountString, toMoneyAmount } from '@lily-protocol/sdk';
+
+// Convert numbers to clean, exact decimal strings without float artifacts
+toAmountString(0.1 + 0.2); // '0.3'
+toAmountString(0.1 + 0.2, 2); // '0.30'
+toAmountString(12.3456, 2); // '12.35' (half-up rounding)
+toAmountString(1e-7); // '0.0000001' (expanded from scientific notation)
+
+// Safely construct valid MoneyAmount instances
+const native = toMoneyAmount(0.1 + 0.2, 'XLM');
+// { assetCode: 'XLM', amount: '0.3' }
+
+const usdc = toMoneyAmount({
+  amount: 100.5,
+  assetCode: 'USDC',
+  assetIssuer: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
+  scale: 2,
+});
+// { assetCode: 'USDC', assetIssuer: '...', amount: '100.50' }
+```
+
+
 ## Repository Structure
 
 ```text
