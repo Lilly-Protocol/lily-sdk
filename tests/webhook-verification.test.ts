@@ -156,7 +156,7 @@ describe('Webhook signature verification (issue #70)', () => {
       expect(verifyWebhookWithReplay(PAYLOAD, `t=${justFuture},v1=${justFutureSig}`, SECRET, 300_000)).toBe(true);
     });
 
-        it('returns false for invalid signature', () => {
+    it('returns false for invalid signature', () => {
       const timestamp = Date.now();
       const header = `t=${timestamp},v1=invalid`;
       expect(verifyWebhookWithReplay(PAYLOAD, header, SECRET)).toBe(false);
