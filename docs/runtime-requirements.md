@@ -2,11 +2,11 @@
 
 ## Node.js
 
-- Minimum: Node.js 18 (LTS)
-- Recommended: Node.js 20+ (LTS)
-- Tested: Node.js 18, 20, 22, 24
+- Minimum: Node.js 20 (LTS)
+- Recommended: Node.js 22+ (LTS)
+- Tested: Node.js 20, 22, 24
 
-Uses native global `fetch` (Node.js 18+).
+Uses native global `fetch` (Node.js 20+).
 
 ## Browser
 
