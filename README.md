@@ -358,7 +358,35 @@ try {
 The transport uses `API_ERROR`, `AUTHENTICATION_ERROR`, `TIMEOUT`, and
 `TRANSPORT_ERROR`. Their typed values are available from `LILY_ERROR_CODES`.
 
+## Subpath Imports
+
+The SDK supports fine-grained subpath imports for minimal bundle size and tree-shaking:
+
+| Subpath                       | Description                                          |
+| :---------------------------- | :--------------------------------------------------- |
+| `@lily-protocol/sdk`          | Full SDK (all clients and exports)                   |
+| `@lily-protocol/sdk/config`   | Configuration types and resolver                     |
+| `@lily-protocol/sdk/errors`   | Error classes and type guards                        |
+| `@lily-protocol/sdk/http`     | HTTP transport layer                                 |
+| `@lily-protocol/sdk/models`   | Domain models                                        |
+| `@lily-protocol/sdk/types`    | Shared type definitions                              |
+| `@lily-protocol/sdk/webhooks` | Webhook signature verification and replay protection |
+
+### Webhook Verification
+
+```ts
+import { verifyWebhookSignature, verifyWebhookWithReplay } from '@lily-protocol/sdk/webhooks';
+
+// Verify webhook signature with replay protection (5-minute tolerance)
+const isValid = verifyWebhookWithReplay(
+  rawBody,
+  req.headers['x-lily-signature'],
+  process.env.LILY_WEBHOOK_SECRET!
+);
+```
+
 ## Design Notes
+
 
 - `LilySdk` composes a shared transport with focused domain clients instead of exposing a single massive client surface. The resolved `HttpClient` is also available as `sdk.http` for one-off raw requests that must reuse the SDK's transport and config.
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.

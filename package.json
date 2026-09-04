@@ -58,6 +58,9 @@
       ],
       "types": [
         "dist/types.d.ts"
+      ],
+      "webhooks": [
+        "dist/webhooks.d.ts"
       ]
     }
   },
@@ -123,11 +126,21 @@
         "default": "./dist/types.cjs"
       }
     },
+    "./webhooks": {
+      "import": {
+        "types": "./dist/webhooks.d.ts",
+        "default": "./dist/webhooks.js"
+      },
+      "require": {
+        "types": "./dist/webhooks.d.cts",
+        "default": "./dist/webhooks.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
     "clean": "rm -rf dist coverage .turbo",
-    "prebuild": "bash scripts/generate-version.sh",
+    "prebuild": "node scripts/generate-version.mjs",
     "build": "tsup",
     "build:browser": "tsup --config tsup.config.ts --env.BROWSER",
     "build:minified": "tsup --minify",

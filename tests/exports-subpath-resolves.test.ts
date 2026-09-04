@@ -26,7 +26,9 @@ const entries = Object.entries(pkg.exports).filter(
 
 function existsWithinDist(file: string, label: string) {
   const target = resolve(process.cwd(), file);
-  expect(target.startsWith(`${dist}/`), `${label} must live under dist/`).toBe(
+  const normalizedTarget = target.replace(/\\/g, '/');
+  const normalizedDist = dist.replace(/\\/g, '/');
+  expect(normalizedTarget.startsWith(`${normalizedDist}/`), `${label} must live under dist/`).toBe(
     true,
   );
   expect(

@@ -28,4 +28,16 @@ describe('export surface', () => {
     expect(sdk.SystemClient).toBeDefined();
     expect(sdk.WalletClient).toBeDefined();
   });
+
+  it('exports webhook verification helpers', () => {
+    expect(sdk.verifyWebhookSignature).toBeDefined();
+    expect(typeof sdk.verifyWebhookSignature).toBe('function');
+    expect(sdk.verifyWebhookJSON).toBeDefined();
+    expect(typeof sdk.verifyWebhookJSON).toBe('function');
+    expect(sdk.parseWebhookHeader).toBeDefined();
+    expect(typeof sdk.parseWebhookHeader).toBe('function');
+    expect(sdk.verifyWebhookWithReplay).toBeDefined();
+    expect(typeof sdk.verifyWebhookWithReplay).toBe('function');
+  });
 });
+
