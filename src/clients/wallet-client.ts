@@ -6,6 +6,7 @@ import type {
   WalletProvisioningResult,
 } from '../models';
 import type { WalletClientContract } from '../types/contracts';
+import { validateNonEmptyString } from '../validation';
 import { BaseClient } from './base-client';
 
 export class WalletClient extends BaseClient implements WalletClientContract {
@@ -19,7 +20,8 @@ export class WalletClient extends BaseClient implements WalletClientContract {
     });
   }
 
-  public get(walletId: string): Promise<Wallet> {
+  public async get(walletId: string): Promise<Wallet> {
+    validateNonEmptyString(walletId, 'walletId');
     return this.request({
       method: 'GET',
       path: `/v1/wallets/${encodePathSegment(walletId)}`,
