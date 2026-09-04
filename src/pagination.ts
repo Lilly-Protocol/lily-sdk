@@ -36,6 +36,11 @@ export function buildPaginationQuery(
 }
 
 /**
+ * Page response shape accepted by paginate. Supports either a CursorPage or a plain array.
+ */
+export type PageResult<T> = readonly T[] | CursorPage<T>;
+
+/**
  * Async iterator helper that auto-paginates through a cursor-based list endpoint.
  *
  * @example
@@ -44,34 +49,53 @@ export function buildPaginationQuery(
  * }
  */
 export async function* paginate<T>(
-  fetchPage: (query?: PaginationQuery) => Promise<readonly T[]>,
+  fetchPage: (query?: PaginationQuery) => Promise<PageResult<T>>,
   options?: { limit?: number; maxPages?: number },
 ): AsyncGenerator<T, void, unknown> {
   const maxPages = options?.maxPages ?? 100;
   let pageCount = 0;
+  let currentCursor: string | null | undefined = undefined;
 
   while (pageCount < maxPages) {
-    const query: PaginationQuery = options?.limit
-      ? { limit: options.limit }
-      : {};
-    const items = await fetchPage(query);
+    const cursorQuery = buildPaginationQuery(currentCursor);
+    const query: PaginationQuery = {
+      ...(cursorQuery.cursor ? { cursor: cursorQuery.cursor } : {}),
+      ...(options?.limit ? { limit: options.limit } : {}),
+    };
+
+    const hasQueryParams = Object.keys(query).length > 0;
+    const result = await fetchPage(hasQueryParams ? query : undefined);
+    pageCount += 1;
+
+    let items: readonly T[];
+    let nextCursor: string | null = null;
+
+    if (Array.isArray(result)) {
+      items = result;
+      nextCursor = null;
+    } else if (result && typeof result === 'object' && 'items' in result) {
+      items = result.items;
+      nextCursor = result.nextCursor ?? null;
+    } else {
+      break;
+    }
+
     for (const item of items) {
       yield item;
     }
-    // Without a cursor mechanism from the response, we stop after one page
-    // since we can't know if there are more items.
-    pageCount += 1;
-    // If we got fewer items than the limit, we're done
-    if (options?.limit && items.length < options.limit) {
-      break;
-    }
-    // Without response headers exposing next cursor, we stop to avoid infinite loop
+
     if (items.length === 0) {
       break;
     }
-    // If no limit specified, we do one page (can't know if there are more)
-    if (!options?.limit) {
+
+    if (options?.limit && items.length < options.limit) {
       break;
     }
+
+    if (!nextCursor) {
+      break;
+    }
+
+    currentCursor = nextCursor;
   }
 }
