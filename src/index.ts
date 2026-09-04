@@ -3,6 +3,7 @@ export { SDK_VERSION } from './version';
 export type {
   LilySdkConfig,
   LilySdkCreateOptions,
+  LilySdkWithConfigOverrides,
   ResolvedLilySdkConfig,
 } from './config/types';
 export { resolveLilySdkConfig } from './config/resolve-config';

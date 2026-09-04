@@ -4,7 +4,11 @@ import { PaymentClient } from './clients/payment-client';
 import { SystemClient } from './clients/system-client';
 import { WalletClient } from './clients/wallet-client';
 import { resolveLilySdkConfig } from './config/resolve-config';
-import type { LilySdkConfig, ResolvedLilySdkConfig } from './config/types';
+import type {
+  LilySdkConfig,
+  LilySdkWithConfigOverrides,
+  ResolvedLilySdkConfig,
+} from './config/types';
 import { createFetchHttpClient } from './http/fetch-http-client';
 import type { HttpClient, HttpRequest } from './http/types';
 import { SDK_VERSION } from './version';
@@ -99,8 +103,25 @@ export class LilySdk {
   /**
    * Creates a new LilySdk instance with merged configuration.
    * Useful for multi-tenant scenarios where credentials or baseUrl differ per tenant.
+   *
+   * To clear inherited credentials (e.g. for public or anonymous child clients),
+   * pass `apiKey: null` or `authToken: null` in overrides.
    */
-  public withConfig(overrides: Partial<LilySdkConfig>): LilySdk {
+  public withConfig(overrides: LilySdkWithConfigOverrides): LilySdk {
+    const apiKey =
+      overrides.apiKey === null
+        ? undefined
+        : overrides.apiKey !== undefined
+          ? overrides.apiKey
+          : this.config.apiKey;
+
+    const authToken =
+      overrides.authToken === null
+        ? undefined
+        : overrides.authToken !== undefined
+          ? overrides.authToken
+          : this.config.authToken;
+
     const merged: LilySdkConfig = {
       baseUrl: overrides.baseUrl ?? String(this.config.baseUrl),
       timeoutMs: overrides.timeoutMs ?? this.config.timeoutMs,
@@ -114,16 +135,8 @@ export class LilySdk {
       },
       userAgent: overrides.userAgent ?? this.config.userAgent,
       fetch: overrides.fetch ?? this.config.fetch,
-      ...(overrides.apiKey !== undefined
-        ? { apiKey: overrides.apiKey }
-        : this.config.apiKey !== undefined
-          ? { apiKey: this.config.apiKey }
-          : {}),
-      ...(overrides.authToken !== undefined
-        ? { authToken: overrides.authToken }
-        : this.config.authToken !== undefined
-          ? { authToken: this.config.authToken }
-          : {}),
+      ...(apiKey !== undefined ? { apiKey } : {}),
+      ...(authToken !== undefined ? { authToken } : {}),
     };
 
     return new LilySdk(merged);
