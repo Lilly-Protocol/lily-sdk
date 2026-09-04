@@ -138,6 +138,18 @@ await sdk.http.request({
 });
 ```
 
+### Multi-tenant & derived instances (`withConfig`)
+
+Derive scoped SDK instances with merged configuration using `sdk.withConfig(overrides)`. Pass `null` for `apiKey` or `authToken` to explicitly clear inherited credentials (e.g. for public or anonymous endpoints):
+
+```ts
+// Inherits baseUrl and settings from sdk, overriding apiKey
+const tenantSdk = sdk.withConfig({ apiKey: 'tenant-specific-key' });
+
+// Clear inherited credentials for public or unauthenticated child instances
+const publicSdk = sdk.withConfig({ apiKey: null, authToken: null });
+```
+
 ## Public API Overview
 
 ```ts
