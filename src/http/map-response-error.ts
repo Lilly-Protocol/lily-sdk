@@ -9,6 +9,7 @@ import {
   LilyValidationError,
   type LilyErrorOptions,
 } from '../errors/sdk-error';
+import { extractHeaders } from './fetch-http-client';
 
 /** Longest excerpt of a response body attached to an error. */
 export const BODY_SNIPPET_MAX_LENGTH = 256;
@@ -115,10 +116,12 @@ export function mapResponseError(
   headers?: Headers,
 ): LilyApiError | LilyAuthenticationError | LilyValidationError {
   const snippet = safeBodySnippet(data);
+  const responseHeaders = extractHeaders(headers);
   const options: LilyErrorOptions = {
     statusCode: status,
     details: data,
     ...(snippet !== undefined ? { bodySnippet: snippet } : {}),
+    ...(responseHeaders !== undefined ? { headers: responseHeaders } : {}),
   };
 
   if (status === 401) {

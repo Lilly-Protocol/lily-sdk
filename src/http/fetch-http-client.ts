@@ -96,6 +96,8 @@ export function createFetchHttpClient(
 
           // Auth failures are terminal: retrying with the same credential just
           // burns the budget. Checked before shouldRetry for that reason.
+          const responseHeaders = extractHeaders(response.headers);
+
           if (response.status === 401 || response.status === 403) {
             cleanup();
             throw new LilyAuthenticationError(
@@ -105,6 +107,9 @@ export function createFetchHttpClient(
                 statusCode: response.status,
                 details: data,
                 request: requestMetadata(request, url),
+                ...(responseHeaders !== undefined
+                  ? { headers: responseHeaders }
+                  : {}),
               },
             );
           }
@@ -130,6 +135,9 @@ export function createFetchHttpClient(
             statusCode: response.status,
             details: data,
             request: requestMetadata(request, url),
+            ...(responseHeaders !== undefined
+              ? { headers: responseHeaders }
+              : {}),
           });
         } catch (error) {
           cleanup();
@@ -263,12 +271,16 @@ async function parseResponse(response: Response): Promise<unknown> {
     try {
       return (await response.json()) as unknown;
     } catch (error) {
+      const responseHeaders = extractHeaders(response.headers);
       throw new LilyValidationError(
         `Failed to parse response body as JSON (status ${response.status}, content-type: ${contentType}).`,
         {
           code: 'RESPONSE_VALIDATION_ERROR',
           statusCode: response.status,
           cause: error,
+          ...(responseHeaders !== undefined
+            ? { headers: responseHeaders }
+            : {}),
         },
       );
     }
@@ -305,3 +317,29 @@ async function sleep(ms: number): Promise<void> {
     setTimeout(resolve, ms);
   });
 }
+
+export function extractHeaders(
+  headers: Headers | Record<string, string> | undefined,
+): Record<string, string> | undefined {
+  if (!headers) {
+    return undefined;
+  }
+
+  const result: Record<string, string> = {};
+
+  if (typeof (headers as Headers).forEach === 'function') {
+    (headers as Headers).forEach((value, key) => {
+      result[key.toLowerCase()] = value;
+    });
+    return result;
+  }
+
+  for (const [key, value] of Object.entries(headers)) {
+    if (typeof value === 'string') {
+      result[key.toLowerCase()] = value;
+    }
+  }
+
+  return result;
+}
+
