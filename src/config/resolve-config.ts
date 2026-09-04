@@ -120,7 +120,13 @@ function resolveCredential(
   explicit: string | undefined,
   envName: string,
 ): string | undefined {
-  return explicit ?? process.env[envName] ?? undefined;
+  if (explicit !== undefined) {
+    return explicit;
+  }
+  if (typeof process === 'undefined' || !process.env) {
+    return undefined;
+  }
+  return process.env[envName] ?? undefined;
 }
 
 function safeUrl(rawUrl: string | URL): URL {
