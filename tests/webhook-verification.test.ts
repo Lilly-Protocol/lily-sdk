@@ -122,7 +122,41 @@ describe('Webhook signature verification (issue #70)', () => {
       );
     });
 
-    it('returns false for invalid signature', () => {
+    it('returns false for future timestamp', () => {
+      const timestamp = Date.now() + 600_000; // 10 minutes in future
+      const signedPayload = `${timestamp}.${PAYLOAD}`;
+      const signature = sign(signedPayload, SECRET);
+      const header = `t=${timestamp},v1=${signature}`;
+      expect(verifyWebhookWithReplay(PAYLOAD, header, SECRET, 300_000)).toBe(
+        false,
+      );
+    });
+
+    it('rejects timestamps exactly at tolerance boundaries', () => {
+      const now = Date.now();
+      const oldTs = now - 300_000;
+      const oldSigned = `${oldTs}.${PAYLOAD}`;
+      const oldSig = sign(oldSigned, SECRET);
+      expect(verifyWebhookWithReplay(PAYLOAD, `t=${oldTs},v1=${oldSig}`, SECRET, 300_000)).toBe(false);
+      const futureTs = now + 300_000;
+      const futureSigned = `${futureTs}.${PAYLOAD}`;
+      const futureSig = sign(futureSigned, SECRET);
+      expect(verifyWebhookWithReplay(PAYLOAD, `t=${futureTs},v1=${futureSig}`, SECRET, 300_000)).toBe(false);
+    });
+
+    it('accepts timestamps just within tolerance window', () => {
+      const now = Date.now();
+      const justOld = now - 299_999;
+      const justOldSigned = `${justOld}.${PAYLOAD}`;
+      const justOldSig = sign(justOldSigned, SECRET);
+      expect(verifyWebhookWithReplay(PAYLOAD, `t=${justOld},v1=${justOldSig}`, SECRET, 300_000)).toBe(true);
+      const justFuture = now + 299_999;
+      const justFutureSigned = `${justFuture}.${PAYLOAD}`;
+      const justFutureSig = sign(justFutureSigned, SECRET);
+      expect(verifyWebhookWithReplay(PAYLOAD, `t=${justFuture},v1=${justFutureSig}`, SECRET, 300_000)).toBe(true);
+    });
+
+        it('returns false for invalid signature', () => {
       const timestamp = Date.now();
       const header = `t=${timestamp},v1=invalid`;
       expect(verifyWebhookWithReplay(PAYLOAD, header, SECRET)).toBe(false);
