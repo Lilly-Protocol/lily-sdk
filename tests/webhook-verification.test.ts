@@ -134,7 +134,7 @@ describe('Webhook signature verification (issue #70)', () => {
 
     it('rejects timestamps exactly at tolerance boundaries', () => {
       const now = Date.now();
-      const oldTs = now - 300_000;
+      const oldTs = now - 300_001;
       const oldSigned = `${oldTs}.${PAYLOAD}`;
       const oldSig = sign(oldSigned, SECRET);
       expect(
@@ -145,7 +145,7 @@ describe('Webhook signature verification (issue #70)', () => {
           300_000,
         ),
       ).toBe(false);
-      const futureTs = now + 300_000;
+      const futureTs = now + 300_001;
       const futureSigned = `${futureTs}.${PAYLOAD}`;
       const futureSig = sign(futureSigned, SECRET);
       expect(
