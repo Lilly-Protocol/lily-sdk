@@ -137,11 +137,25 @@ describe('Webhook signature verification (issue #70)', () => {
       const oldTs = now - 300_000;
       const oldSigned = `${oldTs}.${PAYLOAD}`;
       const oldSig = sign(oldSigned, SECRET);
-      expect(verifyWebhookWithReplay(PAYLOAD, `t=${oldTs},v1=${oldSig}`, SECRET, 300_000)).toBe(false);
+      expect(
+        verifyWebhookWithReplay(
+          PAYLOAD,
+          `t=${oldTs},v1=${oldSig}`,
+          SECRET,
+          300_000,
+        ),
+      ).toBe(false);
       const futureTs = now + 300_000;
       const futureSigned = `${futureTs}.${PAYLOAD}`;
       const futureSig = sign(futureSigned, SECRET);
-      expect(verifyWebhookWithReplay(PAYLOAD, `t=${futureTs},v1=${futureSig}`, SECRET, 300_000)).toBe(false);
+      expect(
+        verifyWebhookWithReplay(
+          PAYLOAD,
+          `t=${futureTs},v1=${futureSig}`,
+          SECRET,
+          300_000,
+        ),
+      ).toBe(false);
     });
 
     it('accepts timestamps just within tolerance window', () => {
@@ -149,11 +163,25 @@ describe('Webhook signature verification (issue #70)', () => {
       const justOld = now - 299_999;
       const justOldSigned = `${justOld}.${PAYLOAD}`;
       const justOldSig = sign(justOldSigned, SECRET);
-      expect(verifyWebhookWithReplay(PAYLOAD, `t=${justOld},v1=${justOldSig}`, SECRET, 300_000)).toBe(true);
+      expect(
+        verifyWebhookWithReplay(
+          PAYLOAD,
+          `t=${justOld},v1=${justOldSig}`,
+          SECRET,
+          300_000,
+        ),
+      ).toBe(true);
       const justFuture = now + 299_999;
       const justFutureSigned = `${justFuture}.${PAYLOAD}`;
       const justFutureSig = sign(justFutureSigned, SECRET);
-      expect(verifyWebhookWithReplay(PAYLOAD, `t=${justFuture},v1=${justFutureSig}`, SECRET, 300_000)).toBe(true);
+      expect(
+        verifyWebhookWithReplay(
+          PAYLOAD,
+          `t=${justFuture},v1=${justFutureSig}`,
+          SECRET,
+          300_000,
+        ),
+      ).toBe(true);
     });
 
     it('returns false for invalid signature', () => {
