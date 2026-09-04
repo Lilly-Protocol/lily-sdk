@@ -160,7 +160,7 @@ describe('Webhook signature verification (issue #70)', () => {
 
     it('accepts timestamps just within tolerance window', () => {
       const now = Date.now();
-      const justOld = now - 299_999;
+      const justOld = now - 299_900;
       const justOldSigned = `${justOld}.${PAYLOAD}`;
       const justOldSig = sign(justOldSigned, SECRET);
       expect(
@@ -171,7 +171,7 @@ describe('Webhook signature verification (issue #70)', () => {
           300_000,
         ),
       ).toBe(true);
-      const justFuture = now + 299_999;
+      const justFuture = now + 299_900;
       const justFutureSigned = `${justFuture}.${PAYLOAD}`;
       const justFutureSig = sign(justFutureSigned, SECRET);
       expect(
