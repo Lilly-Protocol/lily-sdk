@@ -27,7 +27,7 @@ export function createFetchHttpClient(
       const url = buildUrl(config.baseUrl, request.path, request.query);
       const body = serializeBody(request.body);
       const headers = buildHeaders(config, request.headers);
-      const timeoutMs = request.timeoutMs ?? config.timeoutMs;
+      const timeoutMs = resolveRequestTimeout(request, config, url);
 
       let attempt = 0;
 
@@ -187,6 +187,50 @@ export function createFetchHttpClient(
       }
     },
   };
+}
+
+/**
+ * Resolve the effective timeout for one request, validating a per-request
+ * override before anything is dispatched.
+ *
+ * `resolveLilySdkConfig` already rejects a non-positive or non-finite global
+ * `timeoutMs`, but the per-request override reached `setTimeout` unchecked.
+ * A negative or `NaN` value produced an immediately-firing timer and a
+ * spurious `TIMEOUT` transport error, and `Infinity` produced a timer that
+ * never fires — both of them reported as a network condition rather than as
+ * the caller's own mistake.
+ *
+ * `0` stays valid here and only here: it is the documented per-request opt-out
+ * from the timeout, which is why the range differs from the config-level rule
+ * rather than mirroring it exactly.
+ */
+function resolveRequestTimeout(
+  request: HttpRequest,
+  config: ResolvedLilySdkConfig,
+  url: URL,
+): number {
+  const override = request.timeoutMs;
+
+  if (override === undefined) {
+    return config.timeoutMs;
+  }
+
+  if (
+    typeof override !== 'number' ||
+    !Number.isFinite(override) ||
+    override < 0
+  ) {
+    throw new LilyValidationError(
+      '`timeoutMs` must be a non-negative finite number (use 0 to disable the timeout).',
+      {
+        code: LILY_ERROR_CODES.VALIDATION_ERROR,
+        details: { timeoutMs: override },
+        request: requestMetadata(request, url),
+      },
+    );
+  }
+
+  return override;
 }
 
 function requestMetadata(
