@@ -6,12 +6,14 @@ import type {
   WalletProvisioningResult,
 } from '../models';
 import type { WalletClientContract } from '../types/contracts';
+import { validateProvisionWalletRequest } from '../validation';
 import { BaseClient } from './base-client';
 
 export class WalletClient extends BaseClient implements WalletClientContract {
-  public provision(
+  public async provision(
     input: ProvisionWalletRequest,
   ): Promise<WalletProvisioningResult> {
+    validateProvisionWalletRequest(input);
     return this.request({
       method: 'POST',
       path: '/v1/wallets/provision',
