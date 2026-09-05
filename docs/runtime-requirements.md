@@ -2,11 +2,12 @@
 
 ## Node.js
 
-- Minimum: Node.js 18 (LTS)
-- Recommended: Node.js 20+ (LTS)
-- Tested: Node.js 18, 20, 22, 24
+- Minimum: Node.js 20 (`package.json` engines: `>=20.0.0`)
+- Recommended: Node.js 22 LTS (or newer active LTS)
+- Tested in CI: Node.js 20, 22, and 24
 
-Uses native global `fetch` (Node.js 18+).
+Uses native global `fetch`, `AbortController`, and DOM `Headers` (Node.js 20+).
+Node.js 18 is not supported.
 
 ## Browser
 

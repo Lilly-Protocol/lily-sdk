@@ -57,7 +57,7 @@ npm install
 
 - **Node.js >= 20**: The SDK requires Node.js 20 or later. It relies on the built-in global `fetch`, `AbortController`, and DOM `Headers` APIs available natively from Node 20+.
 - **Global Fetch**: A standards-compliant `fetch` implementation must be available globally. If running in an environment without native fetch, provide a compatible polyfill via the `config.fetch` option when constructing the SDK.
-- **CI-Supported Versions**: Automated tests run against Node.js 20 and Node.js 22.
+- **CI-Supported Versions**: Automated tests run against Node.js 20, 22, and 24 (matching `.github/workflows/ci.yml`).
 - **Browser Considerations**: When using the SDK in browser environments, be aware of CORS restrictions and ensure that the `Headers` API is supported. The SDK does not include browser-specific polyfills; configure your bundler or runtime accordingly.
 - **Custom Fetch Fallback**: For unsupported runtimes (e.g., older Node versions or specialized environments), pass a custom fetch implementation through the SDK configuration to override the global default.
 
