@@ -83,7 +83,7 @@ describe('fetch-http-client non-JSON and 204 handling', () => {
         'content-type': 'application/json; charset=utf-8',
       }),
       json: vi.fn().mockResolvedValue(jsonData),
-      text: vi.fn(),
+      text: vi.fn().mockResolvedValue(JSON.stringify(jsonData)),
     };
     vi.mocked(config.fetch).mockResolvedValue(
       mockResponse as unknown as Response,
@@ -93,8 +93,9 @@ describe('fetch-http-client non-JSON and 204 handling', () => {
     const result = await client.request({ method: 'GET', path: '/v1/status' });
 
     expect(result.data).toEqual(jsonData);
-    expect(mockResponse.json).toHaveBeenCalled();
-    expect(mockResponse.text).not.toHaveBeenCalled();
+    // New implementation reads text once then JSON.parse, not response.json()
+    expect(mockResponse.text).toHaveBeenCalled();
+    expect(mockResponse.json).not.toHaveBeenCalled();
   });
 
   it('falls back to text parsing when content-type header is missing', async () => {

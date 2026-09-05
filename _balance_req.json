@@ -1,0 +1,6 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "getBalance",
+  "params": ["3rb3NNaU5foZFvVk4faVuMmqMvoxfADW3Xw5Wv5vfZr6"]
+}
