@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { DEFAULT_TIMEOUT_MS, DEFAULT_RETRY_POLICY, DEFAULT_RETRYABLE_STATUS_CODES } from "../src/config/defaults";
 import { resolveLilySdkConfig } from "../src/config/resolve-config";
 
