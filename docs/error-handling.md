@@ -6,11 +6,16 @@ Lily SDK provides a typed error hierarchy for granular catch blocks.
 
 ```
 LilySdkError (base)
-├── LilyConfigError      — invalid configuration (bad baseUrl, missing apiKey)
-├── LilyTransportError   — network-level failures (timeout, DNS, connection)
-└── LilyApiError         — API returned an error response (4xx/5xx)
-    ├── LilyAuthenticationError — 401/403 (bad/missing credentials)
-    └── LilyRateLimitError       — 429 (rate limited)
+├── LilyConfigError          — invalid configuration (bad baseUrl, missing apiKey)
+├── LilyTransportError       — network-level failures (timeout, DNS, connection)
+├── LilyAuthenticationError  — auth failures (401/403); base for subclasses below
+│   └── LilyAuthorizationError — explicit 403 authorization denial
+└── LilyApiError             — API returned an error response (4xx/5xx)
+    ├── LilyValidationError      — 400 (request validation failure)
+    ├── LilyNotFoundError        — 404 (resource not found)
+    ├── LilyConflictError        — 409 (resource conflict)
+    ├── LilyRateLimitError       — 429 (rate limited; has retryAfterSeconds)
+    └── LilyServerError          — 5xx (server-side failure)
 ```
 
 ## Catching by Type
@@ -22,7 +27,8 @@ import {
   LilyApiError,
   LilyTransportError,
   LilyConfigError,
-} from 'lily-sdk';
+  LilyAuthenticationError,
+} from '@lily-protocol/sdk';
 
 try {
   const payment = await sdk.payments.get('pay_123');
@@ -32,7 +38,7 @@ try {
   } else if (error instanceof LilyAuthenticationError) {
     console.error('Auth error:', error.message);
   } else if (error instanceof LilyApiError) {
-    console.error('API error:', error.status, error.message);
+    console.error('API error:', error.statusCode, error.message);
   } else if (error instanceof LilyTransportError) {
     console.error('Transport error:', error.message);
   } else {
@@ -44,7 +50,7 @@ try {
 ## Type Guard
 
 ```typescript
-import { isLilySdkError } from 'lily-sdk';
+import { isLilySdkError } from '@lily-protocol/sdk';
 
 try {
   await sdk.payments.create({ amount: '10.00', currency: 'USD' });
