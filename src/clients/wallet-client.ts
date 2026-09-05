@@ -1,4 +1,5 @@
 import { encodePathSegment } from '../http/path';
+import { validateNonEmptyString } from '../validation';
 import type {
   PaginationQuery,
   ProvisionWalletRequest,
@@ -20,6 +21,7 @@ export class WalletClient extends BaseClient implements WalletClientContract {
   }
 
   public get(walletId: string): Promise<Wallet> {
+    validateNonEmptyString(walletId, 'walletId');
     return this.request({
       method: 'GET',
       path: `/v1/wallets/${encodePathSegment(walletId)}`,

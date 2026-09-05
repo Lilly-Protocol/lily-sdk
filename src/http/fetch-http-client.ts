@@ -15,7 +15,7 @@ import type {
   HttpResponse,
 } from './types';
 
-const DEFAULT_RETRYABLE_STATUS_CODES = [408, 409, 425, 429, 500, 502, 503, 504];
+import { DEFAULT_RETRYABLE_STATUS_CODES } from '../config/defaults';
 
 export function createFetchHttpClient(
   config: ResolvedLilySdkConfig,
@@ -260,9 +260,24 @@ async function parseResponse(response: Response): Promise<unknown> {
   const contentType = response.headers.get('content-type') ?? '';
 
   if (contentType.includes('application/json')) {
+    // Read body once as text to avoid double-consumption, then parse.
+    const text = await response.text();
     try {
-      return (await response.json()) as unknown;
+      return JSON.parse(text) as unknown;
     } catch (error) {
+      // For non-ok responses, surface the real HTTP error instead of a
+      // validation error ¡ª callers lose the actual status otherwise.
+      if (!response.ok) {
+        throw new LilyApiError(
+          `Failed to parse response body as JSON (status ${response.status}, content-type: ${contentType}).`,
+          {
+            code: LILY_ERROR_CODES.API_ERROR,
+            statusCode: response.status,
+            details: text,
+            cause: error,
+          },
+        );
+      }
       throw new LilyValidationError(
         `Failed to parse response body as JSON (status ${response.status}, content-type: ${contentType}).`,
         {
