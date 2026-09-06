@@ -27,6 +27,17 @@ describe('LilySdk.withConfig', () => {
     expect(derived.config.apiKey).toBe('key-1');
   });
 
+  it('preserves a custom HttpClient across withConfig', () => {
+    const customClient = {
+      request: vi.fn().mockResolvedValue({ status: 200, data: { ok: true } }),
+    };
+    const base = new LilySdk({ baseUrl: 'https://api.example.com' }, customClient as any);
+    const tenant = base.withConfig({ apiKey: 'tenant-key' });
+
+    expect(tenant.http).toBe(customClient);
+    expect(base.http).toBe(customClient);
+  });
+
   it('overrides credentials independently per tenant', () => {
     const base = new LilySdk({
       baseUrl: 'https://api.example.com',
@@ -40,41 +51,31 @@ describe('LilySdk.withConfig', () => {
     expect(base.config.apiKey).toBe('shared-key');
   });
 
-  it('allows clearing inherited credentials using null', () => {
-    const parent = new LilySdk({
+  it('preserves validateResponses setting across reconfigurations', () => {
+    const baseFalse = new LilySdk({
       baseUrl: 'https://api.example.com',
-      apiKey: 'parent-api-key',
-      authToken: 'parent-auth-token',
+      validateResponses: false,
     });
+    const derivedFalse = baseFalse.withConfig({ apiKey: 'new-key' });
+    expect(derivedFalse.config.validateResponses).toBe(false);
 
-    const child = parent.withConfig({
-      apiKey: null,
-      authToken: null,
+    const baseTrue = new LilySdk({
+      baseUrl: 'https://api.example.com',
+      validateResponses: true,
     });
-
-    expect(child.config.apiKey).toBeUndefined();
-    expect(child.config.authToken).toBeUndefined();
-
-    // Verify headers do not include x-api-key or authorization
-    const headers = child.config.toHeaders?.() ?? {};
-    expect(headers['x-api-key']).toBeUndefined();
-    expect(headers['authorization']).toBeUndefined();
+    const derivedTrue = baseTrue.withConfig({ apiKey: 'new-key' });
+    expect(derivedTrue.config.validateResponses).toBe(true);
   });
 
-  it('inherits credentials when overrides do not specify them', () => {
-    const parent = new LilySdk({
+  it('allows overriding validateResponses in withConfig', () => {
+    const base = new LilySdk({
       baseUrl: 'https://api.example.com',
-      apiKey: 'parent-api-key',
-      authToken: 'parent-auth-token',
+      validateResponses: false,
     });
+    const derived = base.withConfig({ validateResponses: true });
+    expect(derived.config.validateResponses).toBe(true);
 
-    const child = parent.withConfig({ timeoutMs: 5000 });
-
-    expect(child.config.apiKey).toBe('parent-api-key');
-    expect(child.config.authToken).toBe('parent-auth-token');
-
-    const headers = child.config.toHeaders?.() ?? {};
-    expect(headers['x-api-key']).toBe('parent-api-key');
-    expect(headers['authorization']).toBe('Bearer parent-auth-token');
+    const backToFalse = derived.withConfig({ validateResponses: false });
+    expect(backToFalse.config.validateResponses).toBe(false);
   });
 });

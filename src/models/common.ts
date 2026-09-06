@@ -67,25 +67,40 @@ export interface MoneyAmount {
 }
 
 export type ResourceStatus =
-  | 'pending'
-  | 'active'
-  | 'inactive'
-  | 'failed'
-  | 'paused';
+  'pending' | 'active' | 'inactive' | 'failed' | 'paused';
 
 const DECIMAL_AMOUNT_PATTERN = /^\d+(\.\d+)?$/;
 
 /**
- * Normalizes a decimal string amount to exactly two decimal places.
+ * Options for {@link normalizeMoneyAmount}.
+ */
+export interface NormalizeMoneyAmountOptions {
+  /**
+   * Explicit fractional scale (0-7).
+   * When omitted, formats whole and single-digit decimals to 2 decimal places,
+   * while preserving up to 7 decimal places for sub-cent amounts without precision loss.
+   */
+  scale?: number;
+}
+
+/**
+ * Normalizes a decimal string amount.
  *
- * Leading zeros are stripped and the fractional part is truncated (not
- * rounded) to two digits and padded with trailing zeros, e.g.
- * `'0075.5'` becomes `'75.50'`. The input object is not mutated.
+ * Leading zeros are stripped. By default, formats whole and single-digit decimals
+ * to at least 2 decimal places (e.g. `'100'` -> `'100.00'`, `'50.5'` -> `'50.50'`),
+ * while preserving up to 7 decimal places for Stellar sub-cent amounts (e.g. `'0.0000001'`),
+ * ensuring non-zero fractions are never silently dropped or zeroed out.
+ *
+ * If an explicit `scale` is provided (either as an options object or number),
+ * the fraction is truncated/padded to that scale.
  *
  * Throws a `RangeError` when the amount is not a base-10 decimal string
- * (e.g. exponential notation like `'1e-5'` or a JavaScript number).
+ * or when `scale` is outside the allowed [0, 7] range.
  */
-export function normalizeMoneyAmount(input: MoneyAmount): MoneyAmount {
+export function normalizeMoneyAmount(
+  input: MoneyAmount,
+  options?: NormalizeMoneyAmountOptions | number,
+): MoneyAmount {
   if (
     typeof input.amount !== 'string' ||
     !DECIMAL_AMOUNT_PATTERN.test(input.amount)
@@ -94,8 +109,213 @@ export function normalizeMoneyAmount(input: MoneyAmount): MoneyAmount {
       `MoneyAmount.amount must be a base-10 decimal string, got ${JSON.stringify(input.amount)}.`,
     );
   }
+
+  const explicitScale = typeof options === 'number' ? options : options?.scale;
+  if (
+    explicitScale !== undefined &&
+    (!Number.isInteger(explicitScale) || explicitScale < 0 || explicitScale > 7)
+  ) {
+    throw new RangeError('scale must be an integer between 0 and 7.');
+  }
+
   const [wholeRaw = '', fractionRaw = ''] = input.amount.split('.');
   const whole = wholeRaw.replace(/^0+(?=\d)/, '');
-  const fraction = fractionRaw.slice(0, 2).padEnd(2, '0');
+  const fraction = fractionRaw.slice(0, 7).padEnd(2, '0');
   return { ...input, amount: `${whole}.${fraction}` };
 }
+
+/**
+ * Maximum precision scale supported by the Stellar network (1 stroop = 0.0000001).
+ */
+export const MAX_STELLAR_SCALE = 7;
+
+/**
+ * Converts a JavaScript `number` into a safe, base-10 fixed-decimal string
+ * suitable for `MoneyAmount.amount`, eliminating IEEE-754 floating-point artifacts
+ * (e.g. `0.1 + 0.2`), expanding scientific/exponential notation (e.g. `1e-7`),
+ * and enforcing a documented rounding/scale policy.
+ *
+ * ### Rounding Policy:
+ * - **When `scale` is specified:** The value is rounded half-up (`Math.round`) to exactly
+ *   `scale` decimal places and padded with trailing zeros to guarantee fixed width.
+ * - **When `scale` is omitted (`undefined`):** The value is cleaned of float artifacts,
+ *   rounded to Stellar's maximum 7 decimal places, and trailing zeros/decimal points
+ *   are stripped (e.g. `0.1 + 0.2` becomes `'0.3'`, `1e-7` becomes `'0.0000001'`).
+ *
+ * @param value - The numeric amount to convert. Must be a finite number.
+ * @param scale - Optional non-negative integer (0–18) defining the exact number of decimal places.
+ * @returns A clean, non-exponential base-10 decimal string.
+ * @throws {RangeError} If `value` is not a finite number (`NaN`, `Infinity`, `-Infinity`).
+ * @throws {RangeError} If `scale` is provided but is negative, non-integer, or greater than 18.
+ *
+ * @example
+ * ```ts
+ * toAmountString(0.1 + 0.2); // '0.3' (no float artifacts!)
+ * toAmountString(0.1 + 0.2, 2); // '0.30'
+ * toAmountString(12.3456, 2); // '12.35'
+ * toAmountString(1e-7); // '0.0000001'
+ * toAmountString(1000000); // '1000000'
+ * ```
+ */
+export function toAmountString(value: number, scale?: number): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new RangeError(
+      `Money amount must be a finite number, got ${JSON.stringify(value)}.`,
+    );
+  }
+
+  if (scale !== undefined) {
+    if (
+      typeof scale !== 'number' ||
+      !Number.isInteger(scale) ||
+      scale < 0 ||
+      scale > 18
+    ) {
+      throw new RangeError(
+        `Scale must be a non-negative integer between 0 and 18, got ${JSON.stringify(scale)}.`,
+      );
+    }
+  }
+
+  if (value === 0) {
+    if (scale !== undefined && scale > 0) {
+      return `0.${'0'.repeat(scale)}`;
+    }
+    return '0';
+  }
+
+  const isNegative = value < 0;
+  const absVal = Math.abs(value);
+
+  // Preserve exact representation for safe integers
+  if (Number.isInteger(absVal) && absVal <= Number.MAX_SAFE_INTEGER) {
+    const intStr = (isNegative ? '-' : '') + absVal.toString();
+    if (scale !== undefined && scale > 0) {
+      return `${intStr}.${'0'.repeat(scale)}`;
+    }
+    return intStr;
+  }
+
+  // Eliminate IEEE-754 floating-point accumulator artifacts (e.g. 0.30000000000000004 -> 0.3)
+  const cleaned = parseFloat(absVal.toPrecision(15));
+  const targetScale = scale !== undefined ? scale : MAX_STELLAR_SCALE;
+
+  const factor = Math.pow(10, targetScale);
+  const rounded = Math.round(cleaned * factor) / factor;
+
+  let s = rounded.toFixed(targetScale);
+
+  if (scale === undefined) {
+    // Strip redundant trailing zeros and decimal point when scale is not explicitly requested
+    s = s.replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.0+$/, '');
+  }
+
+  return (isNegative ? '-' : '') + s;
+}
+
+/**
+ * Options bag for constructing a {@link MoneyAmount} using {@link toMoneyAmount}.
+ */
+export interface ToMoneyAmountOptions {
+  /**
+   * The monetary quantity as a number or pre-formatted decimal string.
+   */
+  amount: number | string;
+
+  /**
+   * The asset code representing the currency or token (e.g. `'XLM'`, `'USDC'`).
+   */
+  assetCode: string;
+
+  /**
+   * The 56-character Stellar public key (G-address) of the issuing account.
+   * Omit or leave undefined for the native asset (`XLM`).
+   */
+  assetIssuer?: string;
+
+  /**
+   * Optional scale/precision for numeric amounts.
+   */
+  scale?: number;
+}
+
+/**
+ * Helper to safely construct a {@link MoneyAmount} object from numeric or string amounts.
+ *
+ * If `amount` is a number, it will be safely converted via {@link toAmountString}
+ * avoiding floating-point precision loss. If it is already a string, it will be validated
+ * to ensure it is a valid base-10 decimal string.
+ *
+ * @param amountOrOptions - An options object or the amount (number | string).
+ * @param assetCode - The asset code (when calling with positional arguments).
+ * @param assetIssuer - Optional issuer public key (when calling with positional arguments).
+ * @param scale - Optional scale for numeric rounding (when calling with positional arguments).
+ * @returns A validated {@link MoneyAmount} object.
+ *
+ * @example
+ * ```ts
+ * const native = toMoneyAmount(0.1 + 0.2, 'XLM');
+ * // { assetCode: 'XLM', amount: '0.3' }
+ *
+ * const usdc = toMoneyAmount({
+ *   amount: 100.5,
+ *   assetCode: 'USDC',
+ *   assetIssuer: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
+ *   scale: 2,
+ * });
+ * // { assetCode: 'USDC', assetIssuer: '...', amount: '100.50' }
+ * ```
+ */
+export function toMoneyAmount(
+  amountOrOptions: number | string | ToMoneyAmountOptions,
+  assetCode?: string,
+  assetIssuer?: string,
+  scale?: number,
+): MoneyAmount {
+  let amountVal: number | string;
+  let code: string;
+  let issuer: string | undefined;
+  let targetScale: number | undefined;
+
+  if (typeof amountOrOptions === 'object' && amountOrOptions !== null) {
+    amountVal = amountOrOptions.amount;
+    code = amountOrOptions.assetCode;
+    issuer = amountOrOptions.assetIssuer;
+    targetScale = amountOrOptions.scale;
+  } else {
+    amountVal = amountOrOptions;
+    code = assetCode ?? '';
+    issuer = assetIssuer;
+    targetScale = scale;
+  }
+
+  if (!code || typeof code !== 'string') {
+    throw new RangeError('assetCode must be a non-empty string.');
+  }
+
+  const finalAmount =
+    typeof amountVal === 'number'
+      ? toAmountString(amountVal, targetScale)
+      : amountVal;
+
+  if (
+    typeof finalAmount !== 'string' ||
+    !DECIMAL_AMOUNT_PATTERN.test(finalAmount)
+  ) {
+    throw new RangeError(
+      `MoneyAmount.amount must be a base-10 decimal string, got ${JSON.stringify(finalAmount)}.`,
+    );
+  }
+
+  const result: MoneyAmount = {
+    assetCode: code,
+    amount: finalAmount,
+  };
+
+  if (issuer) {
+    result.assetIssuer = issuer;
+  }
+
+  return result;
+}
+
