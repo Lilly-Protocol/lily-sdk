@@ -6,7 +6,12 @@ describe('error exports surface', () => {
     expect(
       Object.prototype.hasOwnProperty.call(errors, 'LilyValidationError'),
     ).toBe(true);
-    expect(errors.LilyValidationError).toBeDefined();
+  });
+
+  it('exports isLilySdkError type guard', () => {
+    expect(Object.prototype.hasOwnProperty.call(errors, 'isLilySdkError')).toBe(
+      true,
+    );
   });
 
   it('exports core error classes', () => {
@@ -15,5 +20,11 @@ describe('error exports surface', () => {
     expect(errors.LilyTransportError).toBeDefined();
     expect(errors.LilyAuthenticationError).toBeDefined();
     expect(errors.LilyApiError).toBeDefined();
+  });
+
+  it('isLilySdkError type guard works correctly', () => {
+    expect(errors.isLilySdkError(new errors.LilySdkError('test'))).toBe(true);
+    expect(errors.isLilySdkError('not an error')).toBe(false);
+    expect(errors.isLilySdkError(null)).toBe(false);
   });
 });

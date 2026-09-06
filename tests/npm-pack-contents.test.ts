@@ -30,6 +30,14 @@ describe('npm pack contents', () => {
     expect(pkg.files).toContain('LICENSE');
   });
 
+  it('files includes CHANGELOG.md', () => {
+    expect(pkg.files).toContain('CHANGELOG.md');
+  });
+
+  it('files includes docs', () => {
+    expect(pkg.files).toContain('docs/*.md');
+  });
+
   it('files does NOT include src', () => {
     expect(pkg.files).not.toContain('src');
   });
@@ -60,7 +68,7 @@ describe('npm pack contents', () => {
     expect(pkg.types).toMatch(/\.d\.ts$/);
   });
 
-  it('files count is reasonable (<= 5)', () => {
-    expect(pkg.files.length).toBeLessThanOrEqual(5);
+  it('files count is reasonable (<= 10)', () => {
+    expect(pkg.files.length).toBeLessThanOrEqual(10);
   });
 });
