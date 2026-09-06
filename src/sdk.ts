@@ -19,6 +19,14 @@ export class LilySdk {
   public get http(): HttpClient {
     return this.httpClient;
   }
+  /**
+   * The HttpClient only when it was explicitly injected by the caller.
+   * Derived instances from `withConfig` reuse an injected client (so custom
+   * transport behavior is preserved), but never the default fetch client:
+   * that one is rebuilt from the merged config so `baseUrl`/credential
+   * overrides actually take effect on the transport.
+   */
+  private readonly injectedHttpClient: HttpClient | undefined;
   public readonly agents: AgentClient;
   public readonly wallets: WalletClient;
   public readonly payments: PaymentClient;
@@ -28,24 +36,33 @@ export class LilySdk {
   public constructor(config?: Partial<LilySdkConfig>, httpClient?: HttpClient) {
     this.config = resolveLilySdkConfig(config ?? {});
     this.httpClient = httpClient ?? createFetchHttpClient(this.config);
+    this.injectedHttpClient = httpClient;
 
     this.agents = new AgentClient(this.httpClient);
     this.wallets = new WalletClient(this.httpClient);
     this.payments = new PaymentClient(this.httpClient);
     this.identity = new IdentityClient(this.httpClient);
-    this.system = new SystemClient(this.httpClient);
+    this.system = new SystemClient(this.httpClient, {
+      ...(this.config.validateResponses !== undefined
+        ? { validateResponses: this.config.validateResponses }
+        : {}),
+    });
   }
 
   /**
    * Creates a LilySdk instance with sensible defaults from environment variables.
-   * Explicit options always take precedence over environment variables.
+   * Explicit options always take precedence over environment variables, which take
+   * precedence over the built-in default (https://api.lilyprotocol.com).
    *
-   * Env vars read:
-   * - LILY_API_URL (or LILY_BASE_URL)
+   * Env vars read (in precedence order):
+   * - LILY_API_URL (preferred)
+   * - LILY_BASE_URL (fallback)
    * - LILY_API_KEY
    * - LILY_AUTH_TOKEN
    *
-   * Throws if no baseUrl is provided and no env var is set.
+   * Note: Unlike the constructor, \create()\ never throws for a missing baseUrl.
+   * It silently falls back to \\DEFAULT_API_URL\\. Use the constructor if you
+   * need strict baseUrl validation.
    */
   public static create(
     options?: Partial<LilySdkConfig>,
@@ -57,12 +74,6 @@ export class LilySdk {
         ? (process.env.LILY_API_URL ?? process.env.LILY_BASE_URL)
         : undefined) ??
       DEFAULT_API_URL;
-
-    if (!baseUrl) {
-      throw new Error(
-        'baseUrl is required. Pass it in options or set the LILY_API_URL environment variable.',
-      );
-    }
 
     const apiKey =
       options?.apiKey ??
@@ -99,6 +110,11 @@ export class LilySdk {
   /**
    * Creates a new LilySdk instance with merged configuration.
    * Useful for multi-tenant scenarios where credentials or baseUrl differ per tenant.
+   *
+   * When no custom fetch is overridden, a fresh HttpClient is built from the merged
+   * config so that baseUrl and auth changes take effect on the wire.
+   * When a custom fetch is explicitly provided in overrides, the parent's HttpClient
+   * is shared so that injection point is preserved.
    */
   public withConfig(overrides: Partial<LilySdkConfig>): LilySdk {
     const merged: LilySdkConfig = {
@@ -124,8 +140,19 @@ export class LilySdk {
         : this.config.authToken !== undefined
           ? { authToken: this.config.authToken }
           : {}),
+      ...(overrides.validateResponses !== undefined
+        ? { validateResponses: overrides.validateResponses }
+        : this.config.validateResponses !== undefined
+          ? { validateResponses: this.config.validateResponses }
+          : {}),
     };
 
-    return new LilySdk(merged);
+    // Reuse the transport only when the caller injected a custom HttpClient.
+    // The default fetch client is rebuilt from the merged config so that
+    // baseUrl/credential overrides are captured in the transport closure.
+    return this.injectedHttpClient !== undefined
+      ? new LilySdk(merged, this.injectedHttpClient)
+      : new LilySdk(merged);
   }
+
 }
