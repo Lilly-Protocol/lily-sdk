@@ -94,7 +94,7 @@ console.log(wallet.wallet.address);
 
 ## Configuration
 
-The SDK accepts a `LilySdkConfig` object. All fields except `baseUrl` are optional and have sensible defaults.
+The SDK accepts a `LilySdkConfig` object. Fields are optional at the type level, but direct construction must resolve a `baseUrl` from either the explicit config or `LILY_API_URL`; `LilySdk.create()` also provides the fallback described below.
 
 | Field            | Type                    | Default                                                                                      | Description                                                                                                   |
 | :--------------- | :---------------------- | :------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ |
@@ -106,6 +106,7 @@ The SDK accepts a `LilySdkConfig` object. All fields except `baseUrl` are option
 | `defaultHeaders` | `Record<string,string>` | `{}`                                                                                         | Extra headers merged into every request.                                                                      |
 | `userAgent`      | `string`                | `lily-sdk/0.1.0`                                                                             | Value of the `User-Agent` header.                                                                             |
 | `fetch`          | `typeof fetch`          | `globalThis.fetch`                                                                           | Custom fetch implementation for unsupported runtimes.                                                         |
+| `validateResponses` | `boolean`             | `true`                                                                                       | Enables runtime validation for known response models. Invalid validated payloads throw `LilyValidationError`. |
 
 ### Default constants
 
@@ -142,6 +143,7 @@ const sdk = new LilySdk({
   timeoutMs: 15_000,
   retry: { retries: 3, retryDelayMs: 500 },
   defaultHeaders: { 'x-request-source': 'billing-service' },
+  validateResponses: true,
 });
 ```
 
@@ -188,6 +190,48 @@ Credentials are inherited from the parent unless explicitly overridden. There is
 | 4        | \LILY_AUTH_TOKEN\    | Bearer token         |
 
 Explicit \options\ always take precedence over environment variables, which take precedence over built-in defaults (\https://api.lilyprotocol.com\\). Unlike the constructor, \create()\ never throws for a missing \aseUrl\ — it silently falls back to the default.``
+
+### Tenant-scoped overrides with `withConfig`
+
+Use `withConfig()` to derive a tenant-specific SDK instance with overridden credentials, headers, or endpoint while leaving the original SDK instance unchanged.
+
+```ts
+const platformSdk = new LilySdk({
+  baseUrl: 'https://api.lilyprotocol.com',
+  apiKey: 'platform-api-key',
+  defaultHeaders: { 'x-service': 'billing' },
+});
+
+const tenantSdk = platformSdk.withConfig({
+  apiKey: 'tenant-api-key',
+  defaultHeaders: { 'x-tenant-id': 'tenant_123' },
+});
+
+const wallet = await tenantSdk.wallets.get('wallet_123');
+```
+
+### `LilySdk.create()` environment-variable precedence
+
+`LilySdk.create()` resolves its environment-backed values in this order:
+
+- `baseUrl`: explicit `options.baseUrl` → `LILY_API_URL` → `LILY_BASE_URL` → `https://api.lilyprotocol.com`
+- `apiKey`: explicit `options.apiKey` → `LILY_API_KEY` → `undefined`
+- `authToken`: explicit `options.authToken` → `LILY_AUTH_TOKEN` → `undefined`
+
+Explicit values therefore override process-wide environment defaults.
+
+## Documentation
+
+- [API Reference](./docs/api-reference.md)
+- [Auth Headers](./docs/auth-headers.md)
+- [Custom HTTP Client](./docs/custom-http-client.md)
+- [Environment Variables](./docs/environment-variables.md)
+- [Error Handling](./docs/error-handling.md)
+- [Money and Stellar Assets](./docs/money-and-stellar-assets.md)
+- [Non-JSON Responses](./docs/non-json-responses.md)
+- [Runtime Requirements](./docs/runtime-requirements.md)
+- [Subpath Imports](./docs/subpath-imports.md)
+- [Timeouts and Retries](./docs/timeouts-and-retries.md)
 
 ## Public API Overview
 
