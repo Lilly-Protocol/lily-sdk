@@ -56,6 +56,9 @@
       "models": [
         "dist/models.d.ts"
       ],
+      "pagination": [
+        "dist/pagination.d.ts"
+      ],
       "types": [
         "dist/types.d.ts"
       ]
@@ -111,6 +114,16 @@
       "require": {
         "types": "./dist/models.d.cts",
         "default": "./dist/models.cjs"
+      }
+    },
+    "./pagination": {
+      "import": {
+        "types": "./dist/pagination.d.ts",
+        "default": "./dist/pagination.js"
+      },
+      "require": {
+        "types": "./dist/pagination.d.cts",
+        "default": "./dist/pagination.cjs"
       }
     },
     "./types": {
