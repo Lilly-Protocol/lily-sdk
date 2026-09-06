@@ -9,6 +9,7 @@ import {
   LilyValidationError,
   type LilyErrorOptions,
 } from '../errors/sdk-error';
+import { extractHeaders } from './fetch-http-client';
 
 /** Longest excerpt of a response body attached to an error. */
 export const BODY_SNIPPET_MAX_LENGTH = 256;
@@ -115,31 +116,42 @@ export function mapResponseError(
   headers?: Headers,
 ): LilyApiError | LilyAuthenticationError | LilyValidationError {
   const snippet = safeBodySnippet(data);
+  const responseHeaders = extractHeaders(headers);
   const options: LilyErrorOptions = {
     statusCode: status,
     details: data,
     ...(snippet !== undefined ? { bodySnippet: snippet } : {}),
+    ...(responseHeaders !== undefined ? { headers: responseHeaders } : {}),
   };
 
   if (status === 401) {
-    return new LilyAuthenticationError('Authentication failed for Lily Protocol API.', {
-      ...options,
-      code: 'AUTHENTICATION_ERROR',
-    });
+    return new LilyAuthenticationError(
+      'Authentication failed for Lily Protocol API.',
+      {
+        ...options,
+        code: 'AUTHENTICATION_ERROR',
+      },
+    );
   }
 
   if (status === 403) {
-    return new LilyAuthorizationError('Not authorized for this Lily Protocol resource.', {
-      ...options,
-      code: 'AUTHORIZATION_ERROR',
-    });
+    return new LilyAuthorizationError(
+      'Not authorized for this Lily Protocol resource.',
+      {
+        ...options,
+        code: 'AUTHORIZATION_ERROR',
+      },
+    );
   }
 
   if (status === 400 || status === 422) {
-    return new LilyValidationError('Lily Protocol API rejected the request as invalid.', {
-      ...options,
-      code: 'VALIDATION_ERROR',
-    });
+    return new LilyValidationError(
+      'Lily Protocol API rejected the request as invalid.',
+      {
+        ...options,
+        code: 'VALIDATION_ERROR',
+      },
+    );
   }
 
   if (status === 404 || status === 410) {

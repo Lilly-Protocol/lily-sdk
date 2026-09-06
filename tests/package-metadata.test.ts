@@ -50,4 +50,16 @@ describe('package.json metadata', () => {
     expect(Array.isArray(pkg.keywords)).toBe(true);
     expect((pkg.keywords as string[]).length).toBeGreaterThanOrEqual(3);
   });
+
+  it('defines codegen script referencing scripts/codegen.ts (issue #433)', () => {
+    const scripts = pkg.scripts as Record<string, string>;
+    expect(scripts).toHaveProperty('codegen');
+    expect(scripts.codegen).toContain('scripts/codegen.ts');
+  });
+
+  it('defines test:integration script referencing vitest.integration.config.ts (issue #434)', () => {
+    const scripts = pkg.scripts as Record<string, string>;
+    expect(scripts).toHaveProperty('test:integration');
+    expect(scripts['test:integration']).toContain('vitest.integration.config.ts');
+  });
 });

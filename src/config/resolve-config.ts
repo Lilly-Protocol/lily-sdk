@@ -7,22 +7,39 @@ import { LilyConfigError } from '../errors/sdk-error';
 import { VERSION } from '../version';
 import type { RetryPolicy } from '../http/types';
 import { toBearer } from '../http/resolve-auth-headers';
+import { DEFAULT_TIMEOUT_MS, DEFAULT_RETRY_POLICY } from './defaults';
 
-const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_USER_AGENT = `lily-sdk/${VERSION}`;
-const DEFAULT_RETRY_POLICY: RetryPolicy = {
-  retries: 2,
-  retryDelayMs: 250,
-  retryableStatusCodes: [408, 409, 425, 429, 500, 502, 503, 504],
-};
+
+const KNOWN_CONFIG_KEYS: readonly string[] = [
+  'baseUrl',
+  'apiKey',
+  'authToken',
+  'timeoutMs',
+  'retry',
+  'defaultHeaders',
+  'userAgent',
+  'fetch',
+  'validateResponses',
+];
 
 export function resolveLilySdkConfig(
   config: LilySdkConfig,
 ): ResolvedLilySdkConfig {
+  const unknownKeys = Object.keys(config).filter(
+    (key) => !KNOWN_CONFIG_KEYS.includes(key),
+  );
+  if (unknownKeys.length > 0) {
+    console.warn(
+      `[lily-sdk] Ignoring unknown config keys: ${unknownKeys.join(', ')}`,
+    );
+  }
+
   const baseUrl = resolveBaseUrl(config.baseUrl);
 
   if (
     config.apiKey !== undefined &&
+    config.apiKey !== null &&
     (typeof config.apiKey !== 'string' || config.apiKey.trim() === '')
   ) {
     throw new LilyConfigError('`apiKey` must be a non-empty string.');
@@ -30,6 +47,7 @@ export function resolveLilySdkConfig(
 
   if (
     config.authToken !== undefined &&
+    config.authToken !== null &&
     (typeof config.authToken !== 'string' || config.authToken.trim() === '')
   ) {
     throw new LilyConfigError('`authToken` must be a non-empty string.');
@@ -67,7 +85,9 @@ export function resolveLilySdkConfig(
     userAgent: config.userAgent ?? DEFAULT_USER_AGENT,
     fetch: fetchImpl,
     ...(resolvedApiKey !== undefined ? { apiKey: resolvedApiKey } : {}),
-    ...(resolvedAuthToken !== undefined ? { authToken: resolvedAuthToken } : {}),
+    ...(resolvedAuthToken !== undefined
+      ? { authToken: resolvedAuthToken }
+      : {}),
     validateResponses,
     toHeaders: () => ({
       accept: 'application/json',
@@ -85,21 +105,26 @@ function resolveBaseUrl(explicit: string | URL | undefined): URL {
   const raw =
     explicit ??
     (typeof process !== 'undefined'
-      ? process.env.LILY_API_URL
+      ? process.env.LILY_API_URL ?? process.env.LILY_BASE_URL
       : undefined);
 
   if (raw === undefined) {
-    throw new LilyConfigError('`baseUrl` is required.');
+    throw new LilyConfigError(
+      '`baseUrl` is required. Pass it explicitly or set LILY_API_URL / LILY_BASE_URL.',
+    );
   }
 
   return safeUrl(raw);
 }
 
 function resolveCredential(
-  explicit: string | undefined,
+  explicit: string | null | undefined,
   envName: string,
 ): string | undefined {
-  return explicit ?? process.env[envName] ?? undefined;
+  if (typeof process !== 'undefined' && process.env) {
+    return explicit ?? process.env[envName] ?? undefined;
+  }
+  return explicit;
 }
 
 function safeUrl(rawUrl: string | URL): URL {
@@ -136,7 +161,9 @@ function resolveRetryPolicy(
     policy?.retryableStatusCodes ?? DEFAULT_RETRY_POLICY.retryableStatusCodes;
 
   if (!Number.isInteger(retries) || retries < 0) {
-    throw new LilyConfigError('`retry.retries` must be a non-negative integer.');
+    throw new LilyConfigError(
+      '`retry.retries` must be a non-negative integer.',
+    );
   }
 
   if (!Number.isFinite(retryDelayMs) || retryDelayMs < 0) {

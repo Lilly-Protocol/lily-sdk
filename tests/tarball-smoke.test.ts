@@ -2,47 +2,65 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+interface FormatConditions {
+  types?: string;
+  default?: string;
+}
+
+interface SubpathEntry {
+  import?: FormatConditions;
+  require?: FormatConditions;
+}
+
 describe('Tarball subpath smoke (issue #84)', () => {
-  const pkg = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf-8'));
-  const exports = pkg.exports || {};
-  const subpathEntries = Object.entries(exports).filter(([k, v]) => k !== '.' && typeof v === 'object');
+  const pkg = JSON.parse(
+    readFileSync(join(process.cwd(), 'package.json'), 'utf-8'),
+  );
+  const exports = (pkg.exports || {}) as Record<string, unknown>;
+  const subpathEntries = Object.entries(exports).filter(
+    ([subpath, entry]) =>
+      subpath !== '.' && typeof entry === 'object' && entry !== null,
+  ) as Array<[string, SubpathEntry]>;
 
   it('package.json has exports map', () => {
     expect(Object.keys(exports).length).toBeGreaterThan(0);
   });
 
-  it('every subpath has types condition', () => {
-    for (const [key, conditions] of subpathEntries) {
-      const exp = conditions as Record<string, string>;
-      expect(exp).toHaveProperty('types');
+  it('every subpath has import and require conditions with types', () => {
+    for (const [, entry] of subpathEntries) {
+      expect(entry.import).toBeDefined();
+      expect(entry.require).toBeDefined();
+      expect(entry.import?.types).toBeDefined();
+      expect(entry.require?.types).toBeDefined();
     }
   });
 
-  it('every subpath has import condition', () => {
-    for (const [key, conditions] of subpathEntries) {
-      const exp = conditions as Record<string, string>;
-      expect(exp).toHaveProperty('import');
-    }
-  });
-
-  it('every subpath has require condition', () => {
-    for (const [key, conditions] of subpathEntries) {
-      const exp = conditions as Record<string, string>;
-      expect(exp).toHaveProperty('require');
-    }
-  });
-
-  it('every subpath types points to .d.ts', () => {
-    for (const [key, conditions] of subpathEntries) {
-      const exp = conditions as Record<string, string>;
-      expect(exp.types).toMatch(/\.d\.ts$/);
+  it('every subpath import types points to .d.ts', () => {
+    for (const [, entry] of subpathEntries) {
+      expect(entry.import?.types).toMatch(/\.d\.ts$/);
     }
   });
 
   it('every subpath import points to .js', () => {
-    for (const [key, conditions] of subpathEntries) {
-      const exp = conditions as Record<string, string>;
-      expect(exp.import).toMatch(/\.js$/);
+    for (const [, entry] of subpathEntries) {
+      expect(entry.import?.default).toMatch(/\.js$/);
     }
   });
+
+  it('every subpath require points to .cjs with .d.cts types', () => {
+    for (const [, entry] of subpathEntries) {
+      expect(entry.require?.default).toMatch(/\.cjs$/);
+      expect(entry.require?.types).toMatch(/\.d\.cts$/);
+    }
+  });
+
+  it('exposes ./webhooks subpath with dual-format entries and types (issue #410)', () => {
+    const webhooksEntry = exports['./webhooks'] as SubpathEntry | undefined;
+    expect(webhooksEntry).toBeDefined();
+    expect(webhooksEntry?.import?.default).toBe('./dist/webhooks.js');
+    expect(webhooksEntry?.import?.types).toBe('./dist/webhooks.d.ts');
+    expect(webhooksEntry?.require?.default).toBe('./dist/webhooks.cjs');
+    expect(webhooksEntry?.require?.types).toBe('./dist/webhooks.d.cts');
+  });
 });
+
