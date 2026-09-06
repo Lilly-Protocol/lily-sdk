@@ -125,6 +125,7 @@ export function createFetchHttpClient(
       }
 
       const url = buildUrl(config.baseUrl, request.path, request.query);
+      await lifecycleHooks.beforeRequest?.(request);
       const body = serializeBody(request.body);
       const headers = buildHeaders(config, request.headers);
 
