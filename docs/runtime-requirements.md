@@ -2,12 +2,12 @@
 
 ## Node.js
 
-- Minimum: Node.js 20
-- Recommended: the latest active LTS release of Node.js
+- Minimum: Node.js 20 (`package.json` engines: `>=20.0.0`)
+- Recommended: Node.js 22 LTS (or newer active LTS)
 - Tested in CI: Node.js 20, 22, and 24
 
-The SDK relies on the native global `fetch`, `AbortController`, and DOM `Headers`
-APIs available in Node.js 20 and later.
+Uses native global `fetch`, `AbortController`, and DOM `Headers` (Node.js 20+).
+Node.js 18 is not supported.
 
 ## Browser
 
