@@ -8,6 +8,7 @@ const commonEntry = [
   'src/http.ts',
   'src/models.ts',
   'src/types.ts',
+  'src/pagination.ts',
 ] as string[];
 
 export const nodeConfig: Options = {

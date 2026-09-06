@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { LilySdk } from '../src/sdk';
-import type { HttpClient } from '../src/http/types';
+import type { HttpClient, HttpRequest } from '../src/http/types';
 
 describe('LilySdk.withConfig', () => {
   const baseConfig = {
@@ -42,6 +42,65 @@ describe('LilySdk.withConfig', () => {
 
     // Both should use the injected client (verified by not throwing during construction)
     expect(tenantSdk.config.apiKey).toBe('tenant-key');
+  });
+
+  it('preserves an injected custom HttpClient across withConfig (issue #442)', async () => {
+    const calls: string[] = [];
+    const mockHttpClient: HttpClient = {
+      request: (request: HttpRequest) => {
+        calls.push(request.path);
+        return Promise.resolve({
+          status: 200,
+          data: { tenant: 'injected-client' },
+          headers: {},
+        });
+      },
+    } as unknown as HttpClient;
+
+    const sdk = new LilySdk(baseConfig, mockHttpClient);
+    const tenantSdk = sdk.withConfig({ apiKey: 'tenant2' });
+
+    // The child instance must route through the parent's injected client.
+    expect(tenantSdk.httpClient).toBe(mockHttpClient);
+
+    const result = await tenantSdk.request<{ tenant: string }>({
+      method: 'GET',
+      path: '/v1/agents',
+    });
+    expect(calls).toEqual(['/v1/agents']);
+    expect(result.tenant).toBe('injected-client');
+  });
+
+  it('rebuilds the default fetch client when none was injected (issue #405 semantics)', async () => {
+    const sdk = new LilySdk(baseConfig);
+    const derived = sdk.withConfig({ baseUrl: 'https://tenant.example.com' });
+
+    // The derived instance must NOT share the source transport, otherwise
+    // the baseUrl override would never reach the request closure.
+    expect(derived.httpClient).not.toBe(sdk.httpClient);
+
+    const fetchCalls: URL[] = [];
+    const trackingFetch: typeof fetch = ((input: RequestInfo | URL) => {
+      fetchCalls.push(new URL(String(input)));
+      return Promise.resolve(
+        new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+    }) as unknown as typeof fetch;
+
+    const routed = new LilySdk({
+      baseUrl: 'https://api.example.com',
+      fetch: trackingFetch,
+    });
+    const tenant = routed.withConfig({
+      baseUrl: 'https://tenant.example.com',
+      apiKey: 'tenant-key',
+    });
+    await tenant.request({ method: 'GET', path: '/v1/ping' });
+    expect(fetchCalls).toHaveLength(1);
+    expect(fetchCalls[0].origin).toBe('https://tenant.example.com');
   });
 
   it('does not mutate the original SDK instance', () => {

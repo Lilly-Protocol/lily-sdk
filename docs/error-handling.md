@@ -8,16 +8,16 @@ All SDK errors extend `LilySdkError`. Catch blocks can target specific error typ
 
 ```
 LilySdkError (base)
-├── LilyConfigError         — invalid configuration (bad baseUrl, invalid timeout/retry config)
-├── LilyTransportError      — network-level failures (timeout, DNS, connection drops)
-├── LilyValidationError     — client-side validation failures before dispatch
-├── LilyAuthenticationError — 401 Unauthorized (missing or invalid credentials)
-│   └── LilyAuthorizationError — 403 Forbidden (insufficient permissions)
-└── LilyApiError            — API returned an HTTP error response (4xx/5xx)
-    ├── LilyNotFoundError   — 404 Not Found (resource does not exist)
-    ├── LilyConflictError   — 409 Conflict (e.g. state conflict, concurrent modification)
-    ├── LilyRateLimitError  — 429 Too Many Requests (rate limited; provides retryAfterSeconds)
-    └── LilyServerError     — 5xx Server Error (internal server issues)
+├── LilyConfigError          — invalid configuration (bad baseUrl, missing apiKey)
+├── LilyTransportError       — network-level failures (timeout, DNS, connection)
+├── LilyAuthenticationError  — auth failures (401/403); base for subclasses below
+│   └── LilyAuthorizationError — explicit 403 authorization denial
+└── LilyApiError             — API returned an error response (4xx/5xx)
+    ├── LilyValidationError      — 400 (request validation failure)
+    ├── LilyNotFoundError        — 404 (resource not found)
+    ├── LilyConflictError        — 409 (resource conflict)
+    ├── LilyRateLimitError       — 429 (rate limited; has retryAfterSeconds)
+    └── LilyServerError          — 5xx (server-side failure)
 ```
 
 ## Error Classes & Meaning
@@ -40,21 +40,8 @@ LilySdkError (base)
 import {
   LilySdk,
   LilyConfigError,
-  LilyTransportError,
-  LilyValidationError,
   LilyAuthenticationError,
-  LilyAuthorizationError,
-  LilyNotFoundError,
-  LilyConflictError,
-  LilyRateLimitError,
-  LilyServerError,
-  LilyApiError,
 } from '@lily-protocol/sdk';
-
-const sdk = new LilySdk({
-  apiKey: process.env.LILY_API_KEY,
-  baseUrl: 'https://api.lilyprotocol.com',
-});
 
 try {
   const payment = await sdk.payments.get('pay_123');
@@ -77,7 +64,7 @@ try {
   } else if (error instanceof LilyServerError) {
     console.error(`Server error (${error.statusCode}):`, error.message);
   } else if (error instanceof LilyApiError) {
-    console.error(`API error (${error.statusCode}):`, error.message);
+    console.error('API error:', error.statusCode, error.message);
   } else if (error instanceof LilyTransportError) {
     console.error('Transport error:', error.code, error.message);
   } else {
@@ -91,7 +78,7 @@ try {
 All SDK errors can be narrowed using `isLilySdkError`:
 
 ```typescript
-import { isLilySdkError, LILY_ERROR_CODES } from '@lily-protocol/sdk';
+import { isLilySdkError } from '@lily-protocol/sdk';
 
 try {
   await sdk.payments.create({
