@@ -1,7 +1,7 @@
 import { encodePathSegment } from '../http/path';
+import { validateNonEmptyString } from '../validation';
 import type {
   ExecutePaymentRequest,
-  PaginationQuery,
   Payment,
   PaymentQuote,
   PaymentQuoteRequest,
@@ -9,8 +9,9 @@ import type {
 import type { PaymentClientContract } from '../types/contracts';
 import {
   validateExecutePaymentRequest,
+  validateNonEmptyString,
   validatePaymentQuoteRequest,
-} from '../validation/payment';
+} from '../validation';
 import { BaseClient } from './base-client';
 
 export class PaymentClient extends BaseClient implements PaymentClientContract {
@@ -28,27 +29,26 @@ export class PaymentClient extends BaseClient implements PaymentClientContract {
     return this.request({
       method: 'POST',
       path: '/v1/payments',
-      ...(input.idempotencyKey !== undefined
-        ? { headers: { 'Idempotency-Key': input.idempotencyKey } }
-        : {}),
       body: input,
     });
   }
 
   public get(paymentId: string): Promise<Payment> {
+    validateNonEmptyString(paymentId, 'paymentId');
     return this.request({
       method: 'GET',
       path: `/v1/payments/${encodePathSegment(paymentId)}`,
     });
   }
 
-  public list(query: PaginationQuery = {}): Promise<readonly Payment[]> {
+  public async list(query?: {
+    limit?: number;
+    cursor?: string;
+  }): Promise<readonly Payment[]> {
     return this.request({
       method: 'GET',
       path: '/v1/payments',
-      query: {
-        ...query,
-      },
+      query: query ?? {},
     });
   }
 }

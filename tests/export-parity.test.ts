@@ -1,66 +1,86 @@
 import { describe, it, expect } from 'vitest';
-import * as root from '../src/index';
-import * as errors from '../src/errors';
-import * as config from '../src/config';
-import * as http from '../src/http';
-import * as models from '../src/models';
+import { createRequire } from 'node:module';
+import { resolve } from 'node:path';
+
+const require = createRequire(import.meta.url);
+const pkgRoot = resolve(import.meta.dirname, '..');
 
 describe('export-surface parity (issue #424)', () => {
-  const rootKeys = Object.keys(root).sort();
+  const subpathDistPaths: Record<string, string> = {
+    './config': 'dist/config.cjs',
+    './errors': 'dist/errors.cjs',
+    './http': 'dist/http.cjs',
+    './models': 'dist/models.cjs',
+  };
 
-  it('root and ./errors export the same error symbols', () => {
-    const errorKeys = Object.keys(errors).sort();
-    const rootErrorKeys = rootKeys.filter(k =>
-      k.startsWith('Lily') || k === 'isLilySdkError' || k === 'LILY_ERROR_CODES' || k === 'LilyErrorCode'
-    );
-    for (const key of rootErrorKeys) {
-      expect(errors, missing  in ./errors).toHaveProperty(key);
-    }
-  });
+  const subpathExports: Record<string, string[]> = {
+    './config': [
+      'resolveLilySdkConfig',
+      'DEFAULT_TIMEOUT_MS',
+      'DEFAULT_RETRY_POLICY',
+      'DEFAULT_RETRYABLE_STATUS_CODES',
+    ],
+    './errors': [
+      'LILY_ERROR_CODES',
+      'LilySdkError',
+      'LilyConfigError',
+      'LilyApiError',
+      'LilyAuthenticationError',
+      'LilyAuthorizationError',
+      'LilyConflictError',
+      'LilyNotFoundError',
+      'LilyRateLimitError',
+      'LilyServerError',
+      'LilyTransportError',
+    ],
+    './http': [
+      'createFetchHttpClient',
+      'buildUrl',
+    ],
+    './models': [
+      'normalizeMoneyAmount',
+    ],
+  };
 
-  it('root and ./config export the same config symbols', () => {
-    const configKeys = Object.keys(config).sort();
-    const expected = ['LilySdkConfig', 'LilySdkCreateOptions', 'ResolvedLilySdkConfig', 'resolveLilySdkConfig'];
-    for (const key of expected) {
-      expect(config, missing  in ./config).toHaveProperty(key);
-      expect(root, missing  in root).toHaveProperty(key);
-    }
-  });
-
-  it('root and ./http export the same http symbols', () => {
-    const httpKeys = Object.keys(http).sort();
-    const expected = ['buildUrl', 'createFetchHttpClient'];
-    for (const key of expected) {
-      expect(http, missing  in ./http).toHaveProperty(key);
-      expect(root, missing  in root).toHaveProperty(key);
-    }
-  });
-
-  it('root and ./models export the same model symbols', () => {
-    const modelKeys = Object.keys(models).sort();
-    // Models are re-exported via export *, so check a few known ones
-    const knownModels = modelKeys.filter(k => k[0] === k[0].toUpperCase()).slice(0, 5);
-    expect(knownModels.length).toBeGreaterThan(0);
-    for (const key of knownModels) {
-      expect(root, missing  in root).toHaveProperty(key);
-    }
-  });
-
-  it('every root export has a natural subpath home', () => {
-    const subpaths: Record<string, unknown> = {
-      './config': config,
-      './errors': errors,
-      './http': http,
-      './models': models,
-    };
-    for (const key of rootKeys) {
-      const found = Object.entries(subpaths).some(([, mod]) => {
-        const modKeys = Object.keys(mod as Record<string, unknown>);
-        return modKeys.includes(key);
+  for (const [subpath, expectedSymbols] of Object.entries(subpathExports)) {
+    describe(subpath, () => {
+      it('exports all expected runtime symbols', () => {
+        const mod = require(resolve(pkgRoot, subpathDistPaths[subpath]));
+        for (const symbol of expectedSymbols) {
+          const msg = symbol + ' missing from ' + subpath + ' export';
+          expect(symbol in mod, msg).toBe(true);
+        }
       });
-      if (!found && key !== 'LilySdk') {
-        console.warn(Root export  not found in any subpath);
-      }
-    }
+    });
+  }
+
+  it('root CJS bundle exposes all expected symbols', () => {
+    const root = require(resolve(pkgRoot, 'dist/index.cjs'));
+
+    expect(typeof root.LilySdk).toBe('function');
+    expect(typeof root.AgentClient).toBe('function');
+    expect(typeof root.WalletClient).toBe('function');
+    expect(typeof root.PaymentClient).toBe('function');
+    expect(typeof root.IdentityClient).toBe('function');
+    expect(typeof root.SystemClient).toBe('function');
+    expect(typeof root.BaseClient).toBe('function');
+    expect(typeof root.createFetchHttpClient).toBe('function');
+    expect(typeof root.resolveLilySdkConfig).toBe('function');
+    expect(typeof root.normalizeMoneyAmount).toBe('function');
+    expect(typeof root.SDK_VERSION).toBe('string');
+    expect(typeof root.isLilySdkError).toBe('function');
+
+    expect(root.LILY_ERROR_CODES).toBeDefined();
+    expect(root.LilySdkError).toBeDefined();
+    expect(root.LilyConfigError).toBeDefined();
+    expect(root.LilyApiError).toBeDefined();
+    expect(root.LilyAuthenticationError).toBeDefined();
+    expect(root.LilyAuthorizationError).toBeDefined();
+    expect(root.LilyConflictError).toBeDefined();
+    expect(root.LilyNotFoundError).toBeDefined();
+    expect(root.LilyRateLimitError).toBeDefined();
+    expect(root.LilyServerError).toBeDefined();
+    expect(root.LilyTransportError).toBeDefined();
+    expect(root.LilyValidationError).toBeDefined();
   });
 });
