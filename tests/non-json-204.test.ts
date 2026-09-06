@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import type { ResolvedLilySdkConfig } from '../src/config/types';
 
-function createMockConfig(overrides: Partial<ResolvedLilySdkConfig> = {}): ResolvedLilySdkConfig {
+function createMockConfig(
+  overrides: Partial<ResolvedLilySdkConfig> = {},
+): ResolvedLilySdkConfig {
   return {
     baseUrl: new URL('https://api.example.com'),
     apiKey: 'test-key',
@@ -28,13 +30,20 @@ describe('fetch-http-client non-JSON and 204 handling', () => {
       ok: true,
       status: 204,
       headers: new Headers({ 'content-type': 'application/json' }),
-      json: vi.fn().mockRejectedValue(new Error('Should not call json() on 204')),
+      json: vi
+        .fn()
+        .mockRejectedValue(new Error('Should not call json() on 204')),
       text: vi.fn().mockResolvedValue(''),
     };
-    vi.mocked(config.fetch).mockResolvedValue(mockResponse as unknown as Response);
+    vi.mocked(config.fetch).mockResolvedValue(
+      mockResponse as unknown as Response,
+    );
 
     const client = createFetchHttpClient(config);
-    const result = await client.request({ method: 'DELETE', path: '/v1/resource/1' });
+    const result = await client.request({
+      method: 'DELETE',
+      path: '/v1/resource/1',
+    });
 
     expect(result.status).toBe(204);
     expect(result.data).toBeNull();
@@ -47,10 +56,14 @@ describe('fetch-http-client non-JSON and 204 handling', () => {
       ok: true,
       status: 200,
       headers: new Headers({ 'content-type': 'text/plain' }),
-      json: vi.fn().mockRejectedValue(new Error('Should not call json() for text/plain')),
+      json: vi
+        .fn()
+        .mockRejectedValue(new Error('Should not call json() for text/plain')),
       text: vi.fn().mockResolvedValue(plainText),
     };
-    vi.mocked(config.fetch).mockResolvedValue(mockResponse as unknown as Response);
+    vi.mocked(config.fetch).mockResolvedValue(
+      mockResponse as unknown as Response,
+    );
 
     const client = createFetchHttpClient(config);
     const result = await client.request({ method: 'GET', path: '/health' });
@@ -66,18 +79,23 @@ describe('fetch-http-client non-JSON and 204 handling', () => {
     const mockResponse = {
       ok: true,
       status: 200,
-      headers: new Headers({ 'content-type': 'application/json; charset=utf-8' }),
+      headers: new Headers({
+        'content-type': 'application/json; charset=utf-8',
+      }),
       json: vi.fn().mockResolvedValue(jsonData),
-      text: vi.fn(),
+      text: vi.fn().mockResolvedValue(JSON.stringify(jsonData)),
     };
-    vi.mocked(config.fetch).mockResolvedValue(mockResponse as unknown as Response);
+    vi.mocked(config.fetch).mockResolvedValue(
+      mockResponse as unknown as Response,
+    );
 
     const client = createFetchHttpClient(config);
     const result = await client.request({ method: 'GET', path: '/v1/status' });
 
     expect(result.data).toEqual(jsonData);
-    expect(mockResponse.json).toHaveBeenCalled();
-    expect(mockResponse.text).not.toHaveBeenCalled();
+    // New implementation reads text once then JSON.parse, not response.json()
+    expect(mockResponse.text).toHaveBeenCalled();
+    expect(mockResponse.json).not.toHaveBeenCalled();
   });
 
   it('falls back to text parsing when content-type header is missing', async () => {
@@ -89,7 +107,9 @@ describe('fetch-http-client non-JSON and 204 handling', () => {
       json: vi.fn().mockRejectedValue(new SyntaxError('Unexpected token <')),
       text: vi.fn().mockResolvedValue(rawBody),
     };
-    vi.mocked(config.fetch).mockResolvedValue(mockResponse as unknown as Response);
+    vi.mocked(config.fetch).mockResolvedValue(
+      mockResponse as unknown as Response,
+    );
 
     const client = createFetchHttpClient(config);
     const result = await client.request({ method: 'GET', path: '/legacy' });

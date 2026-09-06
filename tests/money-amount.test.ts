@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeMoneyAmount } from '../src/models/common';
-import { MoneyAmount } from '../src/models/common';
+import type { MoneyAmount } from '../src/models/common';
 
 describe('MoneyAmount decimal normalization', () => {
   it('normalizes a whole-number amount to 2 decimal places', () => {
@@ -21,10 +21,16 @@ describe('MoneyAmount decimal normalization', () => {
     expect(result.amount).toBe('25.00');
   });
 
-  it('truncates excess decimal places to 2', () => {
-    const input: MoneyAmount = { assetCode: 'USDC', amount: '1.234567' };
+  it('preserves up to 7 fractional digits for Stellar precision', () => {
+    const input: MoneyAmount = { assetCode: 'XLM', amount: '0.0000001' };
     const result = normalizeMoneyAmount(input);
-    expect(result.amount).toBe('1.23');
+    expect(result.amount).toBe('0.0000001');
+  });
+
+  it('preserves 7 fractional digits without truncating to 2', () => {
+    const input: MoneyAmount = { assetCode: 'USDC', amount: '1.2345678' };
+    const result = normalizeMoneyAmount(input);
+    expect(result.amount).toBe('1.2345678');
   });
 
   it('handles amounts with leading zeros', () => {
@@ -34,7 +40,11 @@ describe('MoneyAmount decimal normalization', () => {
   });
 
   it('preserves assetCode and assetIssuer', () => {
-    const input: MoneyAmount = { assetCode: 'USDC', assetIssuer: 'GA123...', amount: '10' };
+    const input: MoneyAmount = {
+      assetCode: 'USDC',
+      assetIssuer: 'GA123...',
+      amount: '10',
+    };
     const result = normalizeMoneyAmount(input);
     expect(result.assetCode).toBe('USDC');
     expect(result.assetIssuer).toBe('GA123...');

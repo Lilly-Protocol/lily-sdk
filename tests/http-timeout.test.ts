@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { LilyTransportError } from '../src/errors/sdk-error';
+import { LilyConfigError, LilyTransportError } from '../src/errors/sdk-error';
 import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import type { ResolvedLilySdkConfig } from '../src/config/types';
 
@@ -36,6 +36,7 @@ function client(overrides: Partial<ResolvedLilySdkConfig> = {}) {
     defaultHeaders: {},
     userAgent: 'lily-sdk/test',
     fetch: hangingFetch(),
+    toHeaders: () => ({}),
     ...overrides,
   });
 }
@@ -52,7 +53,8 @@ describe('request timeout', () => {
       method: 'GET',
       path: '/v1/system/health',
     });
-    const assertion = expect(pending).rejects.toBeInstanceOf(LilyTransportError);
+    const assertion =
+      expect(pending).rejects.toBeInstanceOf(LilyTransportError);
 
     await vi.advanceTimersByTimeAsync(2_000);
     await assertion;
@@ -101,7 +103,8 @@ describe('request timeout', () => {
       path: '/v1/system/health',
       timeoutMs: 500,
     });
-    const assertion = expect(pending).rejects.toBeInstanceOf(LilyTransportError);
+    const assertion =
+      expect(pending).rejects.toBeInstanceOf(LilyTransportError);
 
     await vi.advanceTimersByTimeAsync(500);
     await assertion;
@@ -162,3 +165,93 @@ describe('request timeout', () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
   });
 });
+
+describe('per-request timeoutMs validation (Issue #446)', () => {
+  it('rejects negative timeoutMs without calling fetch', async () => {
+    const fetchSpy = vi.fn();
+    const c = client({ fetch: fetchSpy });
+
+    await expect(
+      c.request({ method: 'GET', path: '/test', timeoutMs: -1 }),
+    ).rejects.toBeInstanceOf(LilyConfigError);
+
+    await expect(
+      c.request({ method: 'GET', path: '/test', timeoutMs: -500 }),
+    ).rejects.toThrow('`timeoutMs` must be a non-negative number.');
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejects NaN and non-finite timeoutMs without calling fetch', async () => {
+    const fetchSpy = vi.fn();
+    const c = client({ fetch: fetchSpy });
+
+    await expect(
+      c.request({ method: 'GET', path: '/test', timeoutMs: NaN }),
+    ).rejects.toBeInstanceOf(LilyConfigError);
+
+    await expect(
+      c.request({ method: 'GET', path: '/test', timeoutMs: Infinity }),
+    ).rejects.toBeInstanceOf(LilyConfigError);
+
+    await expect(
+      c.request({ method: 'GET', path: '/test', timeoutMs: -Infinity }),
+    ).rejects.toBeInstanceOf(LilyConfigError);
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejects non-number timeoutMs without calling fetch', async () => {
+    const fetchSpy = vi.fn();
+    const c = client({ fetch: fetchSpy });
+
+    await expect(
+      c.request({ method: 'GET', path: '/test', timeoutMs: '5000' as any }),
+    ).rejects.toBeInstanceOf(LilyConfigError);
+
+    await expect(
+      c.request({ method: 'GET', path: '/test', timeoutMs: null as any }),
+    ).rejects.toBeInstanceOf(LilyConfigError);
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('allows timeoutMs: 0 and disables timeout', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const c = client({ fetch: fetchMock });
+
+    const response = await c.request({
+      method: 'GET',
+      path: '/test',
+      timeoutMs: 0,
+    });
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it('allows valid positive timeoutMs override', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const c = client({ fetch: fetchMock });
+
+    const response = await c.request({
+      method: 'GET',
+      path: '/test',
+      timeoutMs: 1500,
+    });
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+});
+

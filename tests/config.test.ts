@@ -17,7 +17,9 @@ describe('resolveLilySdkConfig', () => {
 
   it('uses explicit baseUrl over env', () => {
     process.env.LILY_API_URL = 'https://env.example.com';
-    const config = resolveLilySdkConfig({ baseUrl: 'https://explicit.example.com' });
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://explicit.example.com',
+    });
     expect(config.baseUrl.toString()).toBe('https://explicit.example.com/');
   });
 
@@ -46,6 +48,7 @@ describe('resolveLilySdkConfig', () => {
     process.env.LILY_API_KEY = 'env-key';
     process.env.LILY_AUTH_TOKEN = 'env-token';
     const config = resolveLilySdkConfig({
+      baseUrl: 'https://api.lily.test',
       apiKey: 'explicit-key',
       authToken: 'explicit-token',
     });
@@ -167,25 +170,52 @@ describe('resolveLilySdkConfig', () => {
       }),
     ).toThrow('`retry.retryDelayMs` must be a non-negative number.');
   });
+
+  describe('validateResponses', () => {
+    it('defaults validateResponses to true when not provided', () => {
+      const config = resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+      });
+      expect(config.validateResponses).toBe(true);
+    });
+
+    it('preserves validateResponses: false when explicitly provided', () => {
+      const config = resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+        validateResponses: false,
+      });
+      expect(config.validateResponses).toBe(false);
+    });
+
+    it('preserves validateResponses: true when explicitly provided', () => {
+      const config = resolveLilySdkConfig({
+        baseUrl: 'https://api.lily.test',
+        fetch: globalThis.fetch,
+        validateResponses: true,
+      });
+      expect(config.validateResponses).toBe(true);
+    });
+  });
 });
 
+it('throws when retry.retries is not an integer', () => {
+  expect(() =>
+    resolveLilySdkConfig({
+      baseUrl: 'https://api.lily.test',
+      fetch: globalThis.fetch,
+      retry: { retries: 1.5 },
+    }),
+  ).toThrow(LilyConfigError);
+});
 
-  it('throws when retry.retries is not an integer', () => {
-    expect(() =>
-      resolveLilySdkConfig({
-        baseUrl: 'https://api.lily.test',
-        fetch: globalThis.fetch,
-        retry: { retries: 1.5 },
-      }),
-    ).toThrow(LilyConfigError);
-  });
-
-  it('throws when retry.retryDelayMs is negative', () => {
-    expect(() =>
-      resolveLilySdkConfig({
-        baseUrl: 'https://api.lily.test',
-        fetch: globalThis.fetch,
-        retry: { retryDelayMs: -100 },
-      }),
-    ).toThrow(LilyConfigError);
-  });
+it('throws when retry.retryDelayMs is negative', () => {
+  expect(() =>
+    resolveLilySdkConfig({
+      baseUrl: 'https://api.lily.test',
+      fetch: globalThis.fetch,
+      retry: { retryDelayMs: -100 },
+    }),
+  ).toThrow(LilyConfigError);
+});

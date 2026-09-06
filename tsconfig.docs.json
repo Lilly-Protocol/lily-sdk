@@ -1,4 +1,15 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["src/index.ts", "src/config.ts", "src/errors.ts", "src/http.ts", "src/models.ts", "src/types.ts"]
+  "typedocOptions": {
+    "sourceLinkTemplate": "https://github.com/Lilly-Protocol/lily-sdk/blob/main/{path}#L{line}"
+  },
+  "include": [
+    "src/index.ts",
+    "src/config.ts",
+    "src/errors.ts",
+    "src/http.ts",
+    "src/models.ts",
+    "src/testing.ts",
+    "src/types.ts"
+  ]
 }
