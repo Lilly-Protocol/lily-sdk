@@ -14,7 +14,7 @@ export interface LilyErrorOptions {
   bodySnippet?: string;
   /** Delta-seconds value from a Retry-After header, when present. */
   retryAfterSeconds?: number;
-  /** Response headers from a failing HTTP request. */
+  /** Response headers from the failing HTTP response. */
   headers?: Record<string, string>;
 }
 
@@ -24,12 +24,15 @@ export const LILY_ERROR_CODES = Object.freeze({
   AUTHENTICATION_ERROR: 'AUTHENTICATION_ERROR',
   AUTHORIZATION_ERROR: 'AUTHORIZATION_ERROR',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
+  RESPONSE_VALIDATION_ERROR: 'RESPONSE_VALIDATION_ERROR',
   TRANSPORT_ERROR: 'TRANSPORT_ERROR',
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
   RATE_LIMITED: 'RATE_LIMITED',
   SERVER_ERROR: 'SERVER_ERROR',
   TIMEOUT: 'TIMEOUT',
+    CANCELLED: 'CANCELLED',
+    RESPONSE_VALIDATION_ERROR: 'RESPONSE_VALIDATION_ERROR',
 });
 
 export type LilyErrorCode = keyof typeof LILY_ERROR_CODES;
@@ -71,6 +74,9 @@ export class LilySdkError extends Error {
 
     if (this.request !== undefined) {
       result.request = this.request;
+    }
+    if (this.headers !== undefined) {
+      result.headers = this.headers;
     }
 
     if (this.headers !== undefined) {
