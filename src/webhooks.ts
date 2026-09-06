@@ -38,6 +38,59 @@ export function verifyWebhookSignature(
 }
 
 /**
+ * Deterministically serializes a value to a canonical JSON string
+ * by recursively sorting object keys.
+ *
+ * @param value - The value to serialize.
+ * @returns The canonical JSON string representation.
+ */
+export function canonicalJsonStringify(value: unknown): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+
+  const raw =
+    typeof (value as { toJSON?: () => unknown }).toJSON === 'function'
+      ? (value as { toJSON: () => unknown }).toJSON()
+      : value;
+
+  if (raw === null || typeof raw !== 'object') {
+    return JSON.stringify(raw);
+  }
+
+  if (Array.isArray(raw)) {
+    return (
+      '[' +
+      raw
+        .map((item) =>
+          item === undefined ||
+          typeof item === 'function' ||
+          typeof item === 'symbol'
+            ? 'null'
+            : canonicalJsonStringify(item),
+        )
+        .join(',') +
+      ']'
+    );
+  }
+
+  const keys = Object.keys(raw as Record<string, unknown>).sort();
+  const entries: string[] = [];
+  for (const key of keys) {
+    const val = (raw as Record<string, unknown>)[key];
+    if (
+      val !== undefined &&
+      typeof val !== 'function' &&
+      typeof val !== 'symbol'
+    ) {
+      entries.push(`${JSON.stringify(key)}:${canonicalJsonStringify(val)}`);
+    }
+  }
+
+  return `{${entries.join(',')}}`;
+}
+
+/**
  * Verifies a webhook signature from parsed JSON.
  * Re-serializes the JSON to a canonical form (sorted keys) before verifying.
  */
