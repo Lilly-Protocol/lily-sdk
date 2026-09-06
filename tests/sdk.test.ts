@@ -34,7 +34,9 @@ describe('LilySdk composition', () => {
     expect(walletsHttp).toBe(http);
     expect(paymentsHttp).toBe(http);
     expect(identityHttp).toBe(http);
-    expect(systemHttp).toBe(http);
+    // SystemClient receives config (not injected httpClient) so it can access validateResponses
+    expect(systemHttp).toBeDefined();
+    expect(typeof systemHttp.request).toBe('function');
   });
 
   it('default construction creates a fetch client from resolved config', () => {
@@ -181,5 +183,22 @@ describe('LilySdk composition', () => {
     expect(sdk.config.retry.retries).toBe(4);
     expect(tenantSdk).not.toBe(sdk);
     expect(tenantSdk.system).not.toBe(sdk.system);
+  });
+  it('passes validateResponses to SystemClient on default SDK path (#413)', async () => {
+    const mockFetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ status: 'invalid!' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    );
+    const sdk = new LilySdk({
+      baseUrl: 'https://api.lily.test',
+      validateResponses: true,
+      fetch: mockFetch as any,
+    });
+    // Should throw because validateResponses=true and response is invalid
+    await expect(sdk.system.health()).rejects.toThrow();
   });
 });
