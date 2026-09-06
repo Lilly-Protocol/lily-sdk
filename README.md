@@ -107,6 +107,15 @@ The SDK accepts a `LilySdkConfig` object. All fields except `baseUrl` are option
 | `userAgent`      | `string`                | `lily-sdk/0.1.0`                                                                             | Value of the `User-Agent` header.                                                                             |
 | `fetch`          | `typeof fetch`          | `globalThis.fetch`                                                                           | Custom fetch implementation for unsupported runtimes.                                                         |
 
+The same timeout and retry defaults are exported as `DEFAULT_TIMEOUT_MS` and `DEFAULT_RETRY_POLICY` from `@lily-protocol/sdk/config`, so custom `HttpClient` implementations can reuse the values applied by `resolveLilySdkConfig` and the default fetch transport.
+
+```ts
+import {
+  DEFAULT_TIMEOUT_MS,
+  DEFAULT_RETRY_POLICY,
+} from '@lily-protocol/sdk/config';
+```
+
 ### Retry semantics
 
 - Retries only apply to **safe/idempotent** methods: `GET`, `PUT`, and `DELETE`. Requests using `POST` or `PATCH` fail immediately on error.
