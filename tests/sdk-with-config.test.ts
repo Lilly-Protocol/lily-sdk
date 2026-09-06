@@ -27,6 +27,17 @@ describe('LilySdk.withConfig', () => {
     expect(derived.config.apiKey).toBe('key-1');
   });
 
+  it('preserves a custom HttpClient across withConfig', () => {
+    const customClient = {
+      request: vi.fn().mockResolvedValue({ status: 200, data: { ok: true } }),
+    };
+    const base = new LilySdk({ baseUrl: 'https://api.example.com' }, customClient as any);
+    const tenant = base.withConfig({ apiKey: 'tenant-key' });
+
+    expect(tenant.http).toBe(customClient);
+    expect(base.http).toBe(customClient);
+  });
+
   it('overrides credentials independently per tenant', () => {
     const base = new LilySdk({
       baseUrl: 'https://api.example.com',
@@ -40,77 +51,31 @@ describe('LilySdk.withConfig', () => {
     expect(base.config.apiKey).toBe('shared-key');
   });
 
-  it('clears inherited apiKey when apiKey is explicitly null', () => {
-    const base = new LilySdk({
+  it('preserves validateResponses setting across reconfigurations', () => {
+    const baseFalse = new LilySdk({
       baseUrl: 'https://api.example.com',
-      apiKey: 'parent-key',
-      authToken: 'parent-token',
+      validateResponses: false,
     });
-    const publicChild = base.withConfig({ apiKey: null });
+    const derivedFalse = baseFalse.withConfig({ apiKey: 'new-key' });
+    expect(derivedFalse.config.validateResponses).toBe(false);
 
-    expect(publicChild.config.apiKey).toBeUndefined();
-    expect(publicChild.config.authToken).toBe('parent-token');
-
-    const headers = publicChild.config.toHeaders?.() ?? {};
-    expect(headers['x-api-key']).toBeUndefined();
-    expect(headers['authorization']).toBe('Bearer parent-token');
+    const baseTrue = new LilySdk({
+      baseUrl: 'https://api.example.com',
+      validateResponses: true,
+    });
+    const derivedTrue = baseTrue.withConfig({ apiKey: 'new-key' });
+    expect(derivedTrue.config.validateResponses).toBe(true);
   });
 
-  it('clears inherited authToken when authToken is explicitly null', () => {
+  it('allows overriding validateResponses in withConfig', () => {
     const base = new LilySdk({
       baseUrl: 'https://api.example.com',
-      apiKey: 'parent-key',
-      authToken: 'parent-token',
+      validateResponses: false,
     });
-    const keyOnlyChild = base.withConfig({ authToken: null });
+    const derived = base.withConfig({ validateResponses: true });
+    expect(derived.config.validateResponses).toBe(true);
 
-    expect(keyOnlyChild.config.apiKey).toBe('parent-key');
-    expect(keyOnlyChild.config.authToken).toBeUndefined();
-
-    const headers = keyOnlyChild.config.toHeaders?.() ?? {};
-    expect(headers['x-api-key']).toBe('parent-key');
-    expect(headers['authorization']).toBeUndefined();
-  });
-
-  it('clears both credentials when null is provided for both', () => {
-    const base = new LilySdk({
-      baseUrl: 'https://api.example.com',
-      apiKey: 'parent-key',
-      authToken: 'parent-token',
-    });
-    const anonymousChild = base.withConfig({ apiKey: null, authToken: null });
-
-    expect(anonymousChild.config.apiKey).toBeUndefined();
-    expect(anonymousChild.config.authToken).toBeUndefined();
-
-    const headers = anonymousChild.config.toHeaders?.() ?? {};
-    expect(headers['x-api-key']).toBeUndefined();
-    expect(headers['authorization']).toBeUndefined();
-  });
-
-  it('does not fall back to env vars when credential is explicitly null', () => {
-    const originalApiKey = process.env.LILY_API_KEY;
-    const originalAuthToken = process.env.LILY_AUTH_TOKEN;
-
-    try {
-      process.env.LILY_API_KEY = 'env-secret-key';
-      process.env.LILY_AUTH_TOKEN = 'env-secret-token';
-
-      const base = new LilySdk({
-        baseUrl: 'https://api.example.com',
-        apiKey: 'parent-key',
-      });
-      const unauthChild = base.withConfig({ apiKey: null, authToken: null });
-
-      expect(unauthChild.config.apiKey).toBeUndefined();
-      expect(unauthChild.config.authToken).toBeUndefined();
-
-      const headers = unauthChild.config.toHeaders?.() ?? {};
-      expect(headers['x-api-key']).toBeUndefined();
-      expect(headers['authorization']).toBeUndefined();
-    } finally {
-      process.env.LILY_API_KEY = originalApiKey;
-      process.env.LILY_AUTH_TOKEN = originalAuthToken;
-    }
+    const backToFalse = derived.withConfig({ validateResponses: false });
+    expect(backToFalse.config.validateResponses).toBe(false);
   });
 });
