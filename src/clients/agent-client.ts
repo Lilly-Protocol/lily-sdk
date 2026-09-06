@@ -1,4 +1,5 @@
 import { encodePathSegment } from '../http/path';
+import { validateNonEmptyString } from '../validation';
 import type {
   Agent,
   CreateAgentRequest,
@@ -25,6 +26,7 @@ export class AgentClient extends BaseClient implements AgentClientContract {
   }
 
   public get(agentId: string): Promise<Agent> {
+    validateNonEmptyString(agentId, 'agentId');
     return this.request({
       method: 'GET',
       path: `/v1/agents/${encodePathSegment(agentId)}`,
@@ -40,9 +42,8 @@ export class AgentClient extends BaseClient implements AgentClientContract {
     });
   }
 
-  public async update(agentId: string, input: UpdateAgentRequest): Promise<Agent> {
+  public update(agentId: string, input: UpdateAgentRequest): Promise<Agent> {
     validateNonEmptyString(agentId, 'agentId');
-    validateUpdateAgentRequest(input);
     return this.request({
       method: 'PATCH',
       path: `/v1/agents/${encodePathSegment(agentId)}`,
@@ -51,6 +52,7 @@ export class AgentClient extends BaseClient implements AgentClientContract {
   }
 
   public delete(agentId: string): Promise<void> {
+    validateNonEmptyString(agentId, 'agentId');
     return this.request({
       method: 'DELETE',
       path: `/v1/agents/${encodePathSegment(agentId)}`,
