@@ -4,6 +4,7 @@ import {
   buildPaginationQuery,
   paginate,
 } from '../src/pagination';
+import type { CursorPage } from '../src/pagination';
 
 describe('pagination helper (issue #61)', () => {
   describe('parseCursorPage', () => {
@@ -57,8 +58,17 @@ describe('pagination helper (issue #61)', () => {
   });
 
   describe('paginate', () => {
-    it('yields all items from a single page', async () => {
-      const fetchPage = vi.fn().mockResolvedValue([1, 2, 3]);
+    const page = (
+      items: number[],
+      nextCursor: string | null,
+    ): CursorPage<number> => ({
+      items,
+      nextCursor,
+      hasMore: nextCursor != null && nextCursor !== '',
+    });
+
+    it('yields all items from a single cursor-less page', async () => {
+      const fetchPage = vi.fn().mockResolvedValue(page([1, 2, 3], null));
       const results: number[] = [];
       for await (const item of paginate<number>(fetchPage)) {
         results.push(item);
@@ -67,8 +77,55 @@ describe('pagination helper (issue #61)', () => {
       expect(fetchPage).toHaveBeenCalledTimes(1);
     });
 
-    it('stops at maxPages when limit is set', async () => {
-      const fetchPage = vi.fn().mockResolvedValue([1, 2]);
+    it('advances on cursor metadata across a two-page dataset (issue #403)', async () => {
+      const fetchPage = vi
+        .fn()
+        .mockResolvedValueOnce(page([1, 2], 'c1'))
+        .mockResolvedValueOnce(page([3, 4], null));
+      const results: number[] = [];
+      for await (const item of paginate<number>(fetchPage, { limit: 2 })) {
+        results.push(item);
+      }
+      expect(results).toEqual([1, 2, 3, 4]);
+      expect(fetchPage).toHaveBeenCalledTimes(2);
+      // First call carries only the limit, second call feeds the cursor back.
+      expect(fetchPage).toHaveBeenNthCalledWith(1, { limit: 2 });
+      expect(fetchPage).toHaveBeenNthCalledWith(2, {
+        limit: 2,
+        cursor: 'c1',
+      });
+    });
+
+    it('never re-fetches a page whose length equals limit (issue #403)', async () => {
+      // Old bug: a full page with no further cursor was re-requested forever,
+      // yielding duplicate items.
+      const fetchPage = vi
+        .fn()
+        .mockResolvedValueOnce(page([1, 2], null))
+        .mockResolvedValue(page([1, 2], null));
+      const results: number[] = [];
+      for await (const item of paginate<number>(fetchPage, { limit: 2 })) {
+        results.push(item);
+      }
+      expect(results).toEqual([1, 2]);
+      expect(fetchPage).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops at maxPages while the server keeps returning cursors', async () => {
+      const fetchPage = vi.fn().mockResolvedValue(page([1, 2], 'c-next'));
+      const results: number[] = [];
+      for await (const item of paginate<number>(fetchPage, { limit: 2 })) {
+        results.push(item);
+      }
+      expect(results).toEqual([1, 2]);
+      expect(fetchPage).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops at maxPages when limit and maxPages are set with continuous cursor', async () => {
+      const fetchPage = vi.fn().mockImplementation((query) => {
+        const pageNum = query?.cursor ? parseInt(query.cursor.replace('c', ''), 10) : 1;
+        return Promise.resolve(parseCursorPage([pageNum * 2 - 1, pageNum * 2], `c${pageNum + 1}`));
+      });
       const results: number[] = [];
       for await (const item of paginate<number>(fetchPage, {
         limit: 2,
@@ -76,15 +133,29 @@ describe('pagination helper (issue #61)', () => {
       })) {
         results.push(item);
       }
-      expect(results.length).toBe(6); // 3 pages * 2 items
+      expect(results).toEqual([1, 2, 1, 2, 1, 2]);
       expect(fetchPage).toHaveBeenCalledTimes(3);
+      expect(fetchPage).toHaveBeenLastCalledWith({
+        limit: 2,
+        cursor: 'c-next',
+      });
     });
 
-    it('stops when page returns fewer items than limit', async () => {
+    it('stops on an empty page', async () => {
+      const fetchPage = vi.fn().mockResolvedValue(page([], null));
+      const results: number[] = [];
+      for await (const item of paginate<number>(fetchPage, { limit: 10 })) {
+        results.push(item);
+      }
+      expect(results).toEqual([]);
+      expect(fetchPage).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops when a page is shorter than the limit', async () => {
       const fetchPage = vi
         .fn()
-        .mockResolvedValueOnce([1, 2])
-        .mockResolvedValueOnce([3]);
+        .mockResolvedValueOnce(page([1, 2], 'c1'))
+        .mockResolvedValueOnce(page([3], 'c2'));
       const results: number[] = [];
       for await (const item of paginate<number>(fetchPage, { limit: 2 })) {
         results.push(item);
@@ -93,14 +164,45 @@ describe('pagination helper (issue #61)', () => {
       expect(fetchPage).toHaveBeenCalledTimes(2);
     });
 
-    it('stops on empty page', async () => {
-      const fetchPage = vi.fn().mockResolvedValue([]);
+    it('stops when hasMore is false even if a cursor leaks back', async () => {
+      const fetchPage = vi.fn().mockResolvedValue({
+        items: [1],
+        nextCursor: 'c1',
+        hasMore: false,
+      });
       const results: number[] = [];
-      for await (const item of paginate<number>(fetchPage, { limit: 10 })) {
+      for await (const item of paginate<number>(fetchPage)) {
         results.push(item);
       }
-      expect(results).toEqual([]);
+      expect(results).toEqual([1]);
       expect(fetchPage).toHaveBeenCalledTimes(1);
+    });
+
+    it('advances cursor between pages and stops when cursor is null', async () => {
+      const fetchPage = vi.fn()
+        .mockResolvedValueOnce({ items: [1, 2], nextCursor: 'c1', hasMore: true })
+        .mockResolvedValueOnce({ items: [3, 4], nextCursor: 'c2', hasMore: true })
+        .mockResolvedValueOnce({ items: [5], nextCursor: null, hasMore: false });
+      const results: number[] = [];
+      for await (const item of paginate<number>(fetchPage, { limit: 2 })) {
+        results.push(item);
+      }
+      expect(results).toEqual([1, 2, 3, 4, 5]);
+      expect(fetchPage).toHaveBeenCalledTimes(3);
+      expect(fetchPage).toHaveBeenNthCalledWith(2, { cursor: 'c1' });
+      expect(fetchPage).toHaveBeenNthCalledWith(3, { cursor: 'c2' });
+    });
+
+    it('does not duplicate pages when limit is met', async () => {
+      const fetchPage = vi.fn()
+        .mockResolvedValueOnce({ items: [1, 2], nextCursor: 'c1', hasMore: true })
+        .mockResolvedValueOnce({ items: [3, 4], nextCursor: null, hasMore: false });
+      const results: number[] = [];
+      for await (const item of paginate<number>(fetchPage, { limit: 2 })) {
+        results.push(item);
+      }
+      expect(results).toEqual([1, 2, 3, 4]);
+      expect(fetchPage).toHaveBeenCalledTimes(2);
     });
   });
 });
