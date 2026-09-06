@@ -1,4 +1,5 @@
 import { encodePathSegment } from '../http/path';
+import { validateNonEmptyString } from '../validation';
 import type {
   ExecutePaymentRequest,
   Payment,
@@ -32,6 +33,7 @@ export class PaymentClient extends BaseClient implements PaymentClientContract {
   }
 
   public get(paymentId: string): Promise<Payment> {
+    validateNonEmptyString(paymentId, 'paymentId');
     return this.request({
       method: 'GET',
       path: `/v1/payments/${encodePathSegment(paymentId)}`,

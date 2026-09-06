@@ -1,5 +1,1 @@
-*.ts eol=lf
-*.mjs eol=lf
-*.cjs eol=lf
-*.json eol=lf
-*.md eol=lf
+* text eol=lf
