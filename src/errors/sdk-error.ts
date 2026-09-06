@@ -9,20 +9,40 @@ export interface LilyErrorOptions {
   statusCode?: number;
   details?: unknown;
   cause?: unknown;
+  request?: LilyRequestMetadata;
+  /** Redacted excerpt of the response body, safe to log or send to a bug tracker. */
+  bodySnippet?: string;
+  /** Delta-seconds value from a Retry-After header, when present. */
+  retryAfterSeconds?: number;
+  /** Response headers from the failing HTTP response. */
   headers?: Record<string, string>;
-  request?: {
-    method: string;
-    path: string;
-    url: string;
-  };
 }
+
+export const LILY_ERROR_CODES = Object.freeze({
+  CONFIG_ERROR: 'CONFIG_ERROR',
+  API_ERROR: 'API_ERROR',
+  AUTHENTICATION_ERROR: 'AUTHENTICATION_ERROR',
+  AUTHORIZATION_ERROR: 'AUTHORIZATION_ERROR',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  RESPONSE_VALIDATION_ERROR: 'RESPONSE_VALIDATION_ERROR',
+  TRANSPORT_ERROR: 'TRANSPORT_ERROR',
+  NOT_FOUND: 'NOT_FOUND',
+  CONFLICT: 'CONFLICT',
+  RATE_LIMITED: 'RATE_LIMITED',
+  SERVER_ERROR: 'SERVER_ERROR',
+  TIMEOUT: 'TIMEOUT',
+    CANCELLED: 'CANCELLED',
+    RESPONSE_VALIDATION_ERROR: 'RESPONSE_VALIDATION_ERROR',
+});
+
+export type LilyErrorCode = keyof typeof LILY_ERROR_CODES;
 
 export class LilySdkError extends Error {
   public readonly code: string | undefined;
   public readonly statusCode: number | undefined;
   public readonly details: unknown;
+  public readonly request: LilyRequestMetadata | undefined;
   public readonly headers: Record<string, string> | undefined;
-  public readonly request: { method: string; path: string; url: string } | undefined;
 
   public constructor(message: string, options: LilyErrorOptions = {}) {
     super(message, { cause: options.cause });
@@ -32,6 +52,7 @@ export class LilySdkError extends Error {
     this.details = options.details;
     this.headers = options.headers;
     this.request = options.request;
+    this.headers = options.headers;
   }
 
   public toJSON(): Record<string, unknown> {
@@ -50,6 +71,13 @@ export class LilySdkError extends Error {
 
     if (this.details !== undefined) {
       result.details = this.details;
+    }
+
+    if (this.request !== undefined) {
+      result.request = this.request;
+    }
+    if (this.headers !== undefined) {
+      result.headers = this.headers;
     }
 
     if (this.headers !== undefined) {
@@ -82,51 +110,6 @@ export class LilySdkError extends Error {
 
     return parts.join(': ');
   }
-
-  /**
-   * Returns a plain JSON-serializable object representation of this error.
-   */
-  public toJSON(): Record<string, unknown> {
-    const json: Record<string, unknown> = {
-      name: this.name,
-      message: this.message,
-    };
-
-    if (this.code !== undefined) {
-      json.code = this.code;
-    }
-
-    if (this.statusCode !== undefined) {
-      json.statusCode = this.statusCode;
-    }
-
-    if (this.details !== undefined) {
-      json.details = this.details;
-    }
-
-    if (this.headers !== undefined) {
-      json.headers = this.headers;
-    }
-
-    return json;
-  }
-
-  /**
-   * Returns a rich string representation including code and statusCode.
-   */
-  public override toString(): string {
-    let str = `${this.name}: ${this.message}`;
-
-    if (this.code !== undefined) {
-      str += ` [code: ${this.code}]`;
-    }
-
-    if (this.statusCode !== undefined) {
-      str += ` (HTTP ${this.statusCode})`;
-    }
-
-    return str;
-  }
 }
 
 export class LilyConfigError extends LilySdkError {}
@@ -140,3 +123,21 @@ export class LilyAuthenticationError extends LilySdkError {}
  */
 export class LilyApiError extends LilySdkError {}
 export class LilyValidationError extends LilySdkError {}
+
+export class LilyAuthorizationError extends LilyAuthenticationError {}
+export class LilyNotFoundError extends LilyApiError {}
+export class LilyConflictError extends LilyApiError {}
+export class LilyServerError extends LilyApiError {}
+
+export class LilyRateLimitError extends LilyApiError {
+  public readonly retryAfterSeconds: number | undefined;
+
+  public constructor(message: string, options: LilyErrorOptions = {}) {
+    super(message, options);
+    this.retryAfterSeconds = options.retryAfterSeconds;
+  }
+}
+
+export function isLilySdkError(value: unknown): value is LilySdkError {
+  return value instanceof LilySdkError;
+}

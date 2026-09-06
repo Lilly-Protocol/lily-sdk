@@ -25,15 +25,14 @@
   "sideEffects": false,
   "engines": {
     "node": ">=20.0.0",
-    "npm": ">=10"
+    "npm": ">=10.0.0"
   },
+  "packageManager": "npm@10.9.2",
   "files": [
     "dist",
     "README.md",
     "LICENSE",
     "CHANGELOG.md",
-    "docs/",
-    "docs/api/",
     "docs/*.md"
   ],
   "publishConfig": {
@@ -42,8 +41,37 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "dist/index.d.ts"
+      ],
+      "config": [
+        "dist/config.d.ts"
+      ],
+      "errors": [
+        "dist/errors.d.ts"
+      ],
+      "http": [
+        "dist/http.d.ts"
+      ],
+      "models": [
+        "dist/models.d.ts"
+      ],
+      "pagination": [
+        "dist/pagination.d.ts"
+      ],
+      "types": [
+        "dist/types.d.ts"
+      ],
+      "webhooks": [
+        "dist/webhooks.d.ts"
+      ]
+    }
+  },
   "exports": {
     ".": {
+      "browser": "./dist/browser/index.js",
       "import": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
@@ -93,17 +121,6 @@
         "default": "./dist/models.cjs"
       }
     },
-    "./types": {
-      "import": {
-        "types": "./dist/types.d.ts",
-        "default": "./dist/types.js"
-      },
-      "require": {
-        "types": "./dist/types.d.cts",
-        "default": "./dist/types.cjs"
-      }
-    },
-    "./package.json": "./package.json",
     "./pagination": {
       "import": {
         "types": "./dist/pagination.d.ts",
@@ -112,6 +129,16 @@
       "require": {
         "types": "./dist/pagination.d.cts",
         "default": "./dist/pagination.cjs"
+      }
+    },
+    "./types": {
+      "import": {
+        "types": "./dist/types.d.ts",
+        "default": "./dist/types.js"
+      },
+      "require": {
+        "types": "./dist/types.d.cts",
+        "default": "./dist/types.cjs"
       }
     },
     "./webhooks": {
@@ -123,15 +150,21 @@
         "types": "./dist/webhooks.d.cts",
         "default": "./dist/webhooks.cjs"
       }
-    }
+    },
+    "./package.json": "./package.json"
   },
   "scripts": {
     "clean": "rm -rf dist coverage .turbo",
-    "prebuild": "bash scripts/generate-version.sh",
+    "prebuild": "node scripts/generate-version.mjs",
     "build": "tsup",
+    "build:browser": "tsup --config tsup.config.ts --env.BROWSER",
+    "build:minified": "tsup --minify",
     "size": "npm run build && node scripts/check-size.mjs",
+    "codegen": "tsx scripts/codegen.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "dev": "tsup --watch",
     "typecheck": "tsc --project tsconfig.json --noEmit && tsc --project tsconfig.examples.json --noEmit",
+    "typecheck:examples": "tsc --project tsconfig.examples.json --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check . examples/",
@@ -141,7 +174,9 @@
     "test:watch": "vitest",
     "example": "tsx examples/quickstart.ts",
     "prepublishOnly": "npm run clean && npm run build && npm run test",
-    "docs": "typedoc --out docs/api --tsconfig tsconfig.docs.json --entryPoints src/index.ts src/config.ts src/errors.ts src/http.ts src/models.ts src/types.ts"
+    "docs": "typedoc --out docs/api --tsconfig tsconfig.docs.json --entryPoints src/index.ts src/config.ts src/errors.ts src/http.ts src/models.ts src/testing.ts src/types.ts",
+    "release": "changeset publish",
+    "version-packages": "changeset version"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.1",
