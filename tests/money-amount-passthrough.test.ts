@@ -19,8 +19,18 @@ describe('MoneyAmount decimal passthrough', () => {
           status: 200,
           headers: new Headers({ 'content-type': 'application/json' }),
           data: {
-            amount: { assetCode: 'USDC', amount },
-            estimatedFee: { assetCode: 'USDC', amount: '0.01' },
+            amount: {
+              assetCode: 'USDC',
+              assetIssuer:
+                'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
+              amount,
+            },
+            estimatedFee: {
+              assetCode: 'USDC',
+              assetIssuer:
+                'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
+              amount: '0.01',
+            },
             expiresAt: '2026-08-26T00:00:00Z',
           },
         };
@@ -52,7 +62,12 @@ describe('MoneyAmount decimal passthrough', () => {
             id: 'pay-1',
             fromWalletId: 'wallet-1',
             toAddress: 'GABC...',
-            amount: { assetCode: 'USDC', amount },
+            amount: {
+              assetCode: 'USDC',
+              assetIssuer:
+                'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
+              amount,
+            },
             status: 'queued',
             createdAt: '2026-08-26T00:00:00Z',
             updatedAt: '2026-08-26T00:00:00Z',

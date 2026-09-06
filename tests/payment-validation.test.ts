@@ -45,6 +45,74 @@ describe('validateMoneyAmount Stellar constraints', () => {
   });
 });
 
+describe('validateMoneyAmount native vs. issued asset rules (#438)', () => {
+  it('rejects native XLM with an assetIssuer', () => {
+    expect(() =>
+      validateMoneyAmount(
+        {
+          assetCode: 'XLM',
+          assetIssuer: USDC_ISSUER,
+          amount: '10.0',
+        },
+        'test',
+      ),
+    ).toThrow(/native asset `XLM` must not have an `assetIssuer`/);
+  });
+
+  it('rejects issued asset (USDC) without an assetIssuer', () => {
+    expect(() =>
+      validateMoneyAmount({ assetCode: 'USDC', amount: '100.0' }, 'test'),
+    ).toThrow(/issued asset `USDC` requires an `assetIssuer`/);
+  });
+
+  it('accepts native XLM with no assetIssuer', () => {
+    expect(() =>
+      validateMoneyAmount({ assetCode: 'XLM', amount: '5.0' }, 'test'),
+    ).not.toThrow();
+  });
+
+  it('accepts issued asset (USDC) with a valid G-address assetIssuer', () => {
+    expect(() =>
+      validateMoneyAmount(
+        {
+          assetCode: 'USDC',
+          assetIssuer: USDC_ISSUER,
+          amount: '100.0',
+        },
+        'test',
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects issued asset whose assetIssuer is not a valid Stellar G-address', () => {
+    expect(() =>
+      validateMoneyAmount(
+        {
+          assetCode: 'USDC',
+          assetIssuer: 'not-a-valid-g-address',
+          amount: '100.0',
+        },
+        'test',
+      ),
+    ).toThrow(/Stellar public key/);
+  });
+
+  it('error message names the violated rule for XLM-with-issuer', () => {
+    expect(() =>
+      validateMoneyAmount(
+        { assetCode: 'XLM', assetIssuer: USDC_ISSUER, amount: '1.0' },
+        'test',
+      ),
+    ).toThrow(/XLM/);
+  });
+
+  it('error message names the violated rule for issued-without-issuer', () => {
+    expect(() =>
+      validateMoneyAmount({ assetCode: 'USDC', amount: '1.0' }, 'test'),
+    ).toThrow(/USDC/);
+  });
+});
+
 describe('validateMemo Stellar constraints', () => {
   it('accepts memo within 28 byte limit', () => {
     expect(() => validateMemo('short memo', 'test')).not.toThrow();
