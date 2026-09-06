@@ -105,6 +105,7 @@ export function createFetchHttpClient(
                 statusCode: response.status,
                 details: data,
                 request: requestMetadata(request, url),
+                headers: Object.fromEntries(Array.from((response.headers as unknown as Map<string,string>).entries())),
               },
             );
           }
@@ -130,6 +131,7 @@ export function createFetchHttpClient(
             statusCode: response.status,
             details: data,
             request: requestMetadata(request, url),
+            headers: Object.fromEntries(Array.from((response.headers as unknown as Map<string,string>).entries())),
           });
         } catch (error) {
           cleanup();
