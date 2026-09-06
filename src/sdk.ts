@@ -38,14 +38,18 @@ export class LilySdk {
 
   /**
    * Creates a LilySdk instance with sensible defaults from environment variables.
-   * Explicit options always take precedence over environment variables.
+   * Explicit options always take precedence over environment variables, which take
+   * precedence over the built-in default (https://api.lilyprotocol.com).
    *
-   * Env vars read:
-   * - LILY_API_URL (or LILY_BASE_URL)
+   * Env vars read (in precedence order):
+   * - LILY_API_URL (preferred)
+   * - LILY_BASE_URL (fallback)
    * - LILY_API_KEY
    * - LILY_AUTH_TOKEN
    *
-   * Throws if no baseUrl is provided and no env var is set.
+   * Note: Unlike the constructor, \create()\ never throws for a missing baseUrl.
+   * It silently falls back to \\DEFAULT_API_URL\\. Use the constructor if you
+   * need strict baseUrl validation.
    */
   public static create(
     options?: Partial<LilySdkConfig>,
@@ -57,12 +61,6 @@ export class LilySdk {
         ? (process.env.LILY_API_URL ?? process.env.LILY_BASE_URL)
         : undefined) ??
       DEFAULT_API_URL;
-
-    if (!baseUrl) {
-      throw new Error(
-        'baseUrl is required. Pass it in options or set the LILY_API_URL environment variable.',
-      );
-    }
 
     const apiKey =
       options?.apiKey ??
