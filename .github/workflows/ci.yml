@@ -29,6 +29,29 @@ jobs:
       - run: npm run build
       - run: npm run test
 
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run docs
+      - name: Verify committed API docs are in sync with the source
+        run: |
+          if ! git diff --exit-code -- docs/api; then
+            echo "::error::docs/api is out of date with the source. Run 'npm run docs' and commit the regenerated output."
+            exit 1
+          fi
+          if [ -n "$(git status --porcelain docs/api)" ]; then
+            echo "::error::docs/api has untracked or modified files. Run 'npm run docs' and commit the regenerated output."
+            git status --porcelain docs/api
+            exit 1
+          fi
+
   example:
     runs-on: ubuntu-latest
     needs: test
@@ -57,7 +80,7 @@ jobs:
         run: npm run build
 
       - name: Test
-        run: npm run test -- --coverage
+        run: npm run test
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -88,12 +111,14 @@ jobs:
           PACK_CONTENTS=$(npm pack --dry-run --json)
           echo "$PACK_CONTENTS" | jq -e '.[0].files | map(.path) | sort' > /tmp/pack-files.json
 
-          # Expected files: package.json, README.md, LICENSE, and dist/**
+          # Expected files: package.json, README.md, LICENSE, CHANGELOG.md, docs/**, and dist/**
           # Fail if src/, tests/, coverage/, .env, or other dev artifacts are present
           UNEXPECTED=$(jq -r '.[] | select(
             test("^package\\.json$") or
             test("^README\\.md$") or
             test("^LICENSE$") or
+            test("^CHANGELOG\\.md$") or
+            test("^docs/") or
             test("^dist/")
           | not)' /tmp/pack-files.json)
 
@@ -104,7 +129,7 @@ jobs:
           fi
 
           # Verify essential files are present
-          ESSENTIAL_MISSING=$(echo '["package.json","README.md","LICENSE"]' | jq -r '.[]' | while read f; do
+          ESSENTIAL_MISSING=$(echo '["package.json","README.md","LICENSE","CHANGELOG.md"]' | jq -r '.[]' | while read f; do
             if ! jq -e ".[] | select(. == \"$f\")" /tmp/pack-files.json > /dev/null 2>&1; then
               echo "$f"
             fi
@@ -117,3 +142,22 @@ jobs:
           fi
 
           echo "✅ npm pack contents verified successfully"
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run docs
+      - name: Check for uncommitted docs diff
+        run: |
+          if [ -n "$(git status --porcelain docs/api)" ]; then
+            echo "::error::Generated typedoc documentation under docs/api/ is out of sync with code. Please run 'npm run docs' locally and commit the changes."
+            git diff docs/api
+            exit 1
+          fi
