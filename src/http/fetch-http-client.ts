@@ -266,7 +266,7 @@ async function parseResponse(response: Response): Promise<unknown> {
       return JSON.parse(text) as unknown;
     } catch (error) {
       // For non-ok responses, surface the real HTTP error instead of a
-      // validation error ¡ª callers lose the actual status otherwise.
+      // validation error ï¿½ï¿½ callers lose the actual status otherwise.
       if (!response.ok) {
         throw new LilyApiError(
           `Failed to parse response body as JSON (status ${response.status}, content-type: ${contentType}).`,
