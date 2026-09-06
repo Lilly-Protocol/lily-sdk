@@ -64,9 +64,7 @@ export async function* paginate<T>(
       ...buildPaginationQuery(cursor),
     };
     const result = await fetchPage(query);
-    const page = isCursorPage(result)
-      ? result
-      : parseCursorPage(result, null);
+    const page = isCursorPage(result) ? result : parseCursorPage(result, null);
     for (const item of page.items) {
       yield item;
     }
