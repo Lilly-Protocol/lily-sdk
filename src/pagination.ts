@@ -6,6 +6,12 @@ export interface CursorPage<T> {
   readonly hasMore: boolean;
 }
 
+export type PageResult<T> = readonly T[] | CursorPage<T>;
+
+function isCursorPage<T>(result: PageResult<T>): result is CursorPage<T> {
+  return !Array.isArray(result);
+}
+
 /**
  * Extracts pagination metadata from an HTTP response.
  * Works with cursor-based list endpoints that return items at the top level
@@ -36,42 +42,50 @@ export function buildPaginationQuery(
 }
 
 /**
+ * Page response shape accepted by paginate. Supports either a CursorPage or a plain array.
+ */
+export type PageResult<T> = readonly T[] | CursorPage<T>;
+
+/**
  * Async iterator helper that auto-paginates through a cursor-based list endpoint.
  *
+ * `fetchPage` receives a `PaginationQuery` (containing the `cursor` from the
+ * previous response when present) and must return a `CursorPage<T>` describing
+ * the fetched page: its items, the cursor for the next page, and whether more
+ * pages exist. Iteration stops when the returned cursor is null/empty, a page
+ * is shorter than `limit` (when `limit` is set), or `maxPages` is reached.
+ *
  * @example
- * for await (const agent of paginate(client.agents.list.bind(client.agents))) {
+ * for await (const agent of paginate(fetchAgentPage, { limit: 100 })) {
  *   console.log(agent.id);
  * }
  */
 export async function* paginate<T>(
-  fetchPage: (query?: PaginationQuery) => Promise<readonly T[]>,
+  fetchPage: (query?: PaginationQuery) => Promise<CursorPage<T>>,
   options?: { limit?: number; maxPages?: number },
 ): AsyncGenerator<T, void, unknown> {
   const maxPages = options?.maxPages ?? 100;
-  let pageCount = 0;
+  let nextCursor: string | undefined;
 
-  while (pageCount < maxPages) {
-    const query: PaginationQuery = options?.limit
-      ? { limit: options.limit }
-      : {};
-    const items = await fetchPage(query);
-    for (const item of items) {
+  for (let pageCount = 0; pageCount < maxPages; pageCount += 1) {
+    const query: PaginationQuery = {
+      ...(options?.limit !== undefined ? { limit: options.limit } : {}),
+      ...buildPaginationQuery(nextCursor),
+    };
+    const page = await fetchPage(query);
+
+    for (const item of page.items) {
       yield item;
     }
-    // Without a cursor mechanism from the response, we stop after one page
-    // since we can't know if there are more items.
-    pageCount += 1;
-    // If we got fewer items than the limit, we're done
-    if (options?.limit && items.length < options.limit) {
+
+    // A short page means the dataset is exhausted even if a cursor leaks back.
+    if (options?.limit !== undefined && page.items.length < options.limit) {
       break;
     }
-    // Without response headers exposing next cursor, we stop to avoid infinite loop
-    if (items.length === 0) {
+    // No further cursor: the last page was reached.
+    if (!page.hasMore || page.nextCursor === null || page.nextCursor === '') {
       break;
     }
-    // If no limit specified, we do one page (can't know if there are more)
-    if (!options?.limit) {
-      break;
-    }
+    nextCursor = page.nextCursor;
   }
 }

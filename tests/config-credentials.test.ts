@@ -41,7 +41,7 @@ describe('resolveLilySdkConfig credential validation', () => {
 
   it('rejects non-string authToken', () => {
     expect(() =>
-      resolveLilySdkConfig({ ...base, authToken: null as unknown as string }),
+      resolveLilySdkConfig({ ...base, authToken: 123 as unknown as string }),
     ).toThrow(LilyConfigError);
   });
 });
