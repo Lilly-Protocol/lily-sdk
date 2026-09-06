@@ -6,6 +6,12 @@ export interface CursorPage<T> {
   readonly hasMore: boolean;
 }
 
+export type PageResult<T> = readonly T[] | CursorPage<T>;
+
+function isCursorPage<T>(result: PageResult<T>): result is CursorPage<T> {
+  return !Array.isArray(result);
+}
+
 /**
  * Extracts pagination metadata from an HTTP response.
  * Works with cursor-based list endpoints that return items at the top level
@@ -44,7 +50,7 @@ export function buildPaginationQuery(
  * }
  */
 export async function* paginate<T>(
-  fetchPage: (query?: PaginationQuery) => Promise<CursorPage<T>>,
+  fetchPage: (query?: PaginationQuery) => Promise<PageResult<T>>,
   options?: { limit?: number; maxPages?: number },
 ): AsyncGenerator<T, void, unknown> {
   const maxPages = options?.maxPages ?? 100;
@@ -57,7 +63,10 @@ export async function* paginate<T>(
       ...(options?.limit ? { limit: options.limit } : {}),
       ...buildPaginationQuery(cursor),
     };
-    const page = await fetchPage(query);
+    const result = await fetchPage(query);
+    const page = isCursorPage(result)
+      ? result
+      : parseCursorPage(result, null);
     for (const item of page.items) {
       yield item;
     }

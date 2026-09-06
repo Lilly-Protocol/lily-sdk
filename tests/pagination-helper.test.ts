@@ -57,6 +57,17 @@ describe('pagination helper (issue #61)', () => {
   });
 
   describe('paginate', () => {
+    it('preserves the one-page array response API', async () => {
+      const fetchPage = vi.fn().mockResolvedValue([1, 2]);
+      const results: number[] = [];
+      for await (const item of paginate<number>(fetchPage, { limit: 2 })) {
+        results.push(item);
+      }
+      expect(results).toEqual([1, 2]);
+      expect(fetchPage).toHaveBeenCalledOnce();
+      expect(fetchPage).toHaveBeenCalledWith({ limit: 2 });
+    });
+
     it('yields all items from a single page', async () => {
       const fetchPage = vi
         .fn()
