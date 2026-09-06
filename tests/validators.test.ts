@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { validateMoneyAmount, validateMemo } from '../src/validation';
 import { LilyValidationError } from '../src/errors/sdk-error';
 
-const USDC_ISSUER = 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
+const TEST_ISSUER = 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
 
 describe('validateMoneyAmount', () => {
   it('accepts valid integer amount', () => {
@@ -13,11 +13,7 @@ describe('validateMoneyAmount', () => {
 
   it('accepts valid decimal amount with 7 digits', () => {
     expect(() => {
-      validateMoneyAmount({
-        assetCode: 'USDC',
-        assetIssuer: USDC_ISSUER,
-        amount: '123.4567890',
-      });
+      validateMoneyAmount({ assetCode: 'USDC', assetIssuer: TEST_ISSUER, amount: '123.4567890' });
     }).not.toThrow();
   });
 

@@ -31,7 +31,9 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md",
+    "docs/*.md"
   ],
   "publishConfig": {
     "access": "public"
@@ -56,8 +58,14 @@
       "models": [
         "dist/models.d.ts"
       ],
+      "pagination": [
+        "dist/pagination.d.ts"
+      ],
       "types": [
         "dist/types.d.ts"
+      ],
+      "webhooks": [
+        "dist/webhooks.d.ts"
       ]
     }
   },
@@ -113,6 +121,16 @@
         "default": "./dist/models.cjs"
       }
     },
+    "./pagination": {
+      "import": {
+        "types": "./dist/pagination.d.ts",
+        "default": "./dist/pagination.js"
+      },
+      "require": {
+        "types": "./dist/pagination.d.cts",
+        "default": "./dist/pagination.cjs"
+      }
+    },
     "./types": {
       "import": {
         "types": "./dist/types.d.ts",
@@ -123,11 +141,21 @@
         "default": "./dist/types.cjs"
       }
     },
+    "./webhooks": {
+      "import": {
+        "types": "./dist/webhooks.d.ts",
+        "default": "./dist/webhooks.js"
+      },
+      "require": {
+        "types": "./dist/webhooks.d.cts",
+        "default": "./dist/webhooks.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
     "clean": "rm -rf dist coverage .turbo",
-    "prebuild": "bash scripts/generate-version.sh",
+    "prebuild": "node scripts/generate-version.mjs",
     "build": "tsup",
     "build:browser": "tsup --config tsup.config.ts --env.BROWSER",
     "build:minified": "tsup --minify",
@@ -146,7 +174,9 @@
     "test:watch": "vitest",
     "example": "tsx examples/quickstart.ts",
     "prepublishOnly": "npm run clean && npm run build && npm run test",
-    "docs": "typedoc --out docs/api --tsconfig tsconfig.docs.json --entryPoints src/index.ts src/config.ts src/errors.ts src/http.ts src/models.ts src/types.ts"
+    "docs": "typedoc --out docs/api --tsconfig tsconfig.docs.json --entryPoints src/index.ts src/config.ts src/errors.ts src/http.ts src/models.ts src/testing.ts src/types.ts",
+    "release": "changeset publish",
+    "version-packages": "changeset version"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.1",

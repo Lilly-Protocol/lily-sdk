@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+const TEST_ISSUER = 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
+
 import type { HttpRequest } from '../src/http/types';
 import { LilySdk } from '../src/sdk';
 import { createMockHttpClient } from './helpers/mock-http-client';
@@ -38,7 +40,7 @@ describe('MoneyAmount decimal normalization', () => {
         toAddress: 'addr_test',
         amount: {
           assetCode: 'BTC',
-          assetIssuer: BTC_ISSUER,
+          assetIssuer: TEST_ISSUER,
           amount,
         },
       });
@@ -74,7 +76,7 @@ describe('MoneyAmount decimal normalization', () => {
         toAddress: 'addr_test',
         amount: {
           assetCode: 'BTC',
-          assetIssuer: BTC_ISSUER,
+          assetIssuer: TEST_ISSUER,
           amount,
         },
       });
