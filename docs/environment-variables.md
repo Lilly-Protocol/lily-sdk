@@ -41,7 +41,22 @@ Explicit code options always beat environment variables.
 | `LILY_TIMEOUT_MS` | Never read; use `timeoutMs` in config       |
 | `LILY_DEBUG`      | Never read; no env-driven debug flag exists |
 
-## Usage
+| Variable          | Description                                                                 | Precedence / Notes |
+| ----------------- | --------------------------------------------------------------------------- | ------------------ |
+| `LILY_API_URL`    | Primary API base URL                                                       | Highest precedence across constructor and `LilySdk.create()` |
+| `LILY_BASE_URL`   | Fallback API base URL                                                      | Honored as fallback by `LilySdk.create()` |
+| `LILY_API_KEY`    | API key for header-based authentication                                    | Populates `config.apiKey` |
+| `LILY_AUTH_TOKEN` | Bearer token for authorization header authentication                        | Populates `config.authToken` |
+
+> [!NOTE]
+> `timeoutMs` is configured programmatically via `LilySdkConfig` options (default: `10000` ms) or per-request overrides; the SDK does not read timeout or debug settings from environment variables (`LILY_TIMEOUT_MS` and `LILY_DEBUG` are not supported).
+
+## Precedence
+
+1. **Base URL**: Explicit `baseUrl` option passed in configuration > `LILY_API_URL` > `LILY_BASE_URL` (in `LilySdk.create()`) > Default (`https://api.lilyprotocol.dev`).
+2. **Credentials**: Explicit `apiKey` or `authToken` option > `LILY_API_KEY` or `LILY_AUTH_TOKEN` environment variables.
+
+## Quickstart Usage
 
 ### Quickstart with Environment Variables
 
