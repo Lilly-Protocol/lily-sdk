@@ -19,6 +19,14 @@ export class LilySdk {
   public get http(): HttpClient {
     return this.httpClient;
   }
+  /**
+   * The HttpClient only when it was explicitly injected by the caller.
+   * Derived instances from `withConfig` reuse an injected client (so custom
+   * transport behavior is preserved), but never the default fetch client:
+   * that one is rebuilt from the merged config so `baseUrl`/credential
+   * overrides actually take effect on the transport.
+   */
+  private readonly injectedHttpClient: HttpClient | undefined;
   public readonly agents: AgentClient;
   public readonly wallets: WalletClient;
   public readonly payments: PaymentClient;
@@ -28,6 +36,7 @@ export class LilySdk {
   public constructor(config?: Partial<LilySdkConfig>, httpClient?: HttpClient) {
     this.config = resolveLilySdkConfig(config ?? {});
     this.httpClient = httpClient ?? createFetchHttpClient(this.config);
+    this.injectedHttpClient = httpClient;
 
     this.agents = new AgentClient(this.httpClient);
     this.wallets = new WalletClient(this.httpClient);
@@ -126,6 +135,11 @@ export class LilySdk {
           : {}),
     };
 
-    return new LilySdk(merged);
+    // Reuse the transport only when the caller injected a custom HttpClient.
+    // The default fetch client is rebuilt from the merged config so that
+    // baseUrl/credential overrides are captured in the transport closure.
+    return this.injectedHttpClient !== undefined
+      ? new LilySdk(merged, this.injectedHttpClient)
+      : new LilySdk(merged);
   }
 }
