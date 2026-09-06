@@ -1,9 +1,11 @@
+import { DEFAULT_RETRYABLE_STATUS_CODES } from '../config/defaults';
 import type { ResolvedLilySdkConfig } from '../config/types';
 import { resolveAuthHeaders } from './resolve-auth-headers';
 import {
   LILY_ERROR_CODES,
   LilyApiError,
   LilyAuthenticationError,
+  LilyConfigError,
   LilySdkError,
   LilyTransportError,
   LilyValidationError,
@@ -15,8 +17,10 @@ import type {
   HttpRequest,
   HttpResponse,
 } from './types';
+import { DEFAULT_RETRY_POLICY } from '../config/defaults';
 
-import { DEFAULT_RETRYABLE_STATUS_CODES } from '../config/defaults';
+const DEFAULT_RETRYABLE_STATUS_CODES =
+  DEFAULT_RETRY_POLICY.retryableStatusCodes;
 
 export function createFetchHttpClient(
   config: ResolvedLilySdkConfig,
@@ -28,6 +32,20 @@ export function createFetchHttpClient(
       const url = buildUrl(config.baseUrl, request.path, request.query);
       const body = serializeBody(request.body);
       const headers = buildHeaders(config, request.headers);
+
+      // Validate per-request timeoutMs
+      if (request.timeoutMs !== undefined) {
+        if (
+          typeof request.timeoutMs !== 'number' ||
+          !Number.isFinite(request.timeoutMs) ||
+          request.timeoutMs < 0
+        ) {
+          throw new LilyConfigError(
+            '`timeoutMs` must be a non-negative number.',
+          );
+        }
+      }
+
       const timeoutMs = request.timeoutMs ?? config.timeoutMs;
       if (request.timeoutMs !== undefined && (request.timeoutMs < 0 || !Number.isFinite(request.timeoutMs))) {
         throw new LilyConfigError('timeoutMs must be a non-negative finite number.');
@@ -43,7 +61,7 @@ export function createFetchHttpClient(
         if (request.signal) {
           if (request.signal.aborted) {
             throw new LilyTransportError('Request cancelled by caller.', {
-              code: 'CANCELLED',
+              code: LILY_ERROR_CODES.CANCELLED,
               cause: request.signal.reason ?? new Error('Aborted'),
               request: requestMetadata(request, url),
             });
@@ -162,7 +180,7 @@ export function createFetchHttpClient(
                 : 'Request timed out while calling Lily Protocol API.',
               {
                 code: externallyAborted
-                  ? 'CANCELLED'
+                  ? LILY_ERROR_CODES.CANCELLED
                   : LILY_ERROR_CODES.TIMEOUT,
                 cause: error,
                 request: requestMetadata(request, url),
@@ -270,7 +288,7 @@ async function parseResponse(response: Response): Promise<unknown> {
       return JSON.parse(text) as unknown;
     } catch (error) {
       // For non-ok responses, surface the real HTTP error instead of a
-      // validation error ï¿½ï¿½ callers lose the actual status otherwise.
+      // validation error ¡ª callers lose the actual status otherwise.
       if (!response.ok) {
         throw new LilyApiError(
           `Failed to parse response body as JSON (status ${response.status}, content-type: ${contentType}).`,
@@ -285,7 +303,7 @@ async function parseResponse(response: Response): Promise<unknown> {
       throw new LilyValidationError(
         `Failed to parse response body as JSON (status ${response.status}, content-type: ${contentType}).`,
         {
-          code: 'RESPONSE_VALIDATION_ERROR',
+          code: LILY_ERROR_CODES.RESPONSE_VALIDATION_ERROR,
           statusCode: response.status,
           cause: error,
         },

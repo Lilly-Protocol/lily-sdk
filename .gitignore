@@ -1,8 +1,0 @@
-node_modules
-dist
-coverage
-.DS_Store
-.env
-.idea
-.vscode
-docs/api
