@@ -43,12 +43,18 @@ Explicit code options always beat environment variables.
 
 ## Usage
 
+### Quickstart with Environment Variables
+
+Set environment variables in your environment:
+
 ```bash
 export LILY_API_URL=https://api.lilyprotocol.com
 export LILY_API_KEY=lk_live_xxx
 # optional:
 # export LILY_AUTH_TOKEN=eyJhbGciOi...
 ```
+
+Initialize the SDK without passing explicit arguments:
 
 ```typescript
 import { LilySdk } from '@lily-protocol/sdk';
