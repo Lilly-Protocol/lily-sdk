@@ -5,9 +5,14 @@ import { SystemClient } from '../src/clients/system-client';
 import { resolveLilySdkConfig } from '../src/config/types';
 import { vi } from 'vitest';
 
-describe('validateHealthStatus (issue #422)', () => {
+describe('validateHealthStatus (issue #437)', () => {
   it('passes through a valid HealthStatus payload unchanged', () => {
-    const data = { status: 'ok', version: '1.0.0', uptime: 42 };
+    const data = {
+      status: 'ok',
+      version: '1.0.0',
+      timestamp: '2024-01-01T00:00:00Z',
+      checks: { db: 'ok' },
+    };
     const result = validateHealthStatus(data);
     expect(result).toEqual(data);
   });
@@ -43,35 +48,87 @@ describe('validateHealthStatus (issue #422)', () => {
   });
 
   it('throws VALIDATION_ERROR when version is not a string', () => {
-    expect(() => validateHealthStatus({ status: 'ok', version: 123 })).toThrow(
-      'version',
-    );
-  });
-
-  it('throws VALIDATION_ERROR when uptime is not a number', () => {
     expect(() =>
-      validateHealthStatus({ status: 'ok', uptime: 'fourty-two' }),
-    ).toThrow('uptime');
+      validateHealthStatus({
+        status: 'ok',
+        version: 123,
+        timestamp: '2024-01-01',
+        checks: {},
+      }),
+    ).toThrow('version');
   });
 
-  it('accepts status "ok"', () => {
-    expect(validateHealthStatus({ status: 'ok' })).toEqual({ status: 'ok' });
+  it('throws VALIDATION_ERROR when timestamp is not a string', () => {
+    expect(() =>
+      validateHealthStatus({
+        status: 'ok',
+        version: '1.0.0',
+        timestamp: 123,
+        checks: {},
+      }),
+    ).toThrow('timestamp');
   });
 
-  it('accepts status "degraded"', () => {
-    expect(validateHealthStatus({ status: 'degraded' })).toEqual({
-      status: 'degraded',
+  it('throws VALIDATION_ERROR when checks is missing', () => {
+    expect(() =>
+      validateHealthStatus({
+        status: 'ok',
+        version: '1.0.0',
+        timestamp: '2024-01-01',
+      }),
+    ).toThrow('checks');
+  });
+
+  it('accepts status ok', () => {
+    expect(
+      validateHealthStatus({
+        status: 'ok',
+        version: '1.0.0',
+        timestamp: '2024-01-01T00:00:00Z',
+        checks: {},
+      }),
+    ).toEqual({
+      status: 'ok',
+      version: '1.0.0',
+      timestamp: '2024-01-01T00:00:00Z',
+      checks: {},
     });
   });
 
-  it('accepts status "down"', () => {
-    expect(validateHealthStatus({ status: 'down' })).toEqual({
+  it('accepts status degraded', () => {
+    expect(
+      validateHealthStatus({
+        status: 'degraded',
+        version: '1.0.0',
+        timestamp: '2024-01-01T00:00:00Z',
+        checks: {},
+      }),
+    ).toEqual({
+      status: 'degraded',
+      version: '1.0.0',
+      timestamp: '2024-01-01T00:00:00Z',
+      checks: {},
+    });
+  });
+
+  it('accepts status down', () => {
+    expect(
+      validateHealthStatus({
+        status: 'down',
+        version: '1.0.0',
+        timestamp: '2024-01-01T00:00:00Z',
+        checks: {},
+      }),
+    ).toEqual({
       status: 'down',
+      version: '1.0.0',
+      timestamp: '2024-01-01T00:00:00Z',
+      checks: {},
     });
   });
 });
 
-describe('SystemClient with validateResponses=true (issue #422)', () => {
+describe('SystemClient with validateResponses=true (issue #437)', () => {
   it('validates health response when validateResponses is enabled', async () => {
     const config = resolveLilySdkConfig({
       baseUrl: 'https://test.example.com',
@@ -79,10 +136,12 @@ describe('SystemClient with validateResponses=true (issue #422)', () => {
     });
     const client = new SystemClient(config);
 
-    // Mock the parent request method
-    const mockRequest = vi
-      .fn()
-      .mockResolvedValue({ status: 'ok', version: '2.0', uptime: 100 });
+    const mockRequest = vi.fn().mockResolvedValue({
+      status: 'ok',
+      version: '2.0',
+      timestamp: '2024-01-01T00:00:00Z',
+      checks: { db: 'ok' },
+    });
     client.request = mockRequest as any;
 
     const result = await client.health();
@@ -102,6 +161,30 @@ describe('SystemClient with validateResponses=true (issue #422)', () => {
 
     await expect(client.health()).rejects.toMatchObject({
       code: 'VALIDATION_ERROR',
+    });
+  });
+
+  it('no longer uses unsafe as unknown cast', async () => {
+    const config = resolveLilySdkConfig({
+      baseUrl: 'https://test.example.com',
+      validateResponses: true,
+    });
+    const client = new SystemClient(config);
+
+    const mockRequest = vi.fn().mockResolvedValue({
+      status: 'ok',
+      version: '1.0',
+      timestamp: '2024-01-01T00:00:00Z',
+      checks: {},
+    });
+    client.request = mockRequest as any;
+
+    const result = await client.health();
+    expect(result).toEqual({
+      status: 'ok',
+      version: '1.0',
+      timestamp: '2024-01-01T00:00:00Z',
+      checks: {},
     });
   });
 });
