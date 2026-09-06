@@ -4,6 +4,7 @@ import {
   LILY_ERROR_CODES,
   LilyApiError,
   LilyAuthenticationError,
+  LilyConfigError,
   LilySdkError,
   LilyTransportError,
   LilyValidationError,
@@ -27,6 +28,20 @@ export function createFetchHttpClient(
       const url = buildUrl(config.baseUrl, request.path, request.query);
       const body = serializeBody(request.body);
       const headers = buildHeaders(config, request.headers);
+
+      // Validate per-request timeoutMs
+      if (request.timeoutMs !== undefined) {
+        if (
+          typeof request.timeoutMs !== 'number' ||
+          !Number.isFinite(request.timeoutMs) ||
+          request.timeoutMs < 0
+        ) {
+          throw new LilyConfigError(
+            '`timeoutMs` must be a non-negative number.',
+          );
+        }
+      }
+
       const timeoutMs = request.timeoutMs ?? config.timeoutMs;
 
       let attempt = 0;
