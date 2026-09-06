@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { build } from 'esbuild';
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { readFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -10,11 +11,12 @@ describe('tree-shaking verification for sideEffects: false', () => {
     const entryFile = resolve(tmpDir, 'entry.js');
     const outFile = resolve(tmpDir, 'bundle.js');
 
+    const indexPath = resolve(__dirname, '..', 'src', 'index.ts').replace(/\\/g, '/');
     // Import ONLY error classes — no SDK, no clients, no validation
     await writeFile(
       entryFile,
       `
-      import { LilyApiError, LilyTransportError } from '${resolve(__dirname, '..', 'src', 'index.ts')}';
+      import { LilyApiError, LilyTransportError } from '${resolve(__dirname, '..', 'src', 'index.ts').replace(/\\/g, '/')}';
       export const err = new LilyApiError('test', { statusCode: 500 });
       export const terr = new LilyTransportError('net', { code: 'NET' });
     `,
@@ -55,11 +57,12 @@ describe('tree-shaking verification for sideEffects: false', () => {
     const entryFile = resolve(tmpDir, 'entry.js');
     const outFile = resolve(tmpDir, 'bundle.js');
 
+    const indexPath = resolve(__dirname, '..', 'src', 'index.ts').replace(/\\/g, '/');
     // Import ONLY the config resolver — no HTTP, no clients
     await writeFile(
       entryFile,
       `
-      import { resolveLilySdkConfig } from '${resolve(__dirname, '..', 'src', 'index.ts')}';
+      import { resolveLilySdkConfig } from '${resolve(__dirname, '..', 'src', 'index.ts').replace(/\\/g, '/')}';
       export const config = resolveLilySdkConfig({ baseUrl: 'https://api.test' });
     `,
     );
@@ -97,6 +100,9 @@ describe('tree-shaking verification for sideEffects: false', () => {
     const require = createRequire(import.meta.url);
     const distEsm = resolve(__dirname, '..', 'dist', 'index.js');
     const distCjs = resolve(__dirname, '..', 'dist', 'index.cjs');
+
+    // Skip when dist has not been built (e.g. `npm run test` in CI does not build).
+    if (!existsSync(distEsm) || !existsSync(distCjs)) return;
 
     const esm = await import(distEsm);
     const cjs = require(distCjs);
