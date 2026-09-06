@@ -57,7 +57,7 @@ npm install
 
 - **Node.js >= 20**: The SDK requires Node.js 20 or later. It relies on the built-in global `fetch`, `AbortController`, and DOM `Headers` APIs available natively from Node 20+.
 - **Global Fetch**: A standards-compliant `fetch` implementation must be available globally. If running in an environment without native fetch, provide a compatible polyfill via the `config.fetch` option when constructing the SDK.
-- **CI-Supported Versions**: Automated tests run against Node.js 20 and Node.js 22.
+- **CI-Supported Versions**: Automated tests run against Node.js 20, 22, and 24 (matching `.github/workflows/ci.yml`).
 - **Browser Considerations**: When using the SDK in browser environments, be aware of CORS restrictions and ensure that the `Headers` API is supported. The SDK does not include browser-specific polyfills; configure your bundler or runtime accordingly.
 - **Custom Fetch Fallback**: For unsupported runtimes (e.g., older Node versions or specialized environments), pass a custom fetch implementation through the SDK configuration to override the global default.
 
@@ -94,18 +94,35 @@ console.log(wallet.wallet.address);
 
 ## Configuration
 
-The SDK accepts a `LilySdkConfig` object. All fields except `baseUrl` are optional and have sensible defaults.
+The SDK accepts a `LilySdkConfig` object. Fields are optional at the type level, but direct construction must resolve a `baseUrl` from either the explicit config or `LILY_API_URL`; `LilySdk.create()` also provides the fallback described below.
 
 | Field            | Type                    | Default                                                                                      | Description                                                                                                   |
 | :--------------- | :---------------------- | :------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ |
 | `baseUrl`        | `string`                | _required_                                                                                   | Absolute URL for the Lily Protocol API (e.g. `https://api.lilyprotocol.com`).                                 |
-| `apiKey`         | `string`                | `undefined`                                                                                  | API key sent as `x-api-key` header when provided.                                                             |
-| `authToken`      | `string`                | `undefined`                                                                                  | Bearer token sent as `Authorization` header when provided.                                                    |
+| `apiKey`         | `string \| null`        | `undefined`                                                                                  | API key sent as `x-api-key` header when provided. Pass `null` to clear in `withConfig`.                      |
+| `authToken`      | `string \| null`        | `undefined`                                                                                  | Bearer token sent as `Authorization` header when provided. Pass `null` to clear in `withConfig`.             |
 | `timeoutMs`      | `number`                | `10000`                                                                                      | Request timeout in milliseconds. Must be positive. Can be overridden per-request via `HttpRequest.timeoutMs`. |
 | `retry`          | `Partial<RetryPolicy>`  | `{ retries: 2, retryDelayMs: 250, retryableStatusCodes: [408,409,425,429,500,502,503,504] }` | Retry behaviour for failed requests. See below.                                                               |
 | `defaultHeaders` | `Record<string,string>` | `{}`                                                                                         | Extra headers merged into every request.                                                                      |
 | `userAgent`      | `string`                | `lily-sdk/0.1.0`                                                                             | Value of the `User-Agent` header.                                                                             |
 | `fetch`          | `typeof fetch`          | `globalThis.fetch`                                                                           | Custom fetch implementation for unsupported runtimes.                                                         |
+| `validateResponses` | `boolean`             | `true`                                                                                       | Enables runtime validation for known response models. Invalid validated payloads throw `LilyValidationError`. |
+
+### Default constants
+
+The default `timeoutMs` and retry policy are exported so custom `HttpClient` implementations and tooling can reference them instead of hard-coding the values. They are the single source of truth used by both config resolution and the fetch transport:
+
+```ts
+import {
+  DEFAULT_TIMEOUT_MS,
+  DEFAULT_RETRY_POLICY,
+} from '@lily-protocol/sdk/config';
+// also re-exported from the root entrypoint:
+import { DEFAULT_TIMEOUT_MS, DEFAULT_RETRY_POLICY } from '@lily-protocol/sdk';
+
+DEFAULT_TIMEOUT_MS; // 10_000
+DEFAULT_RETRY_POLICY; // { retries: 2, retryDelayMs: 250, retryableStatusCodes: [408, 409, 425, 429, 500, 502, 503, 504] }
+```
 
 ### Retry semantics
 
@@ -114,6 +131,8 @@ The SDK accepts a `LilySdkConfig` object. All fields except `baseUrl` are option
 - Transport-level errors (network failures, DNS errors) are retried under the same method constraint.
 - The delay between attempts grows linearly: `retryDelayMs × attemptNumber` (e.g. 250 ms, then 500 ms).
 - Timeouts (`AbortError`) are wrapped as `LilyTransportError` with code `TIMEOUT` and are not retried beyond the transport policy.
+
+The default values above are not hard-coded twice: they are exported from the `@lily-protocol/sdk/config` subpath as `DEFAULT_TIMEOUT_MS` and `DEFAULT_RETRY_POLICY` (plus `DEFAULT_RETRYABLE_STATUS_CODES`), so custom `HttpClient` implementations and documentation can reference the exact defaults the SDK resolves.
 
 ### Example
 
@@ -124,6 +143,7 @@ const sdk = new LilySdk({
   timeoutMs: 15_000,
   retry: { retries: 3, retryDelayMs: 500 },
   defaultHeaders: { 'x-request-source': 'billing-service' },
+  validateResponses: true,
 });
 ```
 
@@ -136,19 +156,82 @@ await sdk.http.request({
   body: { agentId: 'agent_123', network: 'stellar-testnet' },
   timeoutMs: 5_000,
 });
-```
+`
 
-### Multi-tenant & derived instances (`withConfig`)
+### Multi-tenant overrides with \withConfig
+Use \withConfig\ to create child SDK instances with merged configuration — ideal for multi-tenant setups where each tenant needs different credentials or endpoints:
 
-Derive scoped SDK instances with merged configuration using `sdk.withConfig(overrides)`. Pass `null` for `apiKey` or `authToken` to explicitly clear inherited credentials (e.g. for public or anonymous endpoints):
+\\\	s
+const root = LilySdk.create(); // reads from env vars
+
+const tenantA = root.withConfig({
+  baseUrl: 'https://api-tenant-a.lilyprotocol.com',
+  apiKey: 'key_for_tenant_a',
+  timeoutMs: 20_000,
+});
+
+const tenantB = root.withConfig({
+  baseUrl: 'https://api-tenant-b.lilyprotocol.com',
+  authToken: 'bearer_for_tenant_b',
+});
+\\\
+
+Credentials are inherited from the parent unless explicitly overridden. There is currently no way to clear an inherited credential via \withConfig\ — use a fresh \LilySdk\ constructor for anonymous child instances.
+
+### Environment variable precedence
+
+\LilySdk.create()\ reads configuration from environment variables in this order:
+
+| Priority | Variable             | Used for            |
+| -------- | -------------------- | ------------------- |
+| 1        | \LILY_API_URL\       | Base URL (preferred) |
+| 2        | \LILY_BASE_URL\      | Base URL (fallback)  |
+| 3        | \LILY_API_KEY\       | API key              |
+| 4        | \LILY_AUTH_TOKEN\    | Bearer token         |
+
+Explicit \options\ always take precedence over environment variables, which take precedence over built-in defaults (\https://api.lilyprotocol.com\\). Unlike the constructor, \create()\ never throws for a missing \aseUrl\ — it silently falls back to the default.``
+
+### Tenant-scoped overrides with `withConfig`
+
+Use `withConfig()` to derive a tenant-specific SDK instance with overridden credentials, headers, or endpoint while leaving the original SDK instance unchanged.
 
 ```ts
-// Inherits baseUrl and settings from sdk, overriding apiKey
-const tenantSdk = sdk.withConfig({ apiKey: 'tenant-specific-key' });
+const platformSdk = new LilySdk({
+  baseUrl: 'https://api.lilyprotocol.com',
+  apiKey: 'platform-api-key',
+  defaultHeaders: { 'x-service': 'billing' },
+});
 
-// Clear inherited credentials for public or unauthenticated child instances
-const publicSdk = sdk.withConfig({ apiKey: null, authToken: null });
+const tenantSdk = platformSdk.withConfig({
+  apiKey: 'tenant-api-key',
+  defaultHeaders: { 'x-tenant-id': 'tenant_123' },
+});
+
+const wallet = await tenantSdk.wallets.get('wallet_123');
 ```
+
+### `LilySdk.create()` environment-variable precedence
+
+`LilySdk.create()` resolves its environment-backed values in this order:
+
+- `baseUrl`: explicit `options.baseUrl` → `LILY_API_URL` → `LILY_BASE_URL` → `https://api.lilyprotocol.com`
+- `apiKey`: explicit `options.apiKey` → `LILY_API_KEY` → `undefined`
+- `authToken`: explicit `options.authToken` → `LILY_AUTH_TOKEN` → `undefined`
+
+Explicit values therefore override process-wide environment defaults.
+
+## Documentation
+
+- [API Reference](./docs/api-reference.md)
+- [Auth Headers](./docs/auth-headers.md)
+- [Custom HTTP Client](./docs/custom-http-client.md)
+- [Environment Variables](./docs/environment-variables.md)
+- [Error Handling](./docs/error-handling.md)
+- [Money and Stellar Assets](./docs/money-and-stellar-assets.md)
+- [Non-JSON Responses](./docs/non-json-responses.md)
+- [Runtime Requirements](./docs/runtime-requirements.md)
+- [Subpath Imports](./docs/subpath-imports.md)
+- [Timeouts and Retries](./docs/timeouts-and-retries.md)
 
 ## Public API Overview
 
@@ -307,6 +390,33 @@ const invalidMissingIssuer: MoneyAmount = {
 };
 ```
 
+#### Safe Amount Conversion Helpers (`toAmountString` & `toMoneyAmount`)
+
+To eliminate floating-point artifacts (e.g. `0.1 + 0.2 === 0.30000000000000004`), expand exponential notations (such as `1e-7`), and safely construct `MoneyAmount` objects from database values or user inputs, use the built-in conversion helpers:
+
+```ts
+import { toAmountString, toMoneyAmount } from '@lily-protocol/sdk';
+
+// Convert numbers to clean, exact decimal strings without float artifacts
+toAmountString(0.1 + 0.2); // '0.3'
+toAmountString(0.1 + 0.2, 2); // '0.30'
+toAmountString(12.3456, 2); // '12.35' (half-up rounding)
+toAmountString(1e-7); // '0.0000001' (expanded from scientific notation)
+
+// Safely construct valid MoneyAmount instances
+const native = toMoneyAmount(0.1 + 0.2, 'XLM');
+// { assetCode: 'XLM', amount: '0.3' }
+
+const usdc = toMoneyAmount({
+  amount: 100.5,
+  assetCode: 'USDC',
+  assetIssuer: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
+  scale: 2,
+});
+// { assetCode: 'USDC', assetIssuer: '...', amount: '100.50' }
+```
+
+
 ## Repository Structure
 
 ```text
@@ -370,7 +480,35 @@ try {
 The transport uses `API_ERROR`, `AUTHENTICATION_ERROR`, `TIMEOUT`, and
 `TRANSPORT_ERROR`. Their typed values are available from `LILY_ERROR_CODES`.
 
+## Subpath Imports
+
+The SDK supports fine-grained subpath imports for minimal bundle size and tree-shaking:
+
+| Subpath                       | Description                                          |
+| :---------------------------- | :--------------------------------------------------- |
+| `@lily-protocol/sdk`          | Full SDK (all clients and exports)                   |
+| `@lily-protocol/sdk/config`   | Configuration types and resolver                     |
+| `@lily-protocol/sdk/errors`   | Error classes and type guards                        |
+| `@lily-protocol/sdk/http`     | HTTP transport layer                                 |
+| `@lily-protocol/sdk/models`   | Domain models                                        |
+| `@lily-protocol/sdk/types`    | Shared type definitions                              |
+| `@lily-protocol/sdk/webhooks` | Webhook signature verification and replay protection |
+
+### Webhook Verification
+
+```ts
+import { verifyWebhookSignature, verifyWebhookWithReplay } from '@lily-protocol/sdk/webhooks';
+
+// Verify webhook signature with replay protection (5-minute tolerance)
+const isValid = verifyWebhookWithReplay(
+  rawBody,
+  req.headers['x-lily-signature'],
+  process.env.LILY_WEBHOOK_SECRET!
+);
+```
+
 ## Design Notes
+
 
 - `LilySdk` composes a shared transport with focused domain clients instead of exposing a single massive client surface. The resolved `HttpClient` is also available as `sdk.http` for one-off raw requests that must reuse the SDK's transport and config.
 - Models are exported from stable entrypoints so future internal refactors do not require a public breaking change.
@@ -387,6 +525,23 @@ See [CHANGELOG.md](./CHANGELOG.md) for a full list of changes. The changelog fol
 - Pagination helpers and richer idempotency ergonomics
 - Webhook verification, observability hooks, and advanced auth flows
 - More complete Stellar asset and payment orchestration coverage
+
+## Documentation
+
+In-depth guides are available under [docs/](./docs/):
+
+| Guide                          | Description                                            |
+| ------------------------------ | ------------------------------------------------------ |
+| [Environment Variables](./docs/environment-variables.md)       | Available env vars and their defaults                  |
+| [Error Handling](./docs/error-handling.md)                   | Error hierarchy, type guards, and recovery patterns    |
+| [Money & Stellar Assets](./docs/money-and-stellar-assets.md) | MoneyAmount semantics, XLM vs issued assets, precision |
+| [Runtime Requirements](./docs/runtime-requirements.md)       | Node.js version, fetch polyfills, browser support      |
+| [Subpath Imports](./docs/subpath-imports.md)                 | Tree-shakeable ./config, ./errors, ./http imports |
+| [Timeouts & Retries](./docs/timeouts-and-retries.md)         | Retry policy, backoff, and idempotency                 |
+| [Auth Headers](./docs/auth-headers.md)                       | How x-api-key and Authorization are set            |
+| [Custom HTTP Client](./docs/custom-http-client.md)           | Injecting a custom HttpClient                        |
+| [Non-JSON Responses](./docs/non-json-responses.md)           | Handling 204 and non-JSON payloads                     |
+| [API Reference](./docs/api-reference.md)                     | Generated API documentation                            |
 
 ## Contributing
 

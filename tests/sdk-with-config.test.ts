@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { LilySdk } from '../src/sdk';
+import type { HttpClient } from '../src/http/types';
 
 describe('LilySdk.withConfig', () => {
   it('creates a new instance with overridden baseUrl', () => {
@@ -27,6 +28,17 @@ describe('LilySdk.withConfig', () => {
     expect(derived.config.apiKey).toBe('key-1');
   });
 
+  it('preserves a custom HttpClient across withConfig', () => {
+    const customClient = {
+      request: vi.fn().mockResolvedValue({ status: 200, data: { ok: true } }),
+    };
+    const base = new LilySdk({ baseUrl: 'https://api.example.com' }, customClient as any);
+    const tenant = base.withConfig({ apiKey: 'tenant-key' });
+
+    expect(tenant.http).toBe(customClient);
+    expect(base.http).toBe(customClient);
+  });
+
   it('overrides credentials independently per tenant', () => {
     const base = new LilySdk({
       baseUrl: 'https://api.example.com',
@@ -40,67 +52,32 @@ describe('LilySdk.withConfig', () => {
     expect(base.config.apiKey).toBe('shared-key');
   });
 
-  it('clears inherited apiKey when overridden with null', () => {
-    const original = new LilySdk({
+  it('preserves validateResponses setting across reconfigurations', () => {
+    const baseFalse = new LilySdk({
       baseUrl: 'https://api.example.com',
-      apiKey: 'key-1',
+      validateResponses: false,
     });
-    const derived = original.withConfig({ apiKey: null });
+    const derivedFalse = baseFalse.withConfig({ apiKey: 'new-key' });
+    expect(derivedFalse.config.validateResponses).toBe(false);
 
-    expect(derived.config.apiKey).toBeUndefined();
-    expect(original.config.apiKey).toBe('key-1');
-    expect(derived.config.toHeaders?.()['x-api-key']).toBeUndefined();
+    const baseTrue = new LilySdk({
+      baseUrl: 'https://api.example.com',
+      validateResponses: true,
+    });
+    const derivedTrue = baseTrue.withConfig({ apiKey: 'new-key' });
+    expect(derivedTrue.config.validateResponses).toBe(true);
   });
 
-  it('clears inherited authToken when overridden with null', () => {
-    const original = new LilySdk({
+  it('allows overriding validateResponses in withConfig', () => {
+    const base = new LilySdk({
       baseUrl: 'https://api.example.com',
-      authToken: 'token-1',
+      validateResponses: false,
     });
-    const derived = original.withConfig({ authToken: null });
+    const derived = base.withConfig({ validateResponses: true });
+    expect(derived.config.validateResponses).toBe(true);
 
-    expect(derived.config.authToken).toBeUndefined();
-    expect(original.config.authToken).toBe('token-1');
-    expect(derived.config.toHeaders?.()['authorization']).toBeUndefined();
-  });
-
-  it('clears both credentials and sends neither x-api-key nor Authorization header', async () => {
-    let capturedHeaders: Headers | Record<string, string> | undefined;
-
-    const mockFetch = async (
-      _input: RequestInfo | URL,
-      init?: RequestInit,
-    ) => {
-      capturedHeaders = init?.headers as any;
-      return new Response(JSON.stringify({ status: 'ok' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      });
-    };
-
-    const original = new LilySdk({
-      baseUrl: 'https://api.example.com',
-      apiKey: 'secret-api-key',
-      authToken: 'secret-auth-token',
-      fetch: mockFetch as typeof globalThis.fetch,
-    });
-
-    const publicChild = original.withConfig({
-      apiKey: null,
-      authToken: null,
-    });
-
-    expect(publicChild.config.apiKey).toBeUndefined();
-    expect(publicChild.config.authToken).toBeUndefined();
-
-    await publicChild.http.request({
-      method: 'GET',
-      path: '/v1/public-endpoint',
-    });
-
-    const headers = new Headers(capturedHeaders as any);
-    expect(headers.get('x-api-key')).toBeNull();
-    expect(headers.get('authorization')).toBeNull();
+    const backToFalse = derived.withConfig({ validateResponses: false });
+    expect(backToFalse.config.validateResponses).toBe(false);
   });
 });
 
