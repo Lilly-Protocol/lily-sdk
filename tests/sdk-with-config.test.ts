@@ -80,3 +80,4 @@ describe('LilySdk.withConfig', () => {
     expect(backToFalse.config.validateResponses).toBe(false);
   });
 });
+

@@ -13,6 +13,20 @@ export interface LilySdkConfig {
   validateResponses?: boolean;
 }
 
+export type LilySdkWithConfigOverrides = Omit<
+  Partial<LilySdkConfig>,
+  'apiKey' | 'authToken'
+> & {
+  /**
+   * Set to `null` to clear inherited apiKey on the derived SDK instance.
+   */
+  apiKey?: string | null;
+  /**
+   * Set to `null` to clear inherited authToken on the derived SDK instance.
+   */
+  authToken?: string | null;
+};
+
 export interface LilySdkCreateOptions extends Omit<LilySdkConfig, 'baseUrl'> {
   baseUrl?: string;
 }

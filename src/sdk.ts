@@ -4,7 +4,11 @@ import { PaymentClient } from './clients/payment-client';
 import { SystemClient } from './clients/system-client';
 import { WalletClient } from './clients/wallet-client';
 import { resolveLilySdkConfig } from './config/resolve-config';
-import type { LilySdkConfig, ResolvedLilySdkConfig } from './config/types';
+import type {
+  LilySdkConfig,
+  LilySdkWithConfigOverrides,
+  ResolvedLilySdkConfig,
+} from './config/types';
 import { createFetchHttpClient } from './http/fetch-http-client';
 import type { HttpClient, HttpRequest } from './http/types';
 import { SDK_VERSION } from './version';
@@ -126,7 +130,21 @@ export class LilySdk {
    * When a custom fetch is explicitly provided in overrides, the parent's HttpClient
    * is shared so that injection point is preserved.
    */
-  public withConfig(overrides: Partial<LilySdkConfig>): LilySdk {
+  public withConfig(overrides: LilySdkWithConfigOverrides): LilySdk {
+    const apiKey =
+      overrides.apiKey === null
+        ? undefined
+        : overrides.apiKey !== undefined
+          ? overrides.apiKey
+          : this.config.apiKey;
+
+    const authToken =
+      overrides.authToken === null
+        ? undefined
+        : overrides.authToken !== undefined
+          ? overrides.authToken
+          : this.config.authToken;
+
     const merged: LilySdkConfig = {
       baseUrl: overrides.baseUrl ?? String(this.config.baseUrl),
       timeoutMs: overrides.timeoutMs ?? this.config.timeoutMs,
