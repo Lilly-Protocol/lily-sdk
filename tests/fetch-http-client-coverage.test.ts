@@ -25,7 +25,7 @@ describe('fetch-http-client coverage matrix', () => {
       status: 200,
       headers: new Headers({ 'content-type': 'application/json' }),
       json: async () => ({ ok: true }),
-      text: async () => '',
+      text: async () => JSON.stringify({ ok: true }),
     });
 
     const client = createFetchHttpClient(config);
@@ -49,7 +49,7 @@ describe('fetch-http-client coverage matrix', () => {
       status: 200,
       headers: new Headers({ 'content-type': 'application/json' }),
       json: async () => ({}),
-      text: async () => '',
+      text: async () => '{}',
     });
 
     const client = createFetchHttpClient(config);
@@ -176,7 +176,7 @@ describe('fetch-http-client coverage matrix', () => {
       status: 204,
       headers: new Headers(),
       json: async () => ({}),
-      text: async () => '',
+      text: async () => '{}',
     });
 
     const client = createFetchHttpClient(config);
