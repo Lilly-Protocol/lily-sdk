@@ -136,7 +136,40 @@ await sdk.http.request({
   body: { agentId: 'agent_123', network: 'stellar-testnet' },
   timeoutMs: 5_000,
 });
-```
+`
+
+### Multi-tenant overrides with \withConfig
+Use \withConfig\ to create child SDK instances with merged configuration — ideal for multi-tenant setups where each tenant needs different credentials or endpoints:
+
+\\\	s
+const root = LilySdk.create(); // reads from env vars
+
+const tenantA = root.withConfig({
+  baseUrl: 'https://api-tenant-a.lilyprotocol.com',
+  apiKey: 'key_for_tenant_a',
+  timeoutMs: 20_000,
+});
+
+const tenantB = root.withConfig({
+  baseUrl: 'https://api-tenant-b.lilyprotocol.com',
+  authToken: 'bearer_for_tenant_b',
+});
+\\\
+
+Credentials are inherited from the parent unless explicitly overridden. There is currently no way to clear an inherited credential via \withConfig\ — use a fresh \LilySdk\ constructor for anonymous child instances.
+
+### Environment variable precedence
+
+\LilySdk.create()\ reads configuration from environment variables in this order:
+
+| Priority | Variable             | Used for            |
+| -------- | -------------------- | ------------------- |
+| 1        | \LILY_API_URL\       | Base URL (preferred) |
+| 2        | \LILY_BASE_URL\      | Base URL (fallback)  |
+| 3        | \LILY_API_KEY\       | API key              |
+| 4        | \LILY_AUTH_TOKEN\    | Bearer token         |
+
+Explicit \options\ always take precedence over environment variables, which take precedence over built-in defaults (\https://api.lilyprotocol.com\\). Unlike the constructor, \create()\ never throws for a missing \aseUrl\ — it silently falls back to the default.``
 
 ## Public API Overview
 
@@ -375,6 +408,23 @@ See [CHANGELOG.md](./CHANGELOG.md) for a full list of changes. The changelog fol
 - Pagination helpers and richer idempotency ergonomics
 - Webhook verification, observability hooks, and advanced auth flows
 - More complete Stellar asset and payment orchestration coverage
+
+## Documentation
+
+In-depth guides are available under [docs/](./docs/):
+
+| Guide                          | Description                                            |
+| ------------------------------ | ------------------------------------------------------ |
+| [Environment Variables](./docs/environment-variables.md)       | Available env vars and their defaults                  |
+| [Error Handling](./docs/error-handling.md)                   | Error hierarchy, type guards, and recovery patterns    |
+| [Money & Stellar Assets](./docs/money-and-stellar-assets.md) | MoneyAmount semantics, XLM vs issued assets, precision |
+| [Runtime Requirements](./docs/runtime-requirements.md)       | Node.js version, fetch polyfills, browser support      |
+| [Subpath Imports](./docs/subpath-imports.md)                 | Tree-shakeable ./config, ./errors, ./http imports |
+| [Timeouts & Retries](./docs/timeouts-and-retries.md)         | Retry policy, backoff, and idempotency                 |
+| [Auth Headers](./docs/auth-headers.md)                       | How x-api-key and Authorization are set            |
+| [Custom HTTP Client](./docs/custom-http-client.md)           | Injecting a custom HttpClient                        |
+| [Non-JSON Responses](./docs/non-json-responses.md)           | Handling 204 and non-JSON payloads                     |
+| [API Reference](./docs/api-reference.md)                     | Generated API documentation                            |
 
 ## Contributing
 
