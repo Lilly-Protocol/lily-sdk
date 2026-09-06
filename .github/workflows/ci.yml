@@ -40,7 +40,17 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run docs
-      - run: git diff --exit-code docs/api || (echo 'docs/api is out of date' && exit 1)
+      - name: Verify committed API docs are in sync with the source
+        run: |
+          if ! git diff --exit-code -- docs/api; then
+            echo "::error::docs/api is out of date with the source. Run 'npm run docs' and commit the regenerated output."
+            exit 1
+          fi
+          if [ -n "$(git status --porcelain docs/api)" ]; then
+            echo "::error::docs/api has untracked or modified files. Run 'npm run docs' and commit the regenerated output."
+            git status --porcelain docs/api
+            exit 1
+          fi
 
   example:
     runs-on: ubuntu-latest
