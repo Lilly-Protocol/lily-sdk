@@ -37,4 +37,18 @@ describe('LilySdk.create()', () => {
     const sdk = LilySdk.create();
     expect(sdk.config.apiKey).toBe('env-key');
   });
+
+  it('never throws when baseUrl is missing (falls back to DEFAULT_API_URL)', () => {
+    delete process.env.LILY_API_URL;
+    delete process.env.LILY_BASE_URL;
+    expect(() => LilySdk.create()).not.toThrow();
+    expect(LilySdk.create().config.baseUrl.toString()).toBe('https://api.lilyprotocol.com/');
+  });
+
+  it('LILY_API_URL takes precedence over LILY_BASE_URL', () => {
+    process.env.LILY_API_URL = 'https://api.example.com';
+    process.env.LILY_BASE_URL = 'https://base.example.com';
+    const sdk = LilySdk.create();
+    expect(sdk.config.baseUrl.toString()).toBe('https://api.example.com/');
+  });
 });
