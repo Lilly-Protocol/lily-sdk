@@ -96,6 +96,6 @@ export function normalizeMoneyAmount(input: MoneyAmount): MoneyAmount {
   }
   const [wholeRaw = '', fractionRaw = ''] = input.amount.split('.');
   const whole = wholeRaw.replace(/^0+(?=\d)/, '');
-  const fraction = fractionRaw.slice(0, 2).padEnd(2, '0');
+  const fraction = fractionRaw.slice(0, 7).padEnd(2, '0');
   return { ...input, amount: `${whole}.${fraction}` };
 }
