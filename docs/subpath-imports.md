@@ -6,9 +6,9 @@
 | `lily-sdk/config` | Configuration types and resolver |
 | `lily-sdk/errors` | Error classes and type guards    |
 | `lily-sdk/http`   | HTTP transport layer             |
-| `lily-sdk/models`   | Domain models                                        |
-| `lily-sdk/types`    | Shared type definitions                              |
-| `lily-sdk/webhooks` | Webhook signature verification and replay protection |
+| `lily-sdk/models`     | Domain models                     |
+| `lily-sdk/pagination` | Pagination helpers and CursorPage |
+| `lily-sdk/types`      | Shared type definitions           |
 
 ## Usage
 
@@ -17,7 +17,7 @@ import { LilySdk } from 'lily-sdk';
 import { LilyApiError, isLilySdkError } from 'lily-sdk/errors';
 import type { LilySdkConfig } from 'lily-sdk/config';
 import { createFetchHttpClient } from 'lily-sdk/http';
-import { verifyWebhookSignature, verifyWebhookWithReplay } from 'lily-sdk/webhooks';
+import { paginate, type CursorPage } from 'lily-sdk/pagination';
 ```
 
 ## Tree-Shaking

@@ -16,7 +16,7 @@ describe('tree-shaking verification for sideEffects: false', () => {
     await writeFile(
       entryFile,
       `
-      import { LilyApiError, LilyTransportError } from '${indexPath}';
+      import { LilyApiError, LilyTransportError } from '${resolve(__dirname, '..', 'src', 'index.ts').replace(/\\/g, '/')}';
       export const err = new LilyApiError('test', { statusCode: 500 });
       export const terr = new LilyTransportError('net', { code: 'NET' });
     `,
@@ -62,7 +62,7 @@ describe('tree-shaking verification for sideEffects: false', () => {
     await writeFile(
       entryFile,
       `
-      import { resolveLilySdkConfig } from '${indexPath}';
+      import { resolveLilySdkConfig } from '${resolve(__dirname, '..', 'src', 'index.ts').replace(/\\/g, '/')}';
       export const config = resolveLilySdkConfig({ baseUrl: 'https://api.test' });
     `,
     );

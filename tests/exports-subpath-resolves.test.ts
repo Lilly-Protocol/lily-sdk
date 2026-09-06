@@ -25,14 +25,13 @@ const entries = Object.entries(pkg.exports).filter(
 );
 
 function existsWithinDist(file: string, label: string) {
-  const target = resolve(process.cwd(), file);
-  const normalizedTarget = target.replace(/\\/g, '/');
-  const normalizedDist = dist.replace(/\\/g, '/');
-  expect(normalizedTarget.startsWith(`${normalizedDist}/`), `${label} must live under dist/`).toBe(
+  const target = resolve(process.cwd(), file).replace(/\\/g, '/');
+  const distNormalized = dist.replace(/\\/g, '/');
+  expect(target.startsWith(`${distNormalized}/`), `${label} must live under dist/`).toBe(
     true,
   );
   expect(
-    readFileSync(target, 'utf8').length,
+    readFileSync(resolve(process.cwd(), file), 'utf8').length,
     `${file} should not be empty`,
   ).toBeGreaterThan(0);
 }
