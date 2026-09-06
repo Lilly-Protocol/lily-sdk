@@ -1,26 +1,45 @@
 # Environment Variables
 
-The Lily SDK reads the following environment variables when configuration options are not explicitly provided in code.
+The SDK reads a small, fixed set of environment variables. Anything else documented
+historically (`LILY_TIMEOUT_MS`, `LILY_DEBUG`) is **not** implemented — do not rely on it.
 
-## Supported Variables
+## Supported variables
 
-| Variable          | Description                     | Default / Precedence                                                                                                                                                  |
-| ----------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LILY_API_URL`    | Primary API base URL            | Primary URL source. Honored by `resolveLilySdkConfig` and `LilySdk.create()`. Falls back to `DEFAULT_API_URL` (`https://api.lilyprotocol.com`) in `LilySdk.create()`. |
-| `LILY_BASE_URL`   | Fallback API base URL           | Honored only by `LilySdk.create()` when `LILY_API_URL` is not set (`LILY_API_URL ?? LILY_BASE_URL`).                                                                  |
-| `LILY_API_KEY`    | API key for authentication      | Sent via `x-api-key` header when provided.                                                                                                                            |
-| `LILY_AUTH_TOKEN` | Bearer token for authentication | Sent via `authorization: Bearer <token>` header when provided.                                                                                                        |
+| Variable          | Purpose                        | Who reads it                                                    |
+| ----------------- | ------------------------------ | --------------------------------------------------------------- |
+| `LILY_API_URL`    | Primary API base URL           | `resolveLilySdkConfig` (constructor) **and** `LilySdk.create()` |
+| `LILY_BASE_URL`   | Fallback API base URL          | **`LilySdk.create()` only** (when `LILY_API_URL` is unset)      |
+| `LILY_API_KEY`    | API key → `x-api-key` header   | `resolveLilySdkConfig` (constructor) **and** `LilySdk.create()` |
+| `LILY_AUTH_TOKEN` | Bearer token → `Authorization` | `resolveLilySdkConfig` (constructor) **and** `LilySdk.create()` |
 
-> **Note on Timeouts & Debugging**:  
-> `timeoutMs` and other operational options (such as custom retry policies or fetch implementations) are not configured via environment variables. Configure SDK-wide defaults programmatically via `LilySdkConfig`. For a per-request timeout, set `timeoutMs` on the low-level `HttpRequest` passed to `sdk.request(...)` or `sdk.http.request(...)`; high-level client methods do not currently expose a per-call options bag.
+Source of truth: `src/config/resolve-config.ts` and `LilySdk.create()` in `src/sdk.ts`.
 
-## Precedence & Resolution
+## Entry points and `LILY_BASE_URL`
 
-1. **Explicit configuration**: Options passed directly to `new LilySdk(config)` or `LilySdk.create(options)` always take precedence over environment variables.
-2. **Base URL resolution**:
-   - `LilySdk.create()` checks `options.baseUrl` -> `process.env.LILY_API_URL` -> `process.env.LILY_BASE_URL` -> `DEFAULT_API_URL` (`https://api.lilyprotocol.com`).
-   - Direct constructor initialization `new LilySdk(config)` resolves `config.baseUrl` -> `process.env.LILY_API_URL`.
-3. **Credentials**: `config.apiKey` / `config.authToken` override `LILY_API_KEY` and `LILY_AUTH_TOKEN`.
+| Entry point                                    | Base URL sources (first match wins)                                                                       | Honors `LILY_BASE_URL`? |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `new LilySdk(config)` / `resolveLilySdkConfig` | `config.baseUrl` → `process.env.LILY_API_URL` → **throws** if neither is set                              | No                      |
+| `LilySdk.create(options)`                      | `options.baseUrl` → `LILY_API_URL` → `LILY_BASE_URL` → `DEFAULT_API_URL` (`https://api.lilyprotocol.com`) | **Yes** (fallback only) |
+
+Prefer `LILY_API_URL` in new setups. Keep `LILY_BASE_URL` only if you already depend on
+`LilySdk.create()` picking it up as a fallback.
+
+## Precedence
+
+| Setting     | Resolution order                                                                                                                                                                                                                                             |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Base URL    | Explicit `baseUrl` option → `LILY_API_URL` → (`LILY_BASE_URL` **only** in `LilySdk.create()`) → for `create()` only, `DEFAULT_API_URL`                                                                                                                       |
+| Credentials | Explicit `apiKey` / `authToken` → `LILY_API_KEY` / `LILY_AUTH_TOKEN`                                                                                                                                                                                         |
+| Timeout     | **Not** an environment variable. Set `timeoutMs` on `LilySdkConfig` (constructor / `withConfig`). Default: `10000` ms. Per-request timeouts belong on the request options object where supported — see [timeouts-and-retries.md](./timeouts-and-retries.md). |
+
+Explicit code options always beat environment variables.
+
+## Not supported
+
+| Variable          | Status                                      |
+| ----------------- | ------------------------------------------- |
+| `LILY_TIMEOUT_MS` | Never read; use `timeoutMs` in config       |
+| `LILY_DEBUG`      | Never read; no env-driven debug flag exists |
 
 ## Usage
 
@@ -31,6 +50,8 @@ Set environment variables in your environment:
 ```bash
 export LILY_API_URL=https://api.lilyprotocol.com
 export LILY_API_KEY=lk_live_xxx
+# optional:
+# export LILY_AUTH_TOKEN=eyJhbGciOi...
 ```
 
 Initialize the SDK without passing explicit arguments:
@@ -38,6 +59,15 @@ Initialize the SDK without passing explicit arguments:
 ```typescript
 import { LilySdk } from '@lily-protocol/sdk';
 
-// Automatically resolves LILY_API_URL (or LILY_BASE_URL fallback) and LILY_API_KEY / LILY_AUTH_TOKEN
+// Reads LILY_API_URL (or LILY_BASE_URL), LILY_API_KEY, LILY_AUTH_TOKEN
 const sdk = LilySdk.create();
+```
+
+Constructor path (no `LILY_BASE_URL`, no default URL — `baseUrl` or `LILY_API_URL` required):
+
+```typescript
+const sdk = new LilySdk({
+  // baseUrl omitted → falls back to LILY_API_URL only
+  timeoutMs: 15_000,
+});
 ```

@@ -21,10 +21,16 @@ describe('MoneyAmount decimal normalization', () => {
     expect(result.amount).toBe('25.00');
   });
 
-  it('truncates excess decimal places to 2', () => {
-    const input: MoneyAmount = { assetCode: 'USDC', amount: '1.234567' };
+  it('preserves up to 7 fractional digits for Stellar precision', () => {
+    const input: MoneyAmount = { assetCode: 'XLM', amount: '0.0000001' };
     const result = normalizeMoneyAmount(input);
-    expect(result.amount).toBe('1.23');
+    expect(result.amount).toBe('0.0000001');
+  });
+
+  it('preserves 7 fractional digits without truncating to 2', () => {
+    const input: MoneyAmount = { assetCode: 'USDC', amount: '1.2345678' };
+    const result = normalizeMoneyAmount(input);
+    expect(result.amount).toBe('1.2345678');
   });
 
   it('handles amounts with leading zeros', () => {
