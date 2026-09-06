@@ -36,6 +36,13 @@ LilySdkError (base)
 
 ## Catching by Type
 
+Every error thrown by SDK client operations extends `LilySdkError` and exposes typed properties:
+- `message`: Human-readable error description
+- `code`: Structured string error code from `LILY_ERROR_CODES` (e.g. `'RATE_LIMITED'`, `'NOT_FOUND'`)
+- `statusCode`: HTTP status code when available (e.g. `404`, `429`)
+- `details`: Underlying API error payload details
+- `request`: Metadata about the failing request (`method`, `path`, `url`)
+
 ```typescript
 import {
   LilySdk,
@@ -76,6 +83,8 @@ try {
 ## Type Guard & Common Properties
 
 All SDK errors can be narrowed using `isLilySdkError`:
+
+Use `isLilySdkError` to safely narrow unknown caught errors:
 
 ```typescript
 import { isLilySdkError } from '@lily-protocol/sdk';
