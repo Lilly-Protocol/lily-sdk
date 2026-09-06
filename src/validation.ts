@@ -1,10 +1,26 @@
 import { LilyValidationError } from './errors/sdk-error';
-import type { MoneyAmount } from './models/common';
+import type { MoneyAmount, ResourceStatus } from './models/common';
+import type {
+  CreateAgentRequest,
+  UpdateAgentRequest,
+} from './models/agent';
+import type { ProvisionWalletRequest } from './models/wallet';
 import type {
   ExecutePaymentRequest,
   PaymentQuoteRequest,
 } from './models/payment';
 import type { ResolveIdentityRequest } from './models/identity';
+import type { CreateAgentRequest, UpdateAgentRequest } from './models/agent';
+import type { ProvisionWalletRequest } from './models/wallet';
+
+const VALID_NETWORKS = new Set(['stellar-testnet', 'stellar-mainnet']);
+const VALID_RESOURCE_STATUSES = new Set<ResourceStatus>([
+  'pending',
+  'active',
+  'inactive',
+  'failed',
+  'paused',
+]);
 
 const NON_EMPTY_STRING_PATTERN = /\S/;
 const DECIMAL_AMOUNT_PATTERN = /^\d+(\.\d+)?$/;
@@ -13,6 +29,20 @@ const MAX_STELLAR_FRACTIONAL_DIGITS = 7;
 const MAX_MEMO_TEXT_LENGTH = 28;
 const MEMO_HEX_PATTERN = /^(?:[0-9a-fA-F]{2})*$/;
 const MAX_MEMO_HEX_LENGTH = 64;
+
+/**
+ * Stellar native asset code. XLM has no issuer; passing `assetIssuer` alongside
+ * it is documented as invalid in the SDK README and `MoneyAmount` model.
+ */
+const NATIVE_ASSET_CODE = 'XLM';
+
+/**
+ * Stellar public-key account IDs (G-addresses) used to identify asset issuers.
+ * They are 56 characters of base32 alphabet (A-Z, 2-7) and must start with 'G'.
+ * This matches the format documented for issued-asset `assetIssuer` values in
+ * the SDK README "Native vs. Issued Assets" section.
+ */
+const STELLAR_PUBLIC_KEY_PATTERN = /^G[A-Z2-7]{55}$/;
 
 export function validateNonEmptyString(
   value: unknown,
@@ -70,6 +100,50 @@ export function validateMoneyAmount(
         `${context}: \`assetIssuer\` must be a non-empty string when provided.`,
       );
     }
+    if (!STELLAR_PUBLIC_KEY_PATTERN.test(amount.assetIssuer)) {
+      throw new LilyValidationError(
+        `${context}: \`assetIssuer\` must be a Stellar public key (G-address, 56 characters starting with "G"). Got ${amount.assetIssuer.length} characters.`,
+      );
+    }
+  }
+
+  // Native vs. issued-asset rules from the MoneyAmount model + README
+  // "Native vs. Issued Assets" section:
+  // - XLM (native) must omit assetIssuer; carrying one is invalid.
+  // - Non-XLM (issued) assets must carry an assetIssuer; omitting it is invalid.
+  if (
+    amount.assetCode === NATIVE_ASSET_CODE &&
+    amount.assetIssuer !== undefined
+  ) {
+    throw new LilyValidationError(
+      `${context}: native asset \`XLM\` must not have an \`assetIssuer\`. Issued assets are required to identify an anchor account; the native asset has none.`,
+    );
+  }
+  if (
+    amount.assetCode !== NATIVE_ASSET_CODE &&
+    amount.assetIssuer === undefined
+  ) {
+    throw new LilyValidationError(
+      `${context}: issued asset \`${amount.assetCode}\` requires an \`assetIssuer\` to identify the anchor account.`,
+    );
+  }
+
+  // Native asset semantics: `XLM` is built into the ledger and has no
+  // issuing account, so `assetIssuer` must be omitted for it (see the
+  // `MoneyAmount` model docs and the README "Native vs. Issued Assets"
+  // section). Case-sensitive: only the exact code `XLM` is native.
+  if (amount.assetCode === 'XLM' && amount.assetIssuer !== undefined) {
+    throw new LilyValidationError(
+      `${context}: \`assetIssuer\` must be omitted for the native asset (XLM has no issuing account).`,
+    );
+  }
+
+  // Issued credit assets are uniquely identified by the (assetCode,
+  // assetIssuer) pair, so a non-native asset code requires an issuer.
+  if (amount.assetCode !== 'XLM' && amount.assetIssuer === undefined) {
+    throw new LilyValidationError(
+      `${context}: \`assetIssuer\` is required for issued assets (only the native asset XLM may omit it).`,
+    );
   }
 }
 
@@ -154,3 +228,140 @@ export function validatePaymentQuoteRequest(
   validateNonEmptyString(request.toAddress, 'toAddress');
   validateMoneyAmount(request.amount, 'PaymentQuoteRequest');
 }
+
+export function validateProvisionWalletRequest(
+  request: ProvisionWalletRequest,
+): void {
+  if (!request || typeof request !== 'object') {
+    throw new LilyValidationError(
+      'ProvisionWalletRequest: request body is required.',
+    );
+  }
+
+  validateNonEmptyString(request.agentId, 'agentId');
+
+  if (!VALID_NETWORKS.has(request.network)) {
+    throw new LilyValidationError(
+      "ProvisionWalletRequest: `network` must be 'stellar-testnet' or 'stellar-mainnet'.",
+    );
+  }
+
+  if (request.fundingAsset !== undefined && request.fundingAsset !== null) {
+    validateMoneyAmount(
+      request.fundingAsset as MoneyAmount,
+      'ProvisionWalletRequest.fundingAsset',
+    );
+  }
+}
+
+export function validateCreateAgentRequest(
+  request: CreateAgentRequest,
+): void {
+  if (!request || typeof request !== 'object') {
+    throw new LilyValidationError(
+      'CreateAgentRequest: request body is required.',
+    );
+  }
+
+  validateNonEmptyString(request.name, 'name');
+
+  if (!VALID_NETWORKS.has(request.network)) {
+    throw new LilyValidationError(
+      "CreateAgentRequest: `network` must be 'stellar-testnet' or 'stellar-mainnet'.",
+    );
+  }
+
+  if (
+    request.description !== undefined &&
+    request.description !== null &&
+    typeof request.description !== 'string'
+  ) {
+    throw new LilyValidationError(
+      'CreateAgentRequest: `description` must be a string when provided.',
+    );
+  }
+
+  if (request.capabilities !== undefined && request.capabilities !== null) {
+    if (!Array.isArray(request.capabilities)) {
+      throw new LilyValidationError(
+        'CreateAgentRequest: `capabilities` must be an array when provided.',
+      );
+    }
+    for (const cap of request.capabilities) {
+      if (typeof cap !== 'string' || !NON_EMPTY_STRING_PATTERN.test(cap)) {
+        throw new LilyValidationError(
+          'CreateAgentRequest: each capability must be a non-empty string.',
+        );
+      }
+    }
+  }
+
+  if (request.metadata !== undefined && request.metadata !== null) {
+    if (typeof request.metadata !== 'object' || Array.isArray(request.metadata)) {
+      throw new LilyValidationError(
+        'CreateAgentRequest: `metadata` must be an object when provided.',
+      );
+    }
+  }
+}
+
+export function validateUpdateAgentRequest(
+  request: UpdateAgentRequest,
+): void {
+  if (!request || typeof request !== 'object' || Array.isArray(request)) {
+    throw new LilyValidationError(
+      'UpdateAgentRequest: request body must be an object.',
+    );
+  }
+
+  const hasUpdate =
+    request.name !== undefined ||
+    request.description !== undefined ||
+    request.capabilities !== undefined ||
+    request.status !== undefined;
+
+  if (!hasUpdate) {
+    throw new LilyValidationError(
+      'UpdateAgentRequest: at least one update field must be provided.',
+    );
+  }
+
+  if (request.name !== undefined) {
+    validateNonEmptyString(request.name, 'name');
+  }
+
+  if (
+    request.description !== undefined &&
+    request.description !== null &&
+    typeof request.description !== 'string'
+  ) {
+    throw new LilyValidationError(
+      'UpdateAgentRequest: `description` must be a string when provided.',
+    );
+  }
+
+  if (request.capabilities !== undefined && request.capabilities !== null) {
+    if (!Array.isArray(request.capabilities)) {
+      throw new LilyValidationError(
+        'UpdateAgentRequest: `capabilities` must be an array when provided.',
+      );
+    }
+    for (const cap of request.capabilities) {
+      if (typeof cap !== 'string' || !NON_EMPTY_STRING_PATTERN.test(cap)) {
+        throw new LilyValidationError(
+          'UpdateAgentRequest: each capability must be a non-empty string.',
+        );
+      }
+    }
+  }
+
+  if (
+    request.status !== undefined &&
+    !VALID_RESOURCE_STATUSES.has(request.status)
+  ) {
+    throw new LilyValidationError(
+      "UpdateAgentRequest: `status` must be one of: 'pending', 'active', 'inactive', 'failed', 'paused'.",
+    );
+  }
+}
+
