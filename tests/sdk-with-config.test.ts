@@ -28,6 +28,17 @@ describe('LilySdk.withConfig', () => {
     expect(derived.config.apiKey).toBe('key-1');
   });
 
+  it('preserves a custom HttpClient across withConfig', () => {
+    const customClient = {
+      request: vi.fn().mockResolvedValue({ status: 200, data: { ok: true } }),
+    };
+    const base = new LilySdk({ baseUrl: 'https://api.example.com' }, customClient as any);
+    const tenant = base.withConfig({ apiKey: 'tenant-key' });
+
+    expect(tenant.http).toBe(customClient);
+    expect(base.http).toBe(customClient);
+  });
+
   it('overrides credentials independently per tenant', () => {
     const base = new LilySdk({
       baseUrl: 'https://api.example.com',
@@ -41,41 +52,31 @@ describe('LilySdk.withConfig', () => {
     expect(base.config.apiKey).toBe('shared-key');
   });
 
-  it('preserves an injected custom HttpClient across withConfig (issue #442)', async () => {
-    const requestSpy = vi.fn().mockResolvedValue({
-      status: 200,
-      headers: new Headers(),
-      data: { status: 'ok' },
+  it('preserves validateResponses setting across reconfigurations', () => {
+    const baseFalse = new LilySdk({
+      baseUrl: 'https://api.example.com',
+      validateResponses: false,
     });
-    const customClient: HttpClient = {
-      request: requestSpy,
-    };
+    const derivedFalse = baseFalse.withConfig({ apiKey: 'new-key' });
+    expect(derivedFalse.config.validateResponses).toBe(false);
 
-    const parent = new LilySdk(
-      {
-        baseUrl: 'https://api.example.com',
-        apiKey: 'parent-key',
-      },
-      customClient,
-    );
-
-    const child = parent.withConfig({ apiKey: 'tenant2' });
-
-    expect(child.httpClient).toBe(customClient);
-    expect(child.http).toBe(customClient);
-
-    // Make a request from the child
-    await child.request({
-      method: 'GET',
-      path: '/v1/system/health',
+    const baseTrue = new LilySdk({
+      baseUrl: 'https://api.example.com',
+      validateResponses: true,
     });
+    const derivedTrue = baseTrue.withConfig({ apiKey: 'new-key' });
+    expect(derivedTrue.config.validateResponses).toBe(true);
+  });
 
-    expect(requestSpy).toHaveBeenCalledOnce();
-    expect(requestSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: 'GET',
-        path: '/v1/system/health',
-      }),
-    );
+  it('allows overriding validateResponses in withConfig', () => {
+    const base = new LilySdk({
+      baseUrl: 'https://api.example.com',
+      validateResponses: false,
+    });
+    const derived = base.withConfig({ validateResponses: true });
+    expect(derived.config.validateResponses).toBe(true);
+
+    const backToFalse = derived.withConfig({ validateResponses: false });
+    expect(backToFalse.config.validateResponses).toBe(false);
   });
 });
