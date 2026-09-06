@@ -14,6 +14,8 @@ export interface LilyErrorOptions {
   bodySnippet?: string;
   /** Delta-seconds value from a Retry-After header, when present. */
   retryAfterSeconds?: number;
+  /** Response headers from the failing HTTP response. */
+  headers?: Record<string, string>;
 }
 
 export const LILY_ERROR_CODES = Object.freeze({
@@ -40,6 +42,7 @@ export class LilySdkError extends Error {
   public readonly statusCode: number | undefined;
   public readonly details: unknown;
   public readonly request: LilyRequestMetadata | undefined;
+  public readonly headers: Record<string, string> | undefined;
 
   public constructor(message: string, options: LilyErrorOptions = {}) {
     super(message, { cause: options.cause });
@@ -48,6 +51,7 @@ export class LilySdkError extends Error {
     this.statusCode = options.statusCode;
     this.details = options.details;
     this.request = options.request;
+    this.headers = options.headers;
   }
 
   public toJSON(): Record<string, unknown> {
@@ -70,6 +74,9 @@ export class LilySdkError extends Error {
 
     if (this.request !== undefined) {
       result.request = this.request;
+    }
+    if (this.headers !== undefined) {
+      result.headers = this.headers;
     }
 
     const cause = this.cause;
