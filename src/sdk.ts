@@ -99,6 +99,11 @@ export class LilySdk {
   /**
    * Creates a new LilySdk instance with merged configuration.
    * Useful for multi-tenant scenarios where credentials or baseUrl differ per tenant.
+   *
+   * When no custom fetch is overridden, a fresh HttpClient is built from the merged
+   * config so that baseUrl and auth changes take effect on the wire.
+   * When a custom fetch is explicitly provided in overrides, the parent's HttpClient
+   * is shared so that injection point is preserved.
    */
   public withConfig(overrides: Partial<LilySdkConfig>): LilySdk {
     const merged: LilySdkConfig = {
@@ -126,6 +131,9 @@ export class LilySdk {
           : {}),
     };
 
-    return new LilySdk(merged);
+    const httpClient = overrides.fetch !== undefined ? this.httpClient : undefined;
+
+    return new LilySdk(merged, httpClient);
   }
+
 }
