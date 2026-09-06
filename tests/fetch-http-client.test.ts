@@ -5,6 +5,7 @@ import {
   LilyApiError,
   LilyAuthenticationError,
   LilyTransportError,
+  LilyConfigError,
 } from '../src/errors/sdk-error';
 
 function makeConfig(
@@ -186,6 +187,28 @@ describe('fetch-http-client coverage matrix', () => {
     ).rejects.toMatchObject({
       code: 'TIMEOUT',
     });
+  });
+
+  it('throws LilyConfigError for negative timeoutMs', async () => {
+    const client = createFetchHttpClient(config);
+    await expect(client.request({ method: 'GET', path: '/neg', timeoutMs: -1 })).rejects.toBeInstanceOf(LilyConfigError);
+  });
+
+  it('throws LilyConfigError for NaN timeoutMs', async () => {
+    const client = createFetchHttpClient(config);
+    await expect(client.request({ method: 'GET', path: '/nan', timeoutMs: NaN })).rejects.toBeInstanceOf(LilyConfigError);
+  });
+
+  it('throws LilyConfigError for Infinity timeoutMs', async () => {
+    const client = createFetchHttpClient(config);
+    await expect(client.request({ method: 'GET', path: '/inf', timeoutMs: Infinity })).rejects.toBeInstanceOf(LilyConfigError);
+  });
+
+  it('allows valid timeoutMs values', async () => {
+    config.fetch = vi.fn().mockImplementation(() => new Response(JSON.stringify({ok:true}), {status:200, headers:{'content-type':'application/json'}}));
+    const client = createFetchHttpClient(config);
+    await client.request({ method: 'GET', path: '/valid', timeoutMs: 500 });
+    expect(config.fetch).toHaveBeenCalledTimes(1);
   });
 
   it('does not retry transport errors for POST', async () => {
