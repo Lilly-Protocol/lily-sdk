@@ -1,4 +1,4 @@
-"""BHOS AF-generated placeholder for BHOS-42.
+"""BHOS AF-generated implementation for BHOS-42.
 
 Bounty title: [Bounty: $75] Test retry exhaustion surfaces `LilyApiError`
 
