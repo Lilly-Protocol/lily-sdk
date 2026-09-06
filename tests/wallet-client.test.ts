@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { WalletClient } from '../src/clients/wallet-client';
+import { LilyValidationError } from '../src/errors/sdk-error';
 import type { HttpClient, HttpResponse } from '../src/http/types';
 import type {
   Wallet,
@@ -38,6 +39,52 @@ describe('WalletClient', () => {
   });
 
   describe('provision', () => {
+    it('rejects with LilyValidationError before HTTP request if agentId is empty', async () => {
+      const input = {
+        agentId: '',
+        network: 'stellar-testnet' as const,
+      };
+      await expect(client.provision(input)).rejects.toThrow(
+        LilyValidationError,
+      );
+      expect(httpClient.request).not.toHaveBeenCalled();
+    });
+
+    it('rejects with LilyValidationError before HTTP request if network is invalid', async () => {
+      const input = {
+        agentId: 'agent-1',
+        network: 'bitcoin' as any,
+      };
+      await expect(client.provision(input)).rejects.toThrow(
+        LilyValidationError,
+      );
+      expect(httpClient.request).not.toHaveBeenCalled();
+    });
+
+    it('rejects with LilyValidationError if fundingAsset has empty assetCode', async () => {
+      const input: ProvisionWalletRequest = {
+        agentId: 'agent-1',
+        network: 'stellar-testnet',
+        fundingAsset: { assetCode: '', amount: '100' },
+      };
+      await expect(client.provision(input)).rejects.toThrow(
+        LilyValidationError,
+      );
+      expect(httpClient.request).not.toHaveBeenCalled();
+    });
+
+    it('rejects with LilyValidationError if fundingAsset has invalid amount', async () => {
+      const input: ProvisionWalletRequest = {
+        agentId: 'agent-1',
+        network: 'stellar-testnet',
+        fundingAsset: { assetCode: 'XLM', amount: 'invalid-amount' },
+      };
+      await expect(client.provision(input)).rejects.toThrow(
+        LilyValidationError,
+      );
+      expect(httpClient.request).not.toHaveBeenCalled();
+    });
+
     it('sends POST /v1/wallets/provision with the input body and returns result', async () => {
       const input: ProvisionWalletRequest = {
         agentId: 'agent-1',
@@ -67,6 +114,11 @@ describe('WalletClient', () => {
   });
 
   describe('get', () => {
+    it('rejects with LilyValidationError if walletId is empty', async () => {
+      await expect(client.get('')).rejects.toThrow(LilyValidationError);
+      expect(httpClient.request).not.toHaveBeenCalled();
+    });
+
     it('sends GET /v1/wallets/:id and returns the wallet', async () => {
       vi.mocked(httpClient.request).mockResolvedValueOnce({
         status: 200,

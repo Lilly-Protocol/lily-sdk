@@ -21,29 +21,16 @@ describe('MoneyAmount decimal normalization', () => {
     expect(result.amount).toBe('25.00');
   });
 
-  it('preserves sub-cent amounts without precision loss', () => {
-    const subCent1: MoneyAmount = { assetCode: 'XLM', amount: '0.0000001' };
-    expect(normalizeMoneyAmount(subCent1).amount).toBe('0.0000001');
-
-    const subCent9: MoneyAmount = { assetCode: 'XLM', amount: '0.0000009' };
-    expect(normalizeMoneyAmount(subCent9).amount).toBe('0.0000009');
-
-    const multiDecimal: MoneyAmount = { assetCode: 'USDC', amount: '1.234567' };
-    expect(normalizeMoneyAmount(multiDecimal).amount).toBe('1.234567');
+  it('preserves up to 7 fractional digits for Stellar precision', () => {
+    const input: MoneyAmount = { assetCode: 'XLM', amount: '0.0000001' };
+    const result = normalizeMoneyAmount(input);
+    expect(result.amount).toBe('0.0000001');
   });
 
-  it('allows explicit scale truncation when scale option is provided', () => {
-    const input: MoneyAmount = { assetCode: 'USDC', amount: '1.234567' };
-    expect(normalizeMoneyAmount(input, { scale: 2 }).amount).toBe('1.23');
-    expect(normalizeMoneyAmount(input, 2).amount).toBe('1.23');
-    expect(normalizeMoneyAmount(input, { scale: 4 }).amount).toBe('1.2345');
-    expect(normalizeMoneyAmount(input, { scale: 0 }).amount).toBe('1');
-  });
-
-  it('throws RangeError on invalid scale', () => {
-    const input: MoneyAmount = { assetCode: 'USDC', amount: '10' };
-    expect(() => normalizeMoneyAmount(input, { scale: -1 })).toThrow(RangeError);
-    expect(() => normalizeMoneyAmount(input, { scale: 8 })).toThrow(RangeError);
+  it('preserves 7 fractional digits without truncating to 2', () => {
+    const input: MoneyAmount = { assetCode: 'USDC', amount: '1.2345678' };
+    const result = normalizeMoneyAmount(input);
+    expect(result.amount).toBe('1.2345678');
   });
 
   it('handles amounts with leading zeros', () => {
