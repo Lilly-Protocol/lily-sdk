@@ -6,6 +6,12 @@ export type {
   ResolvedLilySdkConfig,
 } from './config/types';
 export { resolveLilySdkConfig } from './config/resolve-config';
+export { DEFAULT_TIMEOUT_MS, DEFAULT_RETRY_POLICY } from './config/defaults';
+export {
+  DEFAULT_TIMEOUT_MS,
+  DEFAULT_RETRY_POLICY,
+  DEFAULT_RETRYABLE_STATUS_CODES,
+} from './config/defaults';
 export {
   LILY_ERROR_CODES,
   LilySdkError,
@@ -25,7 +31,10 @@ export type { LilyErrorCode } from './errors/sdk-error';
 export { AgentClient } from './clients/agent-client';
 export { IdentityClient } from './clients/identity-client';
 export { PaymentClient } from './clients/payment-client';
-export { SystemClient } from './clients/system-client';
+export {
+  SystemClient,
+  type SystemClientOptions,
+} from './clients/system-client';
 export { WalletClient } from './clients/wallet-client';
 export { BaseClient } from './clients/base-client';
 export type {
@@ -37,4 +46,21 @@ export type {
   RetryPolicy,
 } from './http/types';
 export { createFetchHttpClient } from './http/fetch-http-client';
+export { MockHttpClient, createMockHttpClient } from './testing';
+export type {
+  MockAssertionHook,
+  MockHttpClientOptions,
+  MockHttpHandler,
+  MockRequestMatcher,
+  MockResponseStub,
+  MockStubResponse,
+  RecordedHttpRequest,
+} from './testing';
 export * from './models';
+export {
+  verifyWebhookSignature,
+  verifyWebhookJSON,
+  parseWebhookHeader,
+  verifyWebhookWithReplay,
+} from './webhooks';
+
