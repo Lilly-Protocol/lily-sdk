@@ -50,6 +50,7 @@ export class LilySdkError extends Error {
     this.code = options.code;
     this.statusCode = options.statusCode;
     this.details = options.details;
+    this.headers = options.headers;
     this.request = options.request;
     this.headers = options.headers;
   }
