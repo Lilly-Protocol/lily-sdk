@@ -9,6 +9,7 @@ const commonEntry = [
   'src/models.ts',
   'src/testing.ts',
   'src/types.ts',
+  'src/pagination.ts',
 ] as string[];
 
 export const nodeConfig: Options = {

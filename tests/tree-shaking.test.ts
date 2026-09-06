@@ -11,6 +11,7 @@ describe('tree-shaking verification for sideEffects: false', () => {
     const entryFile = resolve(tmpDir, 'entry.js');
     const outFile = resolve(tmpDir, 'bundle.js');
 
+    const indexPath = resolve(__dirname, '..', 'src', 'index.ts').replace(/\\/g, '/');
     // Import ONLY error classes — no SDK, no clients, no validation
     await writeFile(
       entryFile,
@@ -56,6 +57,7 @@ describe('tree-shaking verification for sideEffects: false', () => {
     const entryFile = resolve(tmpDir, 'entry.js');
     const outFile = resolve(tmpDir, 'bundle.js');
 
+    const indexPath = resolve(__dirname, '..', 'src', 'index.ts').replace(/\\/g, '/');
     // Import ONLY the config resolver — no HTTP, no clients
     await writeFile(
       entryFile,
