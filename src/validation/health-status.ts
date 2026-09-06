@@ -1,4 +1,5 @@
 import { LilyValidationError } from '../errors/sdk-error';
+import type { HealthStatus } from '../models/system';
 
 export interface HealthStatusShape {
   status: 'ok' | 'degraded' | 'down';
@@ -7,9 +8,9 @@ export interface HealthStatusShape {
   checks: Record<string, 'ok' | 'degraded' | 'down'>;
 }
 
-const VALID_STATUSES = ['ok', 'degraded', 'down'];
+const VALID_STATUSES = ['ok', 'degraded', 'down'] as const;
 
-export function validateHealthStatus(data: unknown): HealthStatusShape {
+export function validateHealthStatus(data: unknown): HealthStatus {
   if (data === null || typeof data !== 'object') {
     throw new LilyValidationError('HealthStatus must be a non-null object', {
       code: 'VALIDATION_ERROR',
