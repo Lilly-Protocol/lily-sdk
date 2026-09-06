@@ -53,4 +53,14 @@ describe('Tarball subpath smoke (issue #84)', () => {
       expect(entry.require?.types).toMatch(/\.d\.cts$/);
     }
   });
+
+  it('exposes ./webhooks subpath with dual-format entries and types (issue #410)', () => {
+    const webhooksEntry = exports['./webhooks'] as SubpathEntry | undefined;
+    expect(webhooksEntry).toBeDefined();
+    expect(webhooksEntry?.import?.default).toBe('./dist/webhooks.js');
+    expect(webhooksEntry?.import?.types).toBe('./dist/webhooks.d.ts');
+    expect(webhooksEntry?.require?.default).toBe('./dist/webhooks.cjs');
+    expect(webhooksEntry?.require?.types).toBe('./dist/webhooks.d.cts');
+  });
 });
+
