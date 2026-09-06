@@ -72,4 +72,29 @@ describe('dist smoke test (issue #92)', () => {
     expect(mod.LilySdk).toBeDefined();
     expect(mod.SDK_VERSION).toBeDefined();
   });
+
+  it('dist/pagination.js (ESM), pagination.cjs (CJS), and pagination.d.ts exist after build', () => {
+    if (!distExists) return;
+    expect(existsSync(resolve(distDir, 'pagination.js'))).toBe(true);
+    expect(existsSync(resolve(distDir, 'pagination.cjs'))).toBe(true);
+    expect(existsSync(resolve(distDir, 'pagination.d.ts'))).toBe(true);
+  });
+
+  it('CJS pagination build exports helpers', () => {
+    const cjsPath = resolve(distDir, 'pagination.cjs');
+    if (!existsSync(cjsPath)) return;
+    const cjs = require(cjsPath);
+    expect(cjs.paginate).toBeDefined();
+    expect(cjs.parseCursorPage).toBeDefined();
+    expect(cjs.buildPaginationQuery).toBeDefined();
+  });
+
+  it('ESM pagination build can be dynamically imported', async () => {
+    const esmPath = resolve(distDir, 'pagination.js');
+    if (!existsSync(esmPath)) return;
+    const mod = await import(esmPath);
+    expect(mod.paginate).toBeDefined();
+    expect(mod.parseCursorPage).toBeDefined();
+    expect(mod.buildPaginationQuery).toBeDefined();
+  });
 });
