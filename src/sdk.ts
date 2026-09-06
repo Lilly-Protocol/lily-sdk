@@ -33,7 +33,7 @@ export class LilySdk {
     this.wallets = new WalletClient(this.httpClient);
     this.payments = new PaymentClient(this.httpClient);
     this.identity = new IdentityClient(this.httpClient);
-    this.system = new SystemClient(this.httpClient);
+    this.system = new SystemClient(this.config);
   }
 
   /**
