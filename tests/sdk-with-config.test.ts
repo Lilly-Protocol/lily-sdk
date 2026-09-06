@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { LilySdk } from '../src/sdk';
+import type { HttpClient } from '../src/http/types';
 
 describe('LilySdk.withConfig', () => {
   it('creates a new instance with overridden baseUrl', () => {

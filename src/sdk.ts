@@ -44,6 +44,7 @@ export class LilySdk {
    */
   public constructor(config?: Partial<LilySdkConfig>, httpClient?: HttpClient) {
     this.config = resolveLilySdkConfig(config ?? {});
+    this.customHttpClient = httpClient;
     this.httpClient = httpClient ?? createFetchHttpClient(this.config);
     this.injectedHttpClient = httpClient;
 
