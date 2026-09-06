@@ -126,6 +126,6 @@ export class LilySdk {
           : {}),
     };
 
-    return new LilySdk(merged);
+    return new LilySdk(merged, this.httpClient);
   }
 }
