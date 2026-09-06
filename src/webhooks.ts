@@ -91,7 +91,8 @@ export function verifyWebhookWithReplay(
   }
   const now = Date.now();
   const age = now - timestamp;
-  if (age > toleranceMs) {
+
+  if (age >= toleranceMs || age <= -toleranceMs) {
     return false;
   }
   const signedPayload = `${timestamp}.${payload instanceof Buffer ? payload.toString('utf8') : payload}`;
