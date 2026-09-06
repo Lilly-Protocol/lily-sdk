@@ -219,6 +219,8 @@ export function createFetchHttpClient(
 
           // Auth failures are terminal: retrying with the same credential just
           // burns the budget. Checked before shouldRetry for that reason.
+          const responseHeaders = extractHeaders(response.headers);
+
           if (response.status === 401 || response.status === 403) {
             cleanup();
             throw new LilyAuthenticationError(
@@ -474,6 +476,9 @@ async function parseResponse(
           code: LILY_ERROR_CODES.RESPONSE_VALIDATION_ERROR,
           statusCode: response.status,
           cause: error,
+          ...(responseHeaders !== undefined
+            ? { headers: responseHeaders }
+            : {}),
         },
       );
     }
@@ -525,3 +530,29 @@ async function sleep(ms: number): Promise<void> {
     setTimeout(resolve, ms);
   });
 }
+
+export function extractHeaders(
+  headers: Headers | Record<string, string> | undefined,
+): Record<string, string> | undefined {
+  if (!headers) {
+    return undefined;
+  }
+
+  const result: Record<string, string> = {};
+
+  if (typeof (headers as Headers).forEach === 'function') {
+    (headers as Headers).forEach((value, key) => {
+      result[key.toLowerCase()] = value;
+    });
+    return result;
+  }
+
+  for (const [key, value] of Object.entries(headers)) {
+    if (typeof value === 'string') {
+      result[key.toLowerCase()] = value;
+    }
+  }
+
+  return result;
+}
+

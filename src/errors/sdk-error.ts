@@ -79,6 +79,10 @@ export class LilySdkError extends Error {
       result.headers = this.headers;
     }
 
+    if (this.headers !== undefined) {
+      result.headers = this.headers;
+    }
+
     const cause = this.cause;
     if (cause !== undefined && cause !== null) {
       result.cause =
