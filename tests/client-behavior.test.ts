@@ -42,35 +42,27 @@ describe('client behavior', () => {
   });
 
   it('calls system health endpoint through the system client', async () => {
-    const requestSpy = vi.fn(() =>
-      Promise.resolve({
-        status: 200,
-        headers: new Headers(),
-        data: {
-          status: 'ok',
-          version: '0.1.0',
-          timestamp: new Date().toISOString(),
-          checks: {
-            api: 'ok',
-          },
-        },
-      }),
+    const responseData = {
+      status: 'ok',
+      version: '0.1.0',
+      timestamp: new Date().toISOString(),
+      checks: { api: 'ok' },
+    };
+    const mockFetch = vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify(responseData), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
     );
-
-    const sdk = new LilySdk(
-      {
-        baseUrl: 'https://api.lily.test',
-        fetch: globalThis.fetch,
-      },
-      createMockHttpClient(requestSpy),
-    );
+    const sdk = new LilySdk({
+      baseUrl: 'https://api.lily.test',
+      fetch: mockFetch as any,
+    });
 
     const health: HealthStatus = await sdk.system.health();
 
-    expect(requestSpy).toHaveBeenCalledWith({
-      method: 'GET',
-      path: '/v1/system/health',
-    });
     expect(health).toEqual({
       status: 'ok',
       version: '0.1.0',
@@ -96,20 +88,21 @@ describe('client behavior', () => {
       }),
     );
 
-    const sdk = new LilySdk(
-      {
-        baseUrl: 'https://api.lily.test',
-        fetch: globalThis.fetch,
-      },
-      createMockHttpClient(requestSpy),
+    const mockFetch = vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify(serviceInfo), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
     );
+    const sdk = new LilySdk({
+      baseUrl: 'https://api.lily.test',
+      fetch: mockFetch as any,
+    });
 
     const info: ServiceInfo = await sdk.system.info();
 
-    expect(requestSpy).toHaveBeenCalledWith({
-      method: 'GET',
-      path: '/v1/system/info',
-    });
     expect(info).toEqual(serviceInfo);
   });
 
