@@ -1,4 +1,5 @@
 import { encodePathSegment } from '../http/path';
+import { validateNonEmptyString } from '../validation';
 import type {
   PaginationQuery,
   ProvisionWalletRequest,
@@ -6,12 +7,14 @@ import type {
   WalletProvisioningResult,
 } from '../models';
 import type { WalletClientContract } from '../types/contracts';
+import { validateProvisionWalletRequest } from '../validation';
 import { BaseClient } from './base-client';
 
 export class WalletClient extends BaseClient implements WalletClientContract {
-  public provision(
+  public async provision(
     input: ProvisionWalletRequest,
   ): Promise<WalletProvisioningResult> {
+    validateProvisionWalletRequest(input);
     return this.request({
       method: 'POST',
       path: '/v1/wallets/provision',
@@ -20,6 +23,7 @@ export class WalletClient extends BaseClient implements WalletClientContract {
   }
 
   public get(walletId: string): Promise<Wallet> {
+    validateNonEmptyString(walletId, 'walletId');
     return this.request({
       method: 'GET',
       path: `/v1/wallets/${encodePathSegment(walletId)}`,

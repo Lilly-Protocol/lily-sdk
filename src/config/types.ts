@@ -2,16 +2,30 @@ import type { RetryPolicy } from '../http/types';
 
 export interface LilySdkConfig {
   baseUrl?: string | URL;
-  apiKey?: string;
-  authToken?: string;
+  apiKey?: string | null;
+  authToken?: string | null;
   timeoutMs?: number;
   retry?: Partial<RetryPolicy>;
   defaultHeaders?: Record<string, string>;
   userAgent?: string;
   fetch?: typeof globalThis.fetch;
-  /** Enable runtime response validation for known models. Default: false. */
+  /** Enable runtime response validation for known models. Default: true. */
   validateResponses?: boolean;
 }
+
+export type LilySdkWithConfigOverrides = Omit<
+  Partial<LilySdkConfig>,
+  'apiKey' | 'authToken'
+> & {
+  /**
+   * Set to `null` to clear inherited apiKey on the derived SDK instance.
+   */
+  apiKey?: string | null;
+  /**
+   * Set to `null` to clear inherited authToken on the derived SDK instance.
+   */
+  authToken?: string | null;
+};
 
 export interface LilySdkCreateOptions extends Omit<LilySdkConfig, 'baseUrl'> {
   baseUrl?: string;
@@ -28,6 +42,11 @@ export interface ResolvedLilySdkConfig {
   defaultHeaders: Record<string, string>;
   userAgent: string;
   fetch: typeof globalThis.fetch;
+  /**
+   * Whether runtime response validation is enabled.
+   * Optional so mock configs and older custom clients stay compatible;
+   * `resolveLilySdkConfig` always provides it (default: true).
+   */
   validateResponses?: boolean;
   /**
    * Serializes the resolved auth credentials plus default headers into a
