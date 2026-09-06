@@ -38,6 +38,12 @@ export function buildPaginationQuery(
 /**
  * Async iterator helper that auto-paginates through a cursor-based list endpoint.
  *
+ * `fetchPage` receives a `PaginationQuery` (containing the `cursor` from the
+ * previous response when present) and must return a `CursorPage<T>` describing
+ * the fetched page: its items, the cursor for the next page, and whether more
+ * pages exist. Iteration stops when the returned cursor is null/empty, a page
+ * is shorter than `limit` (when `limit` is set), or `maxPages` is reached.
+ *
  * @example
  * for await (const agent of paginate(client.agents.list.bind(client.agents))) {
  *   console.log(agent.id);
@@ -48,22 +54,27 @@ export async function* paginate<T>(
   options?: { limit?: number; maxPages?: number },
 ): AsyncGenerator<T, void, unknown> {
   const maxPages = options?.maxPages ?? 100;
-  let pageCount = 0;
-  let cursor: string | null = null;
+  let nextCursor: string | undefined;
 
-  while (pageCount < maxPages) {
-    const query = cursor ? buildPaginationQuery(cursor) : (options?.limit ? { limit: options.limit } : {});
+  for (let pageCount = 0; pageCount < maxPages; pageCount += 1) {
+    const query: PaginationQuery = {
+      ...(options?.limit !== undefined ? { limit: options.limit } : {}),
+      ...buildPaginationQuery(nextCursor),
+    };
     const page = await fetchPage(query);
+
     for (const item of page.items) {
       yield item;
     }
-    pageCount += 1;
-    if (!page.hasMore || !page.nextCursor) {
+
+    // A short page means the dataset is exhausted even if a cursor leaks back.
+    if (options?.limit !== undefined && page.items.length < options.limit) {
       break;
     }
-    if (page.items.length === 0) {
+    // No further cursor: the last page was reached.
+    if (!page.hasMore || page.nextCursor === null || page.nextCursor === '') {
       break;
     }
-    cursor = page.nextCursor;
+    nextCursor = page.nextCursor;
   }
 }
