@@ -85,12 +85,16 @@ export function verifyWebhookWithReplay(
   secret: string,
   toleranceMs: number = 300_000,
 ): boolean {
+  if (!Number.isFinite(toleranceMs) || toleranceMs <= 0) {
+    return false;
+  }
+
   const { timestamp, signature } = parseWebhookHeader(header);
   if (timestamp === null || signature === null) {
     return false;
   }
   const now = Date.now();
-  const age = now - timestamp;
+  const diff = now - timestamp;
 
   if (age >= toleranceMs || age <= -toleranceMs) {
     return false;
