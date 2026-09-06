@@ -27,6 +27,17 @@ describe('LilySdk.withConfig', () => {
     expect(derived.config.apiKey).toBe('key-1');
   });
 
+  it('preserves a custom HttpClient across withConfig', () => {
+    const customClient = {
+      request: vi.fn().mockResolvedValue({ status: 200, data: { ok: true } }),
+    };
+    const base = new LilySdk({ baseUrl: 'https://api.example.com' }, customClient as any);
+    const tenant = base.withConfig({ apiKey: 'tenant-key' });
+
+    expect(tenant.http).toBe(customClient);
+    expect(base.http).toBe(customClient);
+  });
+
   it('overrides credentials independently per tenant', () => {
     const base = new LilySdk({
       baseUrl: 'https://api.example.com',

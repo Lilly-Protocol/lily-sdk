@@ -6,6 +6,12 @@ export type {
   ResolvedLilySdkConfig,
 } from './config/types';
 export { resolveLilySdkConfig } from './config/resolve-config';
+export { DEFAULT_TIMEOUT_MS, DEFAULT_RETRY_POLICY } from './config/defaults';
+export {
+  DEFAULT_TIMEOUT_MS,
+  DEFAULT_RETRY_POLICY,
+  DEFAULT_RETRYABLE_STATUS_CODES,
+} from './config/defaults';
 export {
   LILY_ERROR_CODES,
   LilySdkError,
@@ -41,3 +47,10 @@ export type {
 } from './http/types';
 export { createFetchHttpClient } from './http/fetch-http-client';
 export * from './models';
+export {
+  verifyWebhookSignature,
+  verifyWebhookJSON,
+  parseWebhookHeader,
+  verifyWebhookWithReplay,
+} from './webhooks';
+

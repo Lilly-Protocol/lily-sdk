@@ -22,22 +22,10 @@ export class SystemClient extends BaseClient implements SystemClientContract {
     optionsOrValidateResponses?: SystemClientOptions | boolean,
   ) {
     super(httpClientOrConfig);
-    if (typeof optionsOrValidateResponses === 'boolean') {
-      this.validateResponses = optionsOrValidateResponses;
-    } else if (
-      optionsOrValidateResponses !== undefined &&
-      typeof optionsOrValidateResponses === 'object' &&
-      'validateResponses' in optionsOrValidateResponses &&
-      optionsOrValidateResponses.validateResponses !== undefined
-    ) {
-      this.validateResponses = optionsOrValidateResponses.validateResponses;
-    } else if ('validateResponses' in httpClientOrConfig) {
-      this.validateResponses =
-        (httpClientOrConfig as ResolvedLilySdkConfig).validateResponses ??
-        false;
-    } else {
-      this.validateResponses = false;
-    }
+    // BaseClient stores config when passed a ResolvedLilySdkConfig, or httpClient when passed an HttpClient
+    // When sdk.ts passes config, this.config is set and we read validateResponses from it
+    // When passed an HttpClient directly, this.config is undefined, so default to false
+    this.validateResponses = this.config?.validateResponses ?? false;
   }
 
   public async health(): Promise<HealthStatus> {
