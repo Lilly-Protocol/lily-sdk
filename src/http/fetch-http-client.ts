@@ -14,8 +14,10 @@ import type {
   HttpRequest,
   HttpResponse,
 } from './types';
+import { DEFAULT_RETRY_POLICY } from '../config/defaults';
 
-import { DEFAULT_RETRYABLE_STATUS_CODES } from '../config/defaults';
+const DEFAULT_RETRYABLE_STATUS_CODES =
+  DEFAULT_RETRY_POLICY.retryableStatusCodes;
 
 export function createFetchHttpClient(
   config: ResolvedLilySdkConfig,
