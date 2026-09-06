@@ -44,34 +44,26 @@ export function buildPaginationQuery(
  * }
  */
 export async function* paginate<T>(
-  fetchPage: (query?: PaginationQuery) => Promise<readonly T[]>,
+  fetchPage: (query?: PaginationQuery) => Promise<CursorPage<T>>,
   options?: { limit?: number; maxPages?: number },
 ): AsyncGenerator<T, void, unknown> {
   const maxPages = options?.maxPages ?? 100;
   let pageCount = 0;
+  let cursor: string | null = null;
 
   while (pageCount < maxPages) {
-    const query: PaginationQuery = options?.limit
-      ? { limit: options.limit }
-      : {};
-    const items = await fetchPage(query);
-    for (const item of items) {
+    const query = cursor ? buildPaginationQuery(cursor) : (options?.limit ? { limit: options.limit } : {});
+    const page = await fetchPage(query);
+    for (const item of page.items) {
       yield item;
     }
-    // Without a cursor mechanism from the response, we stop after one page
-    // since we can't know if there are more items.
     pageCount += 1;
-    // If we got fewer items than the limit, we're done
-    if (options?.limit && items.length < options.limit) {
+    if (!page.hasMore || !page.nextCursor) {
       break;
     }
-    // Without response headers exposing next cursor, we stop to avoid infinite loop
-    if (items.length === 0) {
+    if (page.items.length === 0) {
       break;
     }
-    // If no limit specified, we do one page (can't know if there are more)
-    if (!options?.limit) {
-      break;
-    }
+    cursor = page.nextCursor;
   }
 }
