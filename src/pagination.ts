@@ -43,59 +43,43 @@ export type PageResult<T> = readonly T[] | CursorPage<T>;
 /**
  * Async iterator helper that auto-paginates through a cursor-based list endpoint.
  *
+ * `fetchPage` receives a `PaginationQuery` (containing the `cursor` from the
+ * previous response when present) and must return a `CursorPage<T>` describing
+ * the fetched page: its items, the cursor for the next page, and whether more
+ * pages exist. Iteration stops when the returned cursor is null/empty, a page
+ * is shorter than `limit` (when `limit` is set), or `maxPages` is reached.
+ *
  * @example
  * for await (const agent of paginate(client.agents.list.bind(client.agents))) {
  *   console.log(agent.id);
  * }
  */
 export async function* paginate<T>(
-  fetchPage: (query?: PaginationQuery) => Promise<PageResult<T>>,
+  fetchPage: (query?: PaginationQuery) => Promise<CursorPage<T>>,
   options?: { limit?: number; maxPages?: number },
 ): AsyncGenerator<T, void, unknown> {
   const maxPages = options?.maxPages ?? 100;
-  let pageCount = 0;
-  let currentCursor: string | null | undefined = undefined;
+  let nextCursor: string | undefined;
 
-  while (pageCount < maxPages) {
-    const cursorQuery = buildPaginationQuery(currentCursor);
+  for (let pageCount = 0; pageCount < maxPages; pageCount += 1) {
     const query: PaginationQuery = {
-      ...(cursorQuery.cursor ? { cursor: cursorQuery.cursor } : {}),
-      ...(options?.limit ? { limit: options.limit } : {}),
+      ...(options?.limit !== undefined ? { limit: options.limit } : {}),
+      ...buildPaginationQuery(nextCursor),
     };
+    const page = await fetchPage(query);
 
-    const hasQueryParams = Object.keys(query).length > 0;
-    const result = await fetchPage(hasQueryParams ? query : undefined);
-    pageCount += 1;
-
-    let items: readonly T[];
-    let nextCursor: string | null = null;
-
-    if (Array.isArray(result)) {
-      items = result;
-      nextCursor = null;
-    } else if (result && typeof result === 'object' && 'items' in result) {
-      items = result.items;
-      nextCursor = result.nextCursor ?? null;
-    } else {
-      break;
-    }
-
-    for (const item of items) {
+    for (const item of page.items) {
       yield item;
     }
 
-    if (items.length === 0) {
+    // A short page means the dataset is exhausted even if a cursor leaks back.
+    if (options?.limit !== undefined && page.items.length < options.limit) {
       break;
     }
-
-    if (options?.limit && items.length < options.limit) {
+    // No further cursor: the last page was reached.
+    if (!page.hasMore || page.nextCursor === null || page.nextCursor === '') {
       break;
     }
-
-    if (!nextCursor) {
-      break;
-    }
-
-    currentCursor = nextCursor;
+    nextCursor = page.nextCursor;
   }
 }
