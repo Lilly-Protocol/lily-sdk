@@ -3,7 +3,11 @@ import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import type { ResolvedLilySdkConfig } from '../src/config/types';
 import { LilyTransportError } from '../src/errors/sdk-error';
 
-describe('HttpRequest.signal support', () => {
+/**
+ * Bounty #407 — $60
+ * "Report in-flight caller cancellation as CANCELLED, not TIMEOUT, in the fetch transport"
+ */
+describe('HttpRequest.signal support (issue #407)', () => {
   let mockFetch: ReturnType<typeof vi.fn>;
   let config: ResolvedLilySdkConfig;
 
@@ -16,6 +20,7 @@ describe('HttpRequest.signal support', () => {
       defaultHeaders: {},
       userAgent: 'test-agent',
       fetch: mockFetch as unknown as typeof globalThis.fetch,
+      toHeaders: () => ({}),
     };
   });
 
@@ -36,7 +41,11 @@ describe('HttpRequest.signal support', () => {
     });
 
     const client = createFetchHttpClient(config);
-    const promise = client.request({ method: 'GET', path: '/test', signal: controller.signal });
+    const promise = client.request({
+      method: 'GET',
+      path: '/test',
+      signal: controller.signal,
+    });
 
     setTimeout(() => controller.abort(), 10);
 
@@ -53,7 +62,11 @@ describe('HttpRequest.signal support', () => {
     controller.abort();
 
     const client = createFetchHttpClient(config);
-    const promise = client.request({ method: 'GET', path: '/test', signal: controller.signal });
+    const promise = client.request({
+      method: 'GET',
+      path: '/test',
+      signal: controller.signal,
+    });
 
     await expect(promise).rejects.toThrow(LilyTransportError);
     try {
