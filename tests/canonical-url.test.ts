@@ -11,7 +11,9 @@ describe('DEFAULT_API_URL canonical constant (issue #408)', () => {
     delete process.env.LILY_API_URL;
     try {
       const sdk = LilySdk.create();
-      expect(sdk.config.baseUrl.toString()).toBe('https://api.lilyprotocol.com/');
+      expect(sdk.config.baseUrl.toString()).toBe(
+        'https://api.lilyprotocol.com/',
+      );
     } finally {
       if (originalEnv !== undefined) process.env.LILY_API_URL = originalEnv;
       else delete process.env.LILY_API_URL;

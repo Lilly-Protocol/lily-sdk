@@ -39,7 +39,6 @@ export function resolveLilySdkConfig(
 
   if (
     config.apiKey !== undefined &&
-    config.apiKey !== null &&
     (typeof config.apiKey !== 'string' || config.apiKey.trim() === '')
   ) {
     throw new LilyConfigError('`apiKey` must be a non-empty string.');
@@ -47,7 +46,6 @@ export function resolveLilySdkConfig(
 
   if (
     config.authToken !== undefined &&
-    config.authToken !== null &&
     (typeof config.authToken !== 'string' || config.authToken.trim() === '')
   ) {
     throw new LilyConfigError('`authToken` must be a non-empty string.');
@@ -105,7 +103,7 @@ function resolveBaseUrl(explicit: string | URL | undefined): URL {
   const raw =
     explicit ??
     (typeof process !== 'undefined'
-      ? process.env.LILY_API_URL ?? process.env.LILY_BASE_URL
+      ? (process.env.LILY_API_URL ?? process.env.LILY_BASE_URL)
       : undefined);
 
   if (raw === undefined) {
@@ -118,7 +116,7 @@ function resolveBaseUrl(explicit: string | URL | undefined): URL {
 }
 
 function resolveCredential(
-  explicit: string | null | undefined,
+  explicit: string | undefined,
   envName: string,
 ): string | undefined {
   if (typeof process !== 'undefined' && process.env) {

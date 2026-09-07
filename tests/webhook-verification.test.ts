@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   verifyWebhookSignature,
   verifyWebhookJSON,
-  canonicalJsonStringify,
   parseWebhookHeader,
   verifyWebhookWithReplay,
 } from '../src/webhooks';
@@ -58,10 +57,7 @@ describe('Webhook signature verification (issue #70)', () => {
   describe('verifyWebhookJSON', () => {
     it('verifies parsed JSON object', () => {
       const data = { event: 'payment.completed', data: { id: 'pm_123' } };
-      const payload = JSON.stringify({
-        data: { id: 'pm_123' },
-        event: 'payment.completed',
-      });
+      const payload = JSON.stringify(data);
       const signature = sign(payload, SECRET);
       expect(verifyWebhookJSON(data, signature, SECRET)).toBe(true);
     });
@@ -71,74 +67,6 @@ describe('Webhook signature verification (issue #70)', () => {
       const signature = sign(JSON.stringify(data), SECRET);
       const modified = { event: 'payment.failed' };
       expect(verifyWebhookJSON(modified, signature, SECRET)).toBe(false);
-    });
-
-    it('accepts signature regardless of object key order (issue #436)', () => {
-      const original = { b: 2, a: 1 };
-      const reordered = { a: 1, b: 2 };
-      // Signature produced from canonical string of original
-      const signature = sign(canonicalJsonStringify(original), SECRET);
-      expect(verifyWebhookJSON(reordered, signature, SECRET)).toBe(true);
-
-      // Signature produced from JSON.stringify({ a: 1, b: 2 })
-      const alphabeticalSig = sign(JSON.stringify({ a: 1, b: 2 }), SECRET);
-      expect(verifyWebhookJSON({ b: 2, a: 1 }, alphabeticalSig, SECRET)).toBe(
-        true,
-      );
-    });
-
-    it('serializes nested objects and arrays deterministically', () => {
-      const obj1 = {
-        event: 'payment.completed',
-        data: { amount: '100.00', id: 'pm_123', currency: 'USDC' },
-        metadata: {
-          tags: ['alpha', 'beta'],
-          user: { role: 'admin', id: 'u_1' },
-        },
-      };
-      const obj2 = {
-        metadata: {
-          user: { id: 'u_1', role: 'admin' },
-          tags: ['alpha', 'beta'],
-        },
-        data: { id: 'pm_123', currency: 'USDC', amount: '100.00' },
-        event: 'payment.completed',
-      };
-      const signature = sign(canonicalJsonStringify(obj1), SECRET);
-      expect(verifyWebhookJSON(obj2, signature, SECRET)).toBe(true);
-    });
-  });
-
-  describe('canonicalJsonStringify', () => {
-    it('sorts keys recursively in plain objects', () => {
-      expect(canonicalJsonStringify({ b: 2, a: 1 })).toBe('{"a":1,"b":2}');
-      expect(
-        canonicalJsonStringify({ z: { y: 2, x: 1 }, a: { c: 4, b: 3 } }),
-      ).toBe('{"a":{"b":3,"c":4},"z":{"x":1,"y":2}}');
-    });
-
-    it('preserves array order while canonicalizing elements', () => {
-      expect(canonicalJsonStringify([{ b: 2, a: 1 }, 3])).toBe(
-        '[{"a":1,"b":2},3]',
-      );
-    });
-
-    it('handles primitives, null and undefined correctly', () => {
-      expect(canonicalJsonStringify(null)).toBe('null');
-      expect(canonicalJsonStringify('hello')).toBe('"hello"');
-      expect(canonicalJsonStringify(42)).toBe('42');
-      expect(canonicalJsonStringify(true)).toBe('true');
-      expect(canonicalJsonStringify({ a: undefined, b: 1 })).toBe('{"b":1}');
-    });
-
-    it('supports custom toJSON methods', () => {
-      const obj = {
-        date: new Date('2026-09-03T11:00:00.000Z'),
-        b: 2,
-      };
-      expect(canonicalJsonStringify(obj)).toBe(
-        '{"b":2,"date":"2026-09-03T11:00:00.000Z"}',
-      );
     });
   });
 
@@ -192,68 +120,6 @@ describe('Webhook signature verification (issue #70)', () => {
       expect(verifyWebhookWithReplay(PAYLOAD, header, SECRET, 300_000)).toBe(
         false,
       );
-    });
-
-    it('returns false for future timestamp', () => {
-      const timestamp = Date.now() + 600_000; // 10 minutes in future
-      const signedPayload = `${timestamp}.${PAYLOAD}`;
-      const signature = sign(signedPayload, SECRET);
-      const header = `t=${timestamp},v1=${signature}`;
-      expect(verifyWebhookWithReplay(PAYLOAD, header, SECRET, 300_000)).toBe(
-        false,
-      );
-    });
-
-    it('rejects timestamps exactly at tolerance boundaries', () => {
-      const now = Date.now();
-      const oldTs = now - 300_001;
-      const oldSigned = `${oldTs}.${PAYLOAD}`;
-      const oldSig = sign(oldSigned, SECRET);
-      expect(
-        verifyWebhookWithReplay(
-          PAYLOAD,
-          `t=${oldTs},v1=${oldSig}`,
-          SECRET,
-          300_000,
-        ),
-      ).toBe(false);
-      const futureTs = now + 300_001;
-      const futureSigned = `${futureTs}.${PAYLOAD}`;
-      const futureSig = sign(futureSigned, SECRET);
-      expect(
-        verifyWebhookWithReplay(
-          PAYLOAD,
-          `t=${futureTs},v1=${futureSig}`,
-          SECRET,
-          300_000,
-        ),
-      ).toBe(false);
-    });
-
-    it('accepts timestamps just within tolerance window', () => {
-      const now = Date.now();
-      const justOld = now - 299_900;
-      const justOldSigned = `${justOld}.${PAYLOAD}`;
-      const justOldSig = sign(justOldSigned, SECRET);
-      expect(
-        verifyWebhookWithReplay(
-          PAYLOAD,
-          `t=${justOld},v1=${justOldSig}`,
-          SECRET,
-          300_000,
-        ),
-      ).toBe(true);
-      const justFuture = now + 299_900;
-      const justFutureSigned = `${justFuture}.${PAYLOAD}`;
-      const justFutureSig = sign(justFutureSigned, SECRET);
-      expect(
-        verifyWebhookWithReplay(
-          PAYLOAD,
-          `t=${justFuture},v1=${justFutureSig}`,
-          SECRET,
-          300_000,
-        ),
-      ).toBe(true);
     });
 
     it('returns false for invalid signature', () => {

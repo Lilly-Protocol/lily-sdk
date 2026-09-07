@@ -1,0 +1,28 @@
+name: Integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      sandbox:
+        image: node:20-alpine
+        ports: ['8080:8080']
+        options: --entrypoint /bin/sh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Run integration tests
+        run: npx vitest run --config vitest.integration.config.ts
+        env:
+          SANDBOX_URL: http://localhost:8080

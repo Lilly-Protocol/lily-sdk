@@ -1,0 +1,36 @@
+name: Contract Drift Check
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  drift-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Regenerate contracts from OpenAPI spec
+        run: npm run codegen
+      - name: Check for contract drift
+        run: |
+          if ! git diff --exit-code src/generated/types.ts; then
+            echo ""
+            echo "❌ CONTRACT DRIFT DETECTED"
+            echo ""
+            echo "The generated types in src/generated/types.ts differ from what the"
+            echo "current OpenAPI spec would produce. This means either:"
+            echo "  1. The spec was updated but codegen was not re-run, or"
+            echo "  2. src/generated/types.ts was manually edited (do not do this)"
+            echo ""
+            echo "Fix: run 'npm run codegen' and commit the updated file."
+            echo "See CODEGEN.md for details."
+            exit 1
+          fi
+          echo "✅ No contract drift detected"

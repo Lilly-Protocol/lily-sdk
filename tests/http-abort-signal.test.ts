@@ -3,11 +3,7 @@ import { createFetchHttpClient } from '../src/http/fetch-http-client';
 import type { ResolvedLilySdkConfig } from '../src/config/types';
 import { LilyTransportError } from '../src/errors/sdk-error';
 
-/**
- * Bounty #407 — $60
- * "Report in-flight caller cancellation as CANCELLED, not TIMEOUT, in the fetch transport"
- */
-describe('HttpRequest.signal support (issue #407)', () => {
+describe('HttpRequest.signal support', () => {
   let mockFetch: ReturnType<typeof vi.fn>;
   let config: ResolvedLilySdkConfig;
 

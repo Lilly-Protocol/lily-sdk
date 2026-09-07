@@ -17,7 +17,7 @@ The SDK is the developer entry point to Lily Protocol, the **autonomous agent fi
 ## Stellar at a Glance
 
 - **`stellar-testnet` out of the box** — wallet provisioning targets the Stellar network explicitly (`network: "stellar-testnet"` → `stellar-mainnet` as deployments land).
-- **Native XLM vs issued USDC** — `MoneyAmount` encodes Stellar's asset model precisely: `XLM` with *no issuer*, issued assets like `USDC` with their **56-character `G…` issuer account**, and **7-decimal stroop precision**.
+- **Native XLM vs issued USDC** — `MoneyAmount` encodes Stellar's asset model precisely: `XLM` with _no issuer_, issued assets like `USDC` with their **56-character `G…` issuer account**, and **7-decimal stroop precision**.
 - **Decimal-string money, never floats** — amounts are base-10 strings to mirror Stellar's exact integer/stroop arithmetic and avoid the float bugs that break settlements.
 - **`toAmountString` / `toMoneyAmount` helpers** — safely convert database values and user input into exact Stellar-scale amounts.
 - **Webhook verification with replay protection** for agent payment events.
@@ -121,17 +121,17 @@ const quote = await sdk.payments.quote({
 
 The SDK accepts a `LilySdkConfig` object. Fields are optional at the type level, but direct construction must resolve a `baseUrl` from either the explicit config or `LILY_API_URL`; `LilySdk.create()` also provides the fallback described below.
 
-| Field            | Type                    | Default                                                                                      | Description                                                                                                   |
-| :--------------- | :---------------------- | :------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ |
-| `baseUrl`        | `string`                | _required_                                                                                   | Absolute URL for the Lily Protocol API (e.g. `https://api.lilyprotocol.com`).                                 |
-| `apiKey`         | `string \| null`        | `undefined`                                                                                  | API key sent as `x-api-key` header when provided. Pass `null` to clear in `withConfig`.                      |
-| `authToken`      | `string \| null`        | `undefined`                                                                                  | Bearer token sent as `Authorization` header when provided. Pass `null` to clear in `withConfig`.             |
-| `timeoutMs`      | `number`                | `10000`                                                                                      | Request timeout in milliseconds. Must be positive. Can be overridden per-request via `HttpRequest.timeoutMs`. |
-| `retry`          | `Partial<RetryPolicy>`  | `{ retries: 2, retryDelayMs: 250, retryableStatusCodes: [408,409,425,429,500,502,503,504] }` | Retry behaviour for failed requests. See below.                                                               |
-| `defaultHeaders` | `Record<string,string>` | `{}`                                                                                         | Extra headers merged into every request.                                                                      |
-| `userAgent`      | `string`                | `lily-sdk/0.1.0`                                                                             | Value of the `User-Agent` header.                                                                             |
-| `fetch`          | `typeof fetch`          | `globalThis.fetch`                                                                           | Custom fetch implementation for unsupported runtimes.                                                         |
-| `validateResponses` | `boolean`             | `true`                                                                                       | Enables runtime validation for known response models. Invalid validated payloads throw `LilyValidationError`. |
+| Field               | Type                    | Default                                                                                      | Description                                                                                                   |
+| :------------------ | :---------------------- | :------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ |
+| `baseUrl`           | `string`                | _required_                                                                                   | Absolute URL for the Lily Protocol API (e.g. `https://api.lilyprotocol.com`).                                 |
+| `apiKey`            | `string \| null`        | `undefined`                                                                                  | API key sent as `x-api-key` header when provided. Pass `null` to clear in `withConfig`.                       |
+| `authToken`         | `string \| null`        | `undefined`                                                                                  | Bearer token sent as `Authorization` header when provided. Pass `null` to clear in `withConfig`.              |
+| `timeoutMs`         | `number`                | `10000`                                                                                      | Request timeout in milliseconds. Must be positive. Can be overridden per-request via `HttpRequest.timeoutMs`. |
+| `retry`             | `Partial<RetryPolicy>`  | `{ retries: 2, retryDelayMs: 250, retryableStatusCodes: [408,409,425,429,500,502,503,504] }` | Retry behaviour for failed requests. See below.                                                               |
+| `defaultHeaders`    | `Record<string,string>` | `{}`                                                                                         | Extra headers merged into every request.                                                                      |
+| `userAgent`         | `string`                | `lily-sdk/0.1.0`                                                                             | Value of the `User-Agent` header.                                                                             |
+| `fetch`             | `typeof fetch`          | `globalThis.fetch`                                                                           | Custom fetch implementation for unsupported runtimes.                                                         |
+| `validateResponses` | `boolean`               | `true`                                                                                       | Enables runtime validation for known response models. Invalid validated payloads throw `LilyValidationError`. |
 
 ### Default constants
 
@@ -427,13 +427,16 @@ The SDK supports fine-grained subpath imports for minimal bundle size and tree-s
 ### Webhook Verification
 
 ```ts
-import { verifyWebhookSignature, verifyWebhookWithReplay } from '@lily-protocol/sdk/webhooks';
+import {
+  verifyWebhookSignature,
+  verifyWebhookWithReplay,
+} from '@lily-protocol/sdk/webhooks';
 
 // Verify webhook signature with replay protection (5-minute tolerance)
 const isValid = verifyWebhookWithReplay(
   rawBody,
   req.headers['x-lily-signature'],
-  process.env.LILY_WEBHOOK_SECRET!
+  process.env.LILY_WEBHOOK_SECRET!,
 );
 ```
 
@@ -493,18 +496,18 @@ npm run example
 
 In-depth guides are available under [docs/](./docs/):
 
-| Guide                          | Description                                            |
-| ------------------------------ | ------------------------------------------------------ |
+| Guide                                                        | Description                                                   |
+| ------------------------------------------------------------ | ------------------------------------------------------------- |
 | [Money & Stellar Assets](./docs/money-and-stellar-assets.md) | MoneyAmount semantics, XLM vs issued assets, stroop precision |
-| [Environment Variables](./docs/environment-variables.md)       | Available env vars and their defaults                  |
-| [Error Handling](./docs/error-handling.md)                   | Error hierarchy, type guards, and recovery patterns    |
-| [Runtime Requirements](./docs/runtime-requirements.md)       | Node.js version, fetch polyfills, browser support      |
-| [Subpath Imports](./docs/subpath-imports.md)                 | Tree-shakeable ./config, ./errors, ./http imports |
-| [Timeouts & Retries](./docs/timeouts-and-retries.md)         | Retry policy, backoff, and idempotency                 |
-| [Auth Headers](./docs/auth-headers.md)                       | How x-api-key and Authorization are set            |
-| [Custom HTTP Client](./docs/custom-http-client.md)           | Injecting a custom HttpClient                        |
-| [Non-JSON Responses](./docs/non-json-responses.md)           | Handling 204 and non-JSON payloads                     |
-| [API Reference](./docs/api-reference.md)                     | Generated API documentation                            |
+| [Environment Variables](./docs/environment-variables.md)     | Available env vars and their defaults                         |
+| [Error Handling](./docs/error-handling.md)                   | Error hierarchy, type guards, and recovery patterns           |
+| [Runtime Requirements](./docs/runtime-requirements.md)       | Node.js version, fetch polyfills, browser support             |
+| [Subpath Imports](./docs/subpath-imports.md)                 | Tree-shakeable ./config, ./errors, ./http imports             |
+| [Timeouts & Retries](./docs/timeouts-and-retries.md)         | Retry policy, backoff, and idempotency                        |
+| [Auth Headers](./docs/auth-headers.md)                       | How x-api-key and Authorization are set                       |
+| [Custom HTTP Client](./docs/custom-http-client.md)           | Injecting a custom HttpClient                                 |
+| [Non-JSON Responses](./docs/non-json-responses.md)           | Handling 204 and non-JSON payloads                            |
+| [API Reference](./docs/api-reference.md)                     | Generated API documentation                                   |
 
 ## Roadmap Themes
 

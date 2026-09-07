@@ -42,6 +42,6 @@ describe('Contract Drift Check', () => {
       resolve(ROOT, 'src', 'generated', 'types.ts'),
       'utf-8',
     );
-    expect(after.replace(/\r\n/g, '\n')).toBe(before.replace(/\r\n/g, '\n'));
+    expect(after).toBe(before);
   });
 });

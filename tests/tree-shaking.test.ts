@@ -11,12 +11,11 @@ describe('tree-shaking verification for sideEffects: false', () => {
     const entryFile = resolve(tmpDir, 'entry.js');
     const outFile = resolve(tmpDir, 'bundle.js');
 
-    const indexPath = resolve(__dirname, '..', 'src', 'index.ts').replace(/\\/g, '/');
     // Import ONLY error classes — no SDK, no clients, no validation
     await writeFile(
       entryFile,
       `
-      import { LilyApiError, LilyTransportError } from '${resolve(__dirname, '..', 'src', 'index.ts').replace(/\\/g, '/')}';
+      import { LilyApiError, LilyTransportError } from '${resolve(__dirname, '..', 'src', 'index.ts')}';
       export const err = new LilyApiError('test', { statusCode: 500 });
       export const terr = new LilyTransportError('net', { code: 'NET' });
     `,
@@ -57,12 +56,11 @@ describe('tree-shaking verification for sideEffects: false', () => {
     const entryFile = resolve(tmpDir, 'entry.js');
     const outFile = resolve(tmpDir, 'bundle.js');
 
-    const indexPath = resolve(__dirname, '..', 'src', 'index.ts').replace(/\\/g, '/');
     // Import ONLY the config resolver — no HTTP, no clients
     await writeFile(
       entryFile,
       `
-      import { resolveLilySdkConfig } from '${resolve(__dirname, '..', 'src', 'index.ts').replace(/\\/g, '/')}';
+      import { resolveLilySdkConfig } from '${resolve(__dirname, '..', 'src', 'index.ts')}';
       export const config = resolveLilySdkConfig({ baseUrl: 'https://api.test' });
     `,
     );

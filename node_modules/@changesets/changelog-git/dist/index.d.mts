@@ -1,5 +1,0 @@
-import { ChangelogFunctions } from "@changesets/types";
-//#region src/index.d.ts
-declare const changelogFunctions: ChangelogFunctions;
-//#endregion
-export { changelogFunctions as default };

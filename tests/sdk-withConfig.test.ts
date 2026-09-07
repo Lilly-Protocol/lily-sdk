@@ -100,7 +100,7 @@ describe('LilySdk.withConfig', () => {
     });
     await tenant.request({ method: 'GET', path: '/v1/ping' });
     expect(fetchCalls).toHaveLength(1);
-    expect(fetchCalls[0].origin).toBe('https://tenant.example.com');
+    expect(fetchCalls[0]!.origin).toBe('https://tenant.example.com');
   });
 
   it('does not mutate the original SDK instance', () => {

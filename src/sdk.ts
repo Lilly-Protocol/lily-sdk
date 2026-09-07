@@ -1,14 +1,10 @@
-undefinedimport { AgentClient } from './clients/agent-client';
+import { AgentClient } from './clients/agent-client';
 import { IdentityClient } from './clients/identity-client';
 import { PaymentClient } from './clients/payment-client';
 import { SystemClient } from './clients/system-client';
 import { WalletClient } from './clients/wallet-client';
 import { resolveLilySdkConfig } from './config/resolve-config';
-import type {
-  LilySdkConfig,
-  LilySdkWithConfigOverrides,
-  ResolvedLilySdkConfig,
-} from './config/types';
+import type { LilySdkConfig, ResolvedLilySdkConfig } from './config/types';
 import { createFetchHttpClient } from './http/fetch-http-client';
 import type { HttpClient, HttpRequest } from './http/types';
 import { SDK_VERSION } from './version';
@@ -37,18 +33,8 @@ export class LilySdk {
   public readonly identity: IdentityClient;
   public readonly system: SystemClient;
 
-  /**
-   * Initializes a new instance of the LilySdk.
-   *
-   * If config is omitted or baseUrl is not provided, the SDK attempts to resolve baseUrl
-   * from the environment variables `LILY_API_URL` or `LILY_BASE_URL`.
-   *
-   * @param config - Optional configuration overrides.
-   * @param httpClient - Optional custom HttpClient implementation.
-   */
   public constructor(config?: Partial<LilySdkConfig>, httpClient?: HttpClient) {
     this.config = resolveLilySdkConfig(config ?? {});
-    this.customHttpClient = httpClient;
     this.httpClient = httpClient ?? createFetchHttpClient(this.config);
     this.injectedHttpClient = httpClient;
 
@@ -56,27 +42,19 @@ export class LilySdk {
     this.wallets = new WalletClient(this.httpClient);
     this.payments = new PaymentClient(this.httpClient);
     this.identity = new IdentityClient(this.httpClient);
-    this.system = new SystemClient(this.httpClient, {
-      ...(this.config.validateResponses !== undefined
-        ? { validateResponses: this.config.validateResponses }
-        : {}),
-    });
+    this.system = new SystemClient(this.httpClient);
   }
 
   /**
    * Creates a LilySdk instance with sensible defaults from environment variables.
-   * Explicit options always take precedence over environment variables, which take
-   * precedence over the built-in default (https://api.lilyprotocol.com).
+   * Explicit options always take precedence over environment variables.
    *
-   * Env vars read (in precedence order):
-   * - LILY_API_URL (preferred)
-   * - LILY_BASE_URL (fallback)
+   * Env vars read:
+   * - LILY_API_URL (or LILY_BASE_URL)
    * - LILY_API_KEY
    * - LILY_AUTH_TOKEN
    *
-   * Note: Unlike the constructor, \create()\ never throws for a missing baseUrl.
-   * It silently falls back to \\DEFAULT_API_URL\\. Use the constructor if you
-   * need strict baseUrl validation.
+   * Throws if no baseUrl is provided and no env var is set.
    */
   public static create(
     options?: Partial<LilySdkConfig>,
@@ -88,6 +66,12 @@ export class LilySdk {
         ? (process.env.LILY_API_URL ?? process.env.LILY_BASE_URL)
         : undefined) ??
       DEFAULT_API_URL;
+
+    if (!baseUrl) {
+      throw new Error(
+        'baseUrl is required. Pass it in options or set the LILY_API_URL environment variable.',
+      );
+    }
 
     const apiKey =
       options?.apiKey ??
@@ -124,27 +108,8 @@ export class LilySdk {
   /**
    * Creates a new LilySdk instance with merged configuration.
    * Useful for multi-tenant scenarios where credentials or baseUrl differ per tenant.
-   *
-   * When no custom fetch is overridden, a fresh HttpClient is built from the merged
-   * config so that baseUrl and auth changes take effect on the wire.
-   * When a custom fetch is explicitly provided in overrides, the parent's HttpClient
-   * is shared so that injection point is preserved.
    */
-  public withConfig(overrides: LilySdkWithConfigOverrides): LilySdk {
-    const apiKey =
-      overrides.apiKey === null
-        ? undefined
-        : overrides.apiKey !== undefined
-          ? overrides.apiKey
-          : this.config.apiKey;
-
-    const authToken =
-      overrides.authToken === null
-        ? undefined
-        : overrides.authToken !== undefined
-          ? overrides.authToken
-          : this.config.authToken;
-
+  public withConfig(overrides: Partial<LilySdkConfig>): LilySdk {
     const merged: LilySdkConfig = {
       baseUrl: overrides.baseUrl ?? String(this.config.baseUrl),
       timeoutMs: overrides.timeoutMs ?? this.config.timeoutMs,
@@ -168,11 +133,6 @@ export class LilySdk {
         : this.config.authToken !== undefined
           ? { authToken: this.config.authToken }
           : {}),
-      ...(overrides.validateResponses !== undefined
-        ? { validateResponses: overrides.validateResponses }
-        : this.config.validateResponses !== undefined
-          ? { validateResponses: this.config.validateResponses }
-          : {}),
     };
 
     // Reuse the transport only when the caller injected a custom HttpClient.
@@ -182,5 +142,4 @@ export class LilySdk {
       ? new LilySdk(merged, this.injectedHttpClient)
       : new LilySdk(merged);
   }
-
 }

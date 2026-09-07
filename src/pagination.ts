@@ -6,12 +6,6 @@ export interface CursorPage<T> {
   readonly hasMore: boolean;
 }
 
-export type PageResult<T> = readonly T[] | CursorPage<T>;
-
-function isCursorPage<T>(result: PageResult<T>): result is CursorPage<T> {
-  return !Array.isArray(result);
-}
-
 /**
  * Extracts pagination metadata from an HTTP response.
  * Works with cursor-based list endpoints that return items at the top level
@@ -42,11 +36,6 @@ export function buildPaginationQuery(
 }
 
 /**
- * Page response shape accepted by paginate. Supports either a CursorPage or a plain array.
- */
-export type PageResult<T> = readonly T[] | CursorPage<T>;
-
-/**
  * Async iterator helper that auto-paginates through a cursor-based list endpoint.
  *
  * `fetchPage` receives a `PaginationQuery` (containing the `cursor` from the
@@ -56,7 +45,7 @@ export type PageResult<T> = readonly T[] | CursorPage<T>;
  * is shorter than `limit` (when `limit` is set), or `maxPages` is reached.
  *
  * @example
- * for await (const agent of paginate(fetchAgentPage, { limit: 100 })) {
+ * for await (const agent of paginate(client.agents.list.bind(client.agents))) {
  *   console.log(agent.id);
  * }
  */

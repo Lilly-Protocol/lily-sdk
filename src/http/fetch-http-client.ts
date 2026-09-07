@@ -1,16 +1,12 @@
-import { DEFAULT_RETRYABLE_STATUS_CODES } from '../config/defaults';
 import type { ResolvedLilySdkConfig } from '../config/types';
-import { DEFAULT_RETRYABLE_STATUS_CODES } from '../config/defaults';
 import { resolveAuthHeaders } from './resolve-auth-headers';
 import {
   LILY_ERROR_CODES,
   LilyApiError,
   LilyAuthenticationError,
-  LilyConfigError,
   LilySdkError,
   LilyTransportError,
   LilyValidationError,
-  LilyConfigError,
 } from '../errors/sdk-error';
 import type {
   HttpClient,
@@ -23,129 +19,17 @@ import { DEFAULT_RETRY_POLICY } from '../config/defaults';
 const DEFAULT_RETRYABLE_STATUS_CODES =
   DEFAULT_RETRY_POLICY.retryableStatusCodes;
 
-/**
- * Resolves and validates the per-request timeout override.
- *
- * - `undefined` → use the config default (caller must not pass an invalid value)
- * - `0`         → explicit opt-out of timeout (documented behavior)
- * - Any other value that is not a finite non-negative number → throw
- *   `LilyValidationError` so the caller gets immediate feedback without
- *   dispatching a request or consuming a retry.
- */
-export function resolveRequestTimeout(
-  requestTimeoutMs: number | undefined,
-  configTimeoutMs: number,
-): number | 0 {
-  if (requestTimeoutMs === undefined) {
-    return configTimeoutMs;
-  }
-
-  // `0` is the documented per-request opt-out — allow it explicitly.
-  if (requestTimeoutMs === 0) {
-    return 0;
-  }
-
-  if (
-    typeof requestTimeoutMs !== 'number' ||
-    !Number.isFinite(requestTimeoutMs) ||
-    requestTimeoutMs < 0
-  ) {
-    throw new LilyValidationError(
-      `Per-request \`timeoutMs\` must be a non-negative finite number (got ${JSON.stringify(requestTimeoutMs)}).`,
-      {
-        code: LILY_ERROR_CODES.VALIDATION_ERROR,
-        details: { timeoutMs: requestTimeoutMs },
-      },
-    );
-  }
-
-  return requestTimeoutMs;
-}
-
-/**
- * Resolves and validates the per-request timeout override.
- *
- * - `undefined` → use the config default (caller must not pass an invalid value)
- * - `0`         → explicit opt-out of timeout (documented behavior)
- * - Any other value that is not a finite non-negative number → throw
- *   `LilyValidationError` so the caller gets immediate feedback without
- *   dispatching a request or consuming a retry.
- */
-export function resolveRequestTimeout(
-  requestTimeoutMs: number | undefined,
-  configTimeoutMs: number,
-): number | 0 {
-  if (requestTimeoutMs === undefined) {
-    return configTimeoutMs;
-  }
-
-  // `0` is the documented per-request opt-out — allow it explicitly.
-  if (requestTimeoutMs === 0) {
-    return 0;
-  }
-
-  if (
-    typeof requestTimeoutMs !== 'number' ||
-    !Number.isFinite(requestTimeoutMs) ||
-    requestTimeoutMs < 0
-  ) {
-    throw new LilyValidationError(
-      `Per-request \`timeoutMs\` must be a non-negative finite number (got ${JSON.stringify(requestTimeoutMs)}).`,
-      {
-        code: LILY_ERROR_CODES.VALIDATION_ERROR,
-        details: { timeoutMs: requestTimeoutMs },
-      },
-    );
-  }
-
-  return requestTimeoutMs;
-}
-
 export function createFetchHttpClient(
   config: ResolvedLilySdkConfig,
-  hooks?: RequestLifecycleHooks,
 ): HttpClient {
-  // composeHooks swallows hook errors so observability can never break the
-  // request flow; composing a single set reuses those semantics verbatim.
-  const lifecycle = hooks ? composeHooks(hooks) : undefined;
   return {
     async request<TResponse, TRequest = unknown>(
       request: HttpRequest<TRequest>,
     ): Promise<HttpResponse<TResponse>> {
-      if (request.timeoutMs !== undefined) {
-        if (
-          typeof request.timeoutMs !== 'number' ||
-          !Number.isFinite(request.timeoutMs) ||
-          request.timeoutMs < 0
-        ) {
-          throw new LilyConfigError(
-            '`timeoutMs` must be a non-negative number.',
-          );
-        }
-      }
-
       const url = buildUrl(config.baseUrl, request.path, request.query);
-      await lifecycleHooks.beforeRequest?.(request);
       const body = serializeBody(request.body);
       const headers = buildHeaders(config, request.headers);
-
-      // Validate per-request timeoutMs
-      if (request.timeoutMs !== undefined) {
-        if (
-          typeof request.timeoutMs !== 'number' ||
-          !Number.isFinite(request.timeoutMs) ||
-          request.timeoutMs < 0
-        ) {
-          throw new LilyConfigError(
-            '`timeoutMs` must be a non-negative number.',
-          );
-        }
-      }
-
       const timeoutMs = request.timeoutMs ?? config.timeoutMs;
-      if (request.timeoutMs !== undefined && (request.timeoutMs < 0 || !Number.isFinite(request.timeoutMs))) {
-        throw new LilyConfigError('timeoutMs must be a non-negative finite number.');
-      }
 
       let attempt = 0;
 
@@ -157,7 +41,7 @@ export function createFetchHttpClient(
         if (request.signal) {
           if (request.signal.aborted) {
             throw new LilyTransportError('Request cancelled by caller.', {
-              code: LILY_ERROR_CODES.CANCELLED,
+              code: 'CANCELLED',
               cause: request.signal.reason ?? new Error('Aborted'),
               request: requestMetadata(request, url),
             });
@@ -197,31 +81,23 @@ export function createFetchHttpClient(
         }
 
         try {
-          await lifecycle?.beforeRequest?.(request);
           const response = await config.fetch(url, requestInit);
 
-          const data = (await parseResponse(
-            response,
-            requestMetadata(request, url),
-          )) as TResponse;
+          const data = (await parseResponse(response)) as TResponse;
 
           if (response.ok) {
             cleanup();
-            const result: HttpResponse<TResponse> = {
+            return {
               status: response.status,
               headers: response.headers,
               data,
               attempts: attempt + 1,
               retried: attempt > 0,
             };
-            await lifecycle?.afterResponse?.(request, result);
-            return result;
           }
 
           // Auth failures are terminal: retrying with the same credential just
           // burns the budget. Checked before shouldRetry for that reason.
-          const responseHeaders = extractHeaders(response.headers);
-
           if (response.status === 401 || response.status === 403) {
             cleanup();
             throw new LilyAuthenticationError(
@@ -231,7 +107,6 @@ export function createFetchHttpClient(
                 statusCode: response.status,
                 details: data,
                 request: requestMetadata(request, url),
-                headers: Object.fromEntries(Array.from((response.headers as unknown as Map<string,string>).entries())),
               },
             );
           }
@@ -247,9 +122,7 @@ export function createFetchHttpClient(
           ) {
             cleanup();
             attempt += 1;
-            const delayMs = config.retry.retryDelayMs * attempt;
-            await lifecycle?.onRetry?.(request, attempt, delayMs);
-            await sleep(delayMs);
+            await sleep(config.retry.retryDelayMs * attempt);
             continue;
           }
 
@@ -259,7 +132,6 @@ export function createFetchHttpClient(
             statusCode: response.status,
             details: data,
             request: requestMetadata(request, url),
-            headers: Object.fromEntries(Array.from((response.headers as unknown as Map<string,string>).entries())),
           });
         } catch (error) {
           cleanup();
@@ -267,10 +139,6 @@ export function createFetchHttpClient(
           // LilySdkError instances (validation, auth, API) are definitive:
           // they must never be retried or re-wrapped.
           if (error instanceof LilySdkError) {
-            await lifecycle?.onError?.(
-              request,
-              error instanceof Error ? error : new Error(String(error)),
-            );
             throw error;
           }
 
@@ -282,26 +150,22 @@ export function createFetchHttpClient(
               isRetryableMethod(request.method)
             ) {
               attempt += 1;
-              const delayMs = config.retry.retryDelayMs * attempt;
-              await lifecycle?.onRetry?.(request, attempt, delayMs);
-              await sleep(delayMs);
+              await sleep(config.retry.retryDelayMs * attempt);
               continue;
             }
 
-            const transportError = new LilyTransportError(
+            throw new LilyTransportError(
               externallyAborted
                 ? 'Request cancelled by caller while calling Lily Protocol API.'
                 : 'Request timed out while calling Lily Protocol API.',
               {
                 code: externallyAborted
-                  ? LILY_ERROR_CODES.CANCELLED
+                  ? 'CANCELLED'
                   : LILY_ERROR_CODES.TIMEOUT,
                 cause: error,
                 request: requestMetadata(request, url),
               },
             );
-            await lifecycle?.onError?.(request, transportError);
-            throw transportError;
           }
 
           if (
@@ -309,13 +173,11 @@ export function createFetchHttpClient(
             isRetryableTransportError(error, request.method)
           ) {
             attempt += 1;
-            const delayMs = config.retry.retryDelayMs * attempt;
-            await lifecycle?.onRetry?.(request, attempt, delayMs);
-            await sleep(delayMs);
+            await sleep(config.retry.retryDelayMs * attempt);
             continue;
           }
 
-          const transportError = new LilyTransportError(
+          throw new LilyTransportError(
             'Network error while calling Lily Protocol API.',
             {
               code: LILY_ERROR_CODES.TRANSPORT_ERROR,
@@ -323,59 +185,10 @@ export function createFetchHttpClient(
               request: requestMetadata(request, url),
             },
           );
-          await lifecycle?.onError?.(
-            request,
-            transportError,
-          );
-          throw transportError;
         }
       }
     },
   };
-}
-
-/**
- * Resolve the effective timeout for one request, validating a per-request
- * override before anything is dispatched.
- *
- * `resolveLilySdkConfig` already rejects a non-positive or non-finite global
- * `timeoutMs`, but the per-request override reached `setTimeout` unchecked.
- * A negative or `NaN` value produced an immediately-firing timer and a
- * spurious `TIMEOUT` transport error, and `Infinity` produced a timer that
- * never fires — both of them reported as a network condition rather than as
- * the caller's own mistake.
- *
- * `0` stays valid here and only here: it is the documented per-request opt-out
- * from the timeout, which is why the range differs from the config-level rule
- * rather than mirroring it exactly.
- */
-function resolveRequestTimeout(
-  request: HttpRequest,
-  config: ResolvedLilySdkConfig,
-  url: URL,
-): number {
-  const override = request.timeoutMs;
-
-  if (override === undefined) {
-    return config.timeoutMs;
-  }
-
-  if (
-    typeof override !== 'number' ||
-    !Number.isFinite(override) ||
-    override < 0
-  ) {
-    throw new LilyValidationError(
-      '`timeoutMs` must be a non-negative finite number (use 0 to disable the timeout).',
-      {
-        code: LILY_ERROR_CODES.VALIDATION_ERROR,
-        details: { timeoutMs: override },
-        request: requestMetadata(request, url),
-      },
-    );
-  }
-
-  return override;
 }
 
 function requestMetadata(
@@ -441,16 +254,12 @@ function serializeBody(body: unknown): BodyInit | undefined {
   return JSON.stringify(body);
 }
 
-async function parseResponse(
-  response: Response,
-  request: { method: string; path: string; url: string },
-): Promise<unknown> {
+async function parseResponse(response: Response): Promise<unknown> {
   if (response.status === 204) {
     return null;
   }
 
   const contentType = response.headers.get('content-type') ?? '';
-  const isJson = contentType.includes('application/json');
 
   if (contentType.includes('application/json')) {
     // Read body once as text to avoid double-consumption, then parse.
@@ -474,29 +283,11 @@ async function parseResponse(
       throw new LilyValidationError(
         `Failed to parse response body as JSON (status ${response.status}, content-type: ${contentType}).`,
         {
-          code: LILY_ERROR_CODES.RESPONSE_VALIDATION_ERROR,
+          code: 'RESPONSE_VALIDATION_ERROR',
           statusCode: response.status,
           cause: error,
-          ...(responseHeaders !== undefined
-            ? { headers: responseHeaders }
-            : {}),
         },
       );
-    }
-  }
-
-  if (isJson) {
-    const rawBody = await response.text().catch(() => '');
-    try {
-      return JSON.parse(rawBody) as unknown;
-    } catch (error) {
-      throw new LilyApiError('Lily Protocol API request failed.', {
-        code: LILY_ERROR_CODES.API_ERROR,
-        statusCode: response.status,
-        details: { contentType, body: rawBody },
-        request,
-        cause: error,
-      });
     }
   }
 
@@ -531,29 +322,3 @@ async function sleep(ms: number): Promise<void> {
     setTimeout(resolve, ms);
   });
 }
-
-export function extractHeaders(
-  headers: Headers | Record<string, string> | undefined,
-): Record<string, string> | undefined {
-  if (!headers) {
-    return undefined;
-  }
-
-  const result: Record<string, string> = {};
-
-  if (typeof (headers as Headers).forEach === 'function') {
-    (headers as Headers).forEach((value, key) => {
-      result[key.toLowerCase()] = value;
-    });
-    return result;
-  }
-
-  for (const [key, value] of Object.entries(headers)) {
-    if (typeof value === 'string') {
-      result[key.toLowerCase()] = value;
-    }
-  }
-
-  return result;
-}
-
